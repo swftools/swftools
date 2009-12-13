@@ -5,17 +5,23 @@ tests: testwrite testrewrite testpaths testreadwrite
 
 D=-g -pg
 
+#BISONDEBUG=yes
+
 MODULES = abc.o opcodes.o code.o pool.o scripts.o expr.o common.o initcode.o
 SOURCES = abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h common.c common.h initcode.c initcode.h
 
 tokenizer.yy.c: tokenizer.lex tokenizer.h
 	flex -Pas3_ -8 -B -otokenizer.yy.c tokenizer.lex
 
+ifeq "$(BISONDEBUG)" "yes"
+BISONDEBUGFLAGS=-t
+BISONDEBUGDEFINE=-DBISONDEBUG
+endif
 parser.tab.h parser.tab.c: parser.y parser.h skeleton.m4 Makefile
-	bison -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
+	bison $(BISONDEBUGFLAGS) -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
 
 main.o: main.c parser.tab.h parser.h
-	$(C) main.c -o main.o
+	$(C) $(BISONDEBUGDEFINE) main.c -o main.o
 
 mklib.o: mklib.c parser.tab.h parser.h
 	$(C) mklib.c -o mklib.o

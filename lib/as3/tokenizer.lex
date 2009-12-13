@@ -481,6 +481,7 @@ void tokenizer_unregister_namespace(const char*id)
 }*/
 static inline char tokenizer_is_namespace(const char*id)
 {
+    if(!active_namespaces) return 0;
     return trie_contains(active_namespaces, (const unsigned char*)id);
 }
 
@@ -514,8 +515,20 @@ static int tokenerror();
 %x XMLTEXT
 %x XML
 
-NAME	 [a-zA-Z_\x80-\xff][a-zA-Z0-9_\\\x80-\xff]*
-_        [^a-zA-Z0-9_\\\x80-\xff]
+X1 parsing identifiers with a non unicode lexer is a knightmare we have to skip all possible
+X2 combinations of byte order markers or utf8 space chars and i dont quite like the fact that
+X3 lex doesnt support proper comments in this section either...
+X4 {NAME_HEAD}{NAME_TAIL} 
+
+NAME_NOC2EF  [a-zA-Z_\x80-\xc1\xc3-\xee\xf0-\xff]
+NAME_EF      [\xef][a-zA-Z0-9_\\\x80-\xba\xbc-\xff]
+NAME_C2      [\xc2][a-zA-Z0-9_\\\x80-\x9f\xa1-\xff]
+NAME_EFBB    [\xef][\xbb][a-zA-Z0-9_\\\x80-\xbe\xc0-\xff]
+NAME_TAIL    [a-zA-Z_0-9\\\x80-\xff]*
+NAME_HEAD    (({NAME_NOC2EF})|({NAME_EF})|({NAME_C2})|({NAME_EFBB}))
+NAME	     {NAME_HEAD}{NAME_TAIL} 
+
+_            [^a-zA-Z0-9_\\\x80-\xff]
 
 HEXINT    0x[a-zA-Z0-9]+
 HEXFLOAT  0x[a-zA-Z0-9]*\.[a-zA-Z0-9]*
@@ -534,7 +547,7 @@ XMLID       [A-Za-z0-9_\x80-\xff]+([:][A-Za-z0-9_\x80-\xff]+)?
 XMLSTRING   ["][^"]*["]
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
-S 	 ([ \n\r\t\xa0]|\xc2\xa0)
+S 	 ([ \n\r\t\xa0]|[\xc2][\xa0])
 MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n\r]*[\n\r]
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
@@ -587,7 +600,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 <REGEXPOK>[\{]               {c(); BEGIN(REGEXPOK);return m(T_DICTSTART);}
 [\{]                         {c(); BEGIN(DEFAULT); return m('{');}
 
-\xef\xbb\xbf                 {/* utf 8 bom */}
+\xef\xbb\xbf                 {/* utf 8 bom (0xfeff) */}
 {S}                          {l();}
 
 {HEXINT}/{_}                 {c(); BEGIN(DEFAULT);return handlehex();}

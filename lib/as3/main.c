@@ -64,7 +64,9 @@ int main(int argn, char*argv[])
     }
     filename=argv[argn-1];
 
-    //a3_debug = 1; //if bison was called with -t
+#ifdef BISONDEBUG
+    a3_debug = 1; //if bison was called with -t
+#endif
    
     as3_add_include_dir(getcwd(buf, 512));
 
