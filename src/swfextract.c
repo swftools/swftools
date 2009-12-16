@@ -42,6 +42,7 @@ char* extractjpegids = 0;
 char* extractfontids = 0;
 char* extractpngids = 0;
 char* extractsoundids = 0;
+char* extractbinaryids = 0;
 char extractmp3 = 0;
 
 char* extractname = 0;
@@ -68,6 +69,7 @@ struct options_t options[] =
  {"f","frame"},
  {"F","font"},
  {"V","version"},
+ {"b","binary"},
  {0,0}
 };
 
@@ -135,6 +137,15 @@ int args_callback_option(char*name,char*val)
 	}
 	numextracts++;
 	extractsoundids = val;
+	return 1;
+    } 
+    else if(!strcmp(name, "b")) {
+	if(extractbinaryids) {
+	    fprintf(stderr, "Only one --binary argument is allowed. (Try to use a range, e.g. -s 1,2,3)\n");
+	    exit(1);
+	}
+	numextracts++;
+	extractbinaryids = val;
 	return 1;
     } 
 #ifdef _ZLIB_INCLUDED_
@@ -486,6 +497,9 @@ int isOfType(int t, TAG*tag)
     if(t == 5 && (tag->id == ST_DEFINEFONT || tag->id == ST_DEFINEFONT2 || tag->id == ST_DEFINEFONT3)) {
 	show = 1;
     }
+    if (t== 6 && (tag->id == ST_DEFINEBINARY)) {
+        show = 1;
+    }
     return show;
 }
 
@@ -495,8 +509,8 @@ void listObjects(SWF*swf)
     char first;
     int t;
     int frame = 0;
-    char*names[] = {"Shape", "MovieClip", "JPEG", "PNG", "Sound", "Font"};
-    char*options[] = {"-i", "-i", "-j", "-p", "-s", "-F"};
+    char*names[] = {"Shape", "MovieClip", "JPEG", "PNG", "Sound", "Font", "Binary"};
+    char*options[] = {"-i", "-i", "-j", "-p", "-s", "-F","-b"};
     int mp3=0;
     printf("Objects in file %s:\n",filename);
     swf_FoldAll(swf);
@@ -1023,6 +1037,30 @@ void handledefinesound(TAG*tag)
     fclose(fi);
 }
 
+void handlebinary(TAG*tag) {
+    FILE *fout = NULL;
+    char buf[100];
+    char *filename = buf;
+    int len = tag->memsize;
+    int dx = 6; // offset to binary data
+    if (tag->id!=ST_DEFINEBINARY) {
+        fprintf(stderr, "Object %d is not a binary entity!\n",
+                        GET16(tag->data));
+        return;
+    }
+    sprintf(buf, "binary%d.bin", GET16(tag->data));
+    if(numextracts==1) {
+	filename = destfilename;
+	if(!strcmp(filename,"output.swf")) {
+	    sprintf(buf, "output.bin");
+	    filename = buf;
+	}
+    }
+    fout = fopen(filename, "wb");
+    fwrite(tag->data+dx,len-dx,1,fout);
+    fclose(fout);
+}
+
 int main (int argc,char ** argv)
 { 
     TAG*tag;
@@ -1036,7 +1074,7 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     if(!extractframes && !extractids && ! extractname && !extractjpegids && !extractpngids
-	&& !extractmp3 && !extractsoundids && !extractfontids)
+	&& !extractmp3 && !extractsoundids && !extractfontids && !extractbinaryids)
 	listavailable = 1;
 
     if(!originalplaceobjects && movetozero) {
@@ -1140,6 +1178,9 @@ int main (int argc,char ** argv)
 	    }
 	    if(extractsoundids && is_in_range(id, extractsoundids)) {
 		handledefinesound(tag);
+	    }
+	    if(extractbinaryids && is_in_range(id, extractbinaryids)) {
+		handlebinary(tag);
 	    }
 #ifdef _ZLIB_INCLUDED_
 	    if(extractpngids && is_in_range(id, extractpngids)) {
