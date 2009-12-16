@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf$(A) libpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A) libocr$(A)
+all: librfxswf$(A) libgfxpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A) libocr$(A)
 
 lame_objects = lame/psymodel.$(O) lame/fft.$(O) lame/newmdct.$(O) lame/quantize.$(O) lame/takehiro.$(O) lame/reservoir.$(O) lame/quantize_pvt.$(O) lame/vbrquantize.$(O) lame/encoder.$(O) lame/id3tag.$(O) lame/version.$(O) lame/tables.$(O) lame/util.$(O) lame/bitstream.$(O) lame/set_get.$(O) lame/VbrTag.$(O) lame/lame.$(O)
 lame_in_source = @lame_in_source@
@@ -18,7 +18,7 @@ gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfx
 
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c modules/swfalignzones.c
 
-base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) 
+base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) MD5.$(O)
 gfx_objects=gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
 
 rfxswf_objects=modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O) modules/swfalignzones.$(O)
@@ -96,6 +96,7 @@ MD5.$(O): MD5.c MD5.h
 	$(C) MD5.c -o $@
 log.$(O): log.c log.h
 	$(C) log.c -o $@
+
 rfxswf.$(O): rfxswf.c rfxswf.h drawer.h bitio.h log.h MD5.h $(top_builddir)/config.h
 	$(C) rfxswf.c -o $@
 
@@ -157,12 +158,12 @@ libgfx$(A): $(gfx_objects) $(gfxpoly_objects) Makefile
 	$(AR) r libgfx$(A) $(gfx_objects) $(gfxpoly_objects)
 	$(RANLIB) libgfx$(A)
 
-librfxswf$(A): Makefile $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_in_source) $(h263_objects) $(as12compiler_in_source) $(as3compiler_objects) Makefile
-	$(AR) r librfxswf$(A) $(rfxswf_objects) rfxswf.$(O) drawer.$(O) MD5.$(O) $(lame_in_source) $(h263_objects) $(as12compiler_in_source) $(as3compiler_objects)
+librfxswf$(A): Makefile $(rfxswf_objects) rfxswf.$(O) drawer.$(O) $(lame_in_source) $(h263_objects) $(as12compiler_in_source) $(as3compiler_objects) Makefile
+	$(AR) r librfxswf$(A) $(rfxswf_objects) rfxswf.$(O) drawer.$(O) $(lame_in_source) $(h263_objects) $(as12compiler_in_source) $(as3compiler_objects)
 	$(RANLIB) librfxswf$(A)
 
-libpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
-	cd pdf;$(MAKE) libpdf
+libgfxpdf$(A): pdf/GFXOutputDev.cc pdf/GFXOutputDev.h pdf/pdf.cc pdf/pdf.h
+	cd pdf;$(MAKE) libgfxpdf
 
 tests: png.test.c
 	$(L) png.test.c -o png.test $(LIBS)

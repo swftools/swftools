@@ -56,7 +56,7 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 ../lib/librfxswf$(A): ../lib/modules/swfrender.c ../lib/modules/swfshape.c ../lib/modules/swftext.c ../lib/modules/swffont.c ../lib/modules/swfbits.c ../lib/rfxswf.c ../lib/devices/swf.c ../lib/modules/swfalignzones.c
 	cd ../lib;$(MAKE) librfxswf$(A);cd -
 
-../lib/libpdf$(A): ../lib/pdf/GFXOutputDev.cc
+../lib/libgfxpdf$(A): ../lib/pdf/GFXOutputDev.cc
 	cd ../lib;$(MAKE) libpdf$(A);cd -
 
 ../lib/libgfx$(A): ../lib/devices/*.c

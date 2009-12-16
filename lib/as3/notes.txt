@@ -66,7 +66,8 @@
 
 code needed for this:
 
-    [calculate Math.random(100), gives us two stack values]
+    push a
+    calculate Math.random(100), push
     dup2 [a.k.a. setlocal tmp, dup , getlocal tmp, swap, getlocal tmp]
     getproperty (consumes two stack values)
     [code for adding 10]

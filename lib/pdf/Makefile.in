@@ -4,11 +4,11 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: ../libpdf$(A) pdf2swf$(E)
+all: ../libgfxpdf$(A) pdf2swf$(E)
 
-libpdf: ../libpdf$(A)
+libgfxpdf: ../libgfxpdf$(A)
 
-libpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O)
+libgfxpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O)
 
 xpdf_in_source = @xpdf_in_source@
 
@@ -149,9 +149,9 @@ xpdf/%.$(O): xpdf/%.cc
 	$(CC) -I ./ -I xpdf $< -o $@
 
 
-../libpdf$(A): $(XPDFOK) $(libpdf_objects) $(xpdf_in_source) $(splash_in_source)
-	$(AR) r ../libpdf$(A) $(libpdf_objects) $(xpdf_in_source) $(splash_in_source)
-	$(RANLIB) ../libpdf$(A)
+../libgfxpdf$(A): $(XPDFOK) $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source)
+	$(AR) r ../libgfxpdf$(A) $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source)
+	$(RANLIB) ../libgfxpdf$(A)
 
 xpdfapp_sources=xpdf/XPDFApp.cc xpdf/XPDFCore.cc xpdf/XPDFTree.cc xpdf/XPDFViewer.cc xpdf/PDFCore.cc xpdf/TextOutputDev.cc xpdf/xpdf.cc xpdf/CoreOutputDev.cc xpdf/UnicodeTypeTable.cc xpdf/PSOutputDev.cc
 splash_sources=xpdf/Splash.cc xpdf/SplashBitmap.cc xpdf/SplashClip.cc xpdf/SplashFTFont.cc xpdf/SplashFTFontEngine.cc xpdf/SplashFTFontFile.cc xpdf/SplashFont.cc xpdf/SplashFontEngine.cc xpdf/SplashFontFile.cc xpdf/SplashFontFileID.cc xpdf/SplashOutputDev.cc xpdf/SplashPath.cc xpdf/SplashPattern.cc xpdf/SplashScreen.cc xpdf/SplashState.cc xpdf/SplashT1Font.cc xpdf/SplashT1FontEngine.cc xpdf/SplashT1FontFile.cc xpdf/SplashXPath.cc xpdf/SplashXPathScanner.cc
@@ -171,10 +171,10 @@ pdfinfo$(E): $(XPDFOK) xpdf/pdfinfo.cc $(xpdf_objects)
 gfx_objects = ../libgfxswf$(A) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
 gfx_objects2 = $(gfx_objects) ../devices/lrf.$(O) ../libocr$(A)
 
-pdf2swf$(E): $(XPDFOK) ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
-	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
-gfx2gfx$(E): $(XPDFOK) ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2)
-	$(LL) $(CPPFLAGS) -g ../../src/gfx2gfx.c $(libpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2) -o gfx2gfx$(E) $(LIBS)
+pdf2swf$(E): $(XPDFOK) ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
+	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
+gfx2gfx$(E): $(XPDFOK) ../../src/gfx2gfx.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2)
+	$(LL) $(CPPFLAGS) -g ../../src/gfx2gfx.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2) -o gfx2gfx$(E) $(LIBS)
 
 install:
 	$(mkinstalldirs) $(bindir)
