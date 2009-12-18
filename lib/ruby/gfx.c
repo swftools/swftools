@@ -1,6 +1,7 @@
 #include <ruby.h>
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
+#include "../gfxtools.h"
 #include "../devices/pdf.h"
 #include "../readers/swf.h"
 #include "../readers/image.h"
@@ -11,7 +12,7 @@
 #define RUBY_GFX_VERSION  "0.9.0"
 
 static VALUE GFX;
-static VALUE Bitmap, Document, DocumentPage, PDFClass, SWFClass, ImageClass, Device;
+static VALUE Glyph, Bitmap, Document, DocumentPage, PDFClass, SWFClass, ImageClass, Device;
 static ID id_doc;
 
 typedef struct doc_internal {
@@ -27,6 +28,11 @@ typedef struct page_internal {
 typedef struct image_internal {
     gfximage_t*image;
 } image_internal_t;
+
+typedef struct glyph_internal {
+    gfxfont_t*font;
+    int nr;
+} glyph_internal_t;
 
 static gfxsource_t* pdfdriver = 0;
 static gfxsource_t* imagedriver = 0;
@@ -195,7 +201,49 @@ void invalidate_image(VALUE v)
     image->image = 0;
 }
 
+// ------------------------ glyphs ------------------------------------------
+
+static VALUE convert_line(gfxline_t*line);
+
+#define Get_Glyph(glyph,cls) glyph_internal_t*glyph=0;Data_Get_Struct(cls, glyph_internal_t, glyph);
+
+static void glyph_free(glyph_internal_t*glyph)
+{
+    free(glyph);
+}
+
+static VALUE glyph_allocate(VALUE cls)
+{
+    glyph_internal_t*glyph = 0;
+    VALUE v = Data_Make_Struct(cls, glyph_internal_t, 0, glyph_free, glyph);
+    memset(glyph, 0, sizeof(glyph_internal_t));
+    return v;
+}
+
+static VALUE glyph_polygon(VALUE cls)
+{
+    Get_Glyph(glyph,cls);
+    return convert_line(glyph->font->glyphs[glyph->nr].line);
+}
+
+static VALUE glyph_advance(VALUE cls)
+{
+    Get_Glyph(glyph,cls);
+    return rb_float_new(glyph->font->glyphs[glyph->nr].advance);
+}
+
+static VALUE glyph_unicode(VALUE cls)
+{
+    Get_Glyph(glyph,cls);
+    return INT2FIX(glyph->font->glyphs[glyph->nr].unicode);
+}
+
 // ------------------------ gfx device --------------------------------------
+
+typedef struct device_internal {
+    gfxfontlist_t*fontlist;
+    VALUE v;
+} device_internal_t;
 
 static ID id_setparameter = 0;
 static ID id_startpage = 0;
@@ -259,30 +307,52 @@ VALUE convert_matrix(gfxmatrix_t*matrix)
 	    rb_ary_new3(2, rb_float_new(matrix->m10), rb_float_new(matrix->m11)),
 	    rb_ary_new3(2, rb_float_new(matrix->tx), rb_float_new(matrix->ty)));
 }
+VALUE convert_font(device_internal_t*i, gfxfont_t*font)
+{
+    VALUE v = (VALUE)gfxfontlist_getuserdata(i->fontlist, font->id);
+    if(v) return v;
+
+    VALUE*a = (VALUE*)malloc(sizeof(VALUE)*font->num_glyphs);
+    int t;
+    for(t=0;t<font->num_glyphs;t++) {
+	a[t] = glyph_allocate(Glyph);
+	Get_Glyph(g, a[t]);
+	g->font = font;
+	g->nr = t;
+    }
+    v = rb_ary_new4(font->num_glyphs, a);
+    //rb_define_method(v, "id", font_get_id, 0);
+
+    i->fontlist = gfxfontlist_addfont2(i->fontlist, font, (void*)v);
+    return v;
+}
+#define HEAD \
+    device_internal_t*i = (device_internal_t*)dev->internal; \
+    VALUE v = i->v;
 int rb_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     VALUE ret = forward(v,id_setparameter,2,rb_tainted_str_new2(key),rb_tainted_str_new2(value));
     return 0;
 }
 void rb_startpage(gfxdevice_t*dev, int width, int height)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     VALUE ret = forward(v,id_startpage,2,INT2FIX(width),INT2FIX(height));
 }
 void rb_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     VALUE ret = forward(v,id_startclip,1,convert_line(line));
 }
 void rb_endclip(gfxdevice_t*dev)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     VALUE ret = forward(v,id_endclip,0);
 }
 void rb_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     
     ID cap = 0;
     if(cap_style == gfx_capButt) cap = id_butt;
@@ -298,45 +368,45 @@ void rb_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*col
 }
 void rb_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     forward(v, id_fill, 2, convert_line(line), convert_color(color));
 }
 void rb_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     VALUE image = convert_image(img);
     forward(v, id_fillbitmap, 4, convert_line(line), image, convert_matrix(matrix), Qnil);
     invalidate_image(image);
 }
 void rb_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     ID typeid = (type == gfxgradient_linear)? id_linear : id_radial;
     forward(v, id_fillgradient, 4, convert_line(line), convert_gradient(gradient), ID2SYM(typeid), convert_matrix(matrix));
 }
 void rb_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
-    //forward(v, id_addfont, 1, convert_font(font));
+    HEAD
+    forward(v, id_addfont, 1, convert_font(i, font));
 }
 void rb_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
-    //forward(v, id_drawchar, 1, convert_font(font));
+    HEAD
+    forward(v, id_drawchar, 4, convert_font(i, font), INT2FIX(glyphnr), convert_color(color), convert_matrix(matrix));
 }
 void rb_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     forward(v, id_drawlink, convert_line(line), rb_tainted_str_new2(action));
 }
 void rb_endpage(gfxdevice_t*dev)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     forward(v, id_endpage, 0);
 }
 gfxresult_t* rb_finish(gfxdevice_t*dev)
 {
-    VALUE v = (VALUE)(ptroff_t)dev->internal;
+    HEAD
     VALUE ret = forward(v, id_endpage, 0);
     gfxresult_t*r = (gfxresult_t*)rfx_calloc(sizeof(gfxresult_t));
     r->internal = (void*)(ptroff_t)ret;
@@ -349,7 +419,11 @@ static VALUE page_render(VALUE cls, VALUE device)
     Get_Page(page,cls)
 
     gfxdevice_t dev;
-    dev.internal = (void*)(ptroff_t)device;
+    device_internal_t i;
+    i.fontlist = gfxfontlist_create();
+    i.v = device;
+
+    dev.internal = &i;
     dev.setparameter = rb_setparameter;
     dev.startpage = rb_startpage;
     dev.startclip = rb_startclip;
@@ -396,6 +470,12 @@ void Init_gfx()
     Bitmap = rb_define_class_under(GFX, "Bitmap", rb_cObject);
     rb_define_alloc_func(Bitmap, image_allocate);
     rb_define_method(Bitmap, "save_jpeg", image_save_jpeg, 2);
+    
+    Glyph = rb_define_class_under(GFX, "Glyph", rb_cObject);
+    rb_define_alloc_func(Glyph, glyph_allocate);
+    rb_define_method(Glyph, "polygon", glyph_polygon, 0);
+    rb_define_method(Glyph, "unicode", glyph_unicode, 0);
+    rb_define_method(Glyph, "advance", glyph_advance, 0);
     
     Device = rb_define_class_under(GFX, "Device", rb_cObject);
     rb_define_method(Device, "startpage", noop, -1);

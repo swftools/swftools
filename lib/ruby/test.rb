@@ -31,6 +31,8 @@ class TestRender < GFX::Device
         puts "fillgradient(#{line}, #{gradient}, #{type}, #{gradcoord2devcoord})"
     end
     def addfont(font)
+        p @lastfont === font
+        @lastfont = font
         puts "addfont(#{font})"
     end
     def drawchar(font, glyph, color, matrix)
