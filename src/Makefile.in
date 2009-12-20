@@ -57,7 +57,7 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 	cd ../lib;$(MAKE) librfxswf$(A);cd -
 
 ../lib/libgfxpdf$(A): ../lib/pdf/GFXOutputDev.cc
-	cd ../lib;$(MAKE) libpdf$(A);cd -
+	cd ../lib;$(MAKE) libgfxpdf$(A);cd -
 
 ../lib/libgfx$(A): ../lib/devices/*.c
 	cd ../lib;$(MAKE) libgfx$(A);cd -
@@ -112,7 +112,7 @@ swfrender$(E): swfrender.$(O) ../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/l
 	$(L) swfrender.$(O) -o $@ ../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libgfx$(A) ../lib/libbase$(A) $(LIBS) 
 	$(STRIP) $@
 
-PDF2SWF_OBJ=../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libpdf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
+PDF2SWF_OBJ=../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libgfxpdf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
 OCR_OBJ=../lib/libocr$(A)
 
 pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)

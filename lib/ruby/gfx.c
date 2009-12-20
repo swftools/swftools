@@ -28,18 +28,20 @@ typedef struct page_internal {
 } page_internal_t;
 
 typedef struct image_internal {
+    doc_internal_t*doc;
     gfximage_t*image;
 } image_internal_t;
 
-typedef struct glyph_internal {
-    gfxfont_t*font;
-    int nr;
-} glyph_internal_t;
-
 typedef struct font_internal {
+    VALUE self;
     VALUE glyph_array;
     gfxfont_t*font;
 } font_internal_t;
+
+typedef struct glyph_internal {
+    font_internal_t*font;
+    int nr;
+} glyph_internal_t;
 
 static gfxsource_t* pdfdriver = 0;
 static gfxsource_t* imagedriver = 0;
@@ -177,10 +179,14 @@ static void image_free(image_internal_t*image)
 {
     free(image);
 }
+static void image_mark(image_internal_t*image)
+{
+    rb_gc_mark(image->doc->self);
+}
 static VALUE image_allocate(VALUE cls)
 {
     image_internal_t*image = 0;
-    VALUE v = Data_Make_Struct(cls, image_internal_t, 0, image_free, image);
+    VALUE v = Data_Make_Struct(cls, image_internal_t, image_mark, image_free, image);
     memset(image, 0, sizeof(image_internal_t));
     return v;
 }
@@ -208,11 +214,12 @@ static VALUE image_save_jpeg(VALUE cls, VALUE _filename, VALUE quality)
     jpeg_save(image->image->data, image->image->width, image->image->height, FIX2INT(quality), filename);
     return cls;
 }
-VALUE convert_image(gfximage_t*_image)
+VALUE convert_image(doc_internal_t*doc,gfximage_t*_image)
 {
     VALUE v = image_allocate(Bitmap);
     Get_Image(image,v)
     image->image = _image;
+    image->doc = doc;
     return v;
 }
 void invalidate_image(VALUE v)
@@ -232,10 +239,15 @@ static void glyph_free(glyph_internal_t*glyph)
     free(glyph);
 }
 
+static void glyph_mark(glyph_internal_t*glyph)
+{
+    rb_gc_mark(glyph->font->self);
+}
+
 static VALUE glyph_allocate(VALUE cls)
 {
     glyph_internal_t*glyph = 0;
-    VALUE v = Data_Make_Struct(cls, glyph_internal_t, 0, glyph_free, glyph);
+    VALUE v = Data_Make_Struct(cls, glyph_internal_t, glyph_mark, glyph_free, glyph);
     memset(glyph, 0, sizeof(glyph_internal_t));
     return v;
 }
@@ -243,19 +255,19 @@ static VALUE glyph_allocate(VALUE cls)
 static VALUE glyph_polygon(VALUE cls)
 {
     Get_Glyph(glyph,cls);
-    return convert_line(glyph->font->glyphs[glyph->nr].line);
+    return convert_line(glyph->font->font->glyphs[glyph->nr].line);
 }
 
 static VALUE glyph_advance(VALUE cls)
 {
     Get_Glyph(glyph,cls);
-    return rb_float_new(glyph->font->glyphs[glyph->nr].advance);
+    return rb_float_new(glyph->font->font->glyphs[glyph->nr].advance);
 }
 
 static VALUE glyph_unicode(VALUE cls)
 {
     Get_Glyph(glyph,cls);
-    return INT2FIX(glyph->font->glyphs[glyph->nr].unicode);
+    return INT2FIX(glyph->font->font->glyphs[glyph->nr].unicode);
 }
 
 // ------------------------ font --------------------------------------------
@@ -277,6 +289,7 @@ static VALUE font_allocate(VALUE cls)
     font_internal_t*font = 0;
     VALUE v = Data_Make_Struct(cls, font_internal_t, font_mark, font_free, font);
     memset(font, 0, sizeof(font_internal_t));
+    font->self = v;
     return v;
 }
 
@@ -334,13 +347,12 @@ VALUE convert_line(gfxline_t*line)
     gfxline_t*l = line;
     while(l) {l=l->next;len++;}
 
-    VALUE array = rb_ary_new2(len);
-    rb_gc_register_address(&array);
+    volatile VALUE array = rb_ary_new2(len);
 
     int pos = 0;
     l = line;
     while(l) {
-	VALUE e;
+	volatile VALUE e;
 	if(l->type == gfx_moveTo) {
 	    e = rb_ary_new3(3, ID2SYM(id_move), Qfalse, Qfalse);
 	    rb_ary_store(array, pos, e);
@@ -362,7 +374,6 @@ VALUE convert_line(gfxline_t*line)
 	pos++;
 	l=l->next;
     }
-    rb_gc_unregister_address(&array);
     return array;
 }
 VALUE convert_color(gfxcolor_t*color)
@@ -371,9 +382,8 @@ VALUE convert_color(gfxcolor_t*color)
 }
 VALUE convert_matrix(gfxmatrix_t*matrix)
 {
-    VALUE array = rb_ary_new2(3);
-    rb_gc_register_address(&array);
-    VALUE a = rb_ary_new2(2);
+    volatile VALUE array = rb_ary_new2(3);
+    volatile VALUE a = rb_ary_new2(2);
     rb_ary_store(array, 0, a);
     rb_ary_store(a, 0, rb_float_new(matrix->m00));
     rb_ary_store(a, 1, rb_float_new(matrix->m01));
@@ -385,29 +395,31 @@ VALUE convert_matrix(gfxmatrix_t*matrix)
     rb_ary_store(array, 2, a);
     rb_ary_store(a, 0, rb_float_new(matrix->tx));
     rb_ary_store(a, 1, rb_float_new(matrix->ty));
-    rb_gc_unregister_address(&array);
     return array;
 }
-VALUE convert_font(device_internal_t*i, gfxfont_t*font)
+static VALUE font_is_cached(device_internal_t*i, gfxfont_t*font)
 {
-    VALUE v = (VALUE)gfxfontlist_getuserdata(i->doc->fontlist, font->id);
-    if(v) return v;
+    return (VALUE)gfxfontlist_getuserdata(i->doc->fontlist, font->id);
+}
+static void cache_font(device_internal_t*i, gfxfont_t*font, VALUE v)
+{
+    i->doc->fontlist = gfxfontlist_addfont2(i->doc->fontlist, font, (void*)v);
+}
+static VALUE convert_font(gfxfont_t*font)
+{
+    volatile VALUE v2 = font_allocate(Font);
+    Get_Font(f, v2);
+    f->font = font;
+    f->glyph_array = rb_ary_new2(font->num_glyphs);
 
-    VALUE*a = (VALUE*)malloc(sizeof(VALUE)*font->num_glyphs);
     int t;
     for(t=0;t<font->num_glyphs;t++) {
-	a[t] = glyph_allocate(Glyph);
-	Get_Glyph(g, a[t]);
-	g->font = font;
+	volatile VALUE a = glyph_allocate(Glyph);
+	rb_ary_store(f->glyph_array, t, a);
+	Get_Glyph(g, a);
+	g->font = f;
 	g->nr = t;
     }
-    VALUE v2 = font_allocate(Font);
-    Get_Font(f, v2);
-
-    f->font = font;
-    f->glyph_array = rb_ary_new4(font->num_glyphs, a);
-
-    i->doc->fontlist = gfxfontlist_addfont2(i->doc->fontlist, font, (void*)v2);
     return v2;
 }
 #define HEAD \
@@ -416,7 +428,9 @@ VALUE convert_font(device_internal_t*i, gfxfont_t*font)
 int rb_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     HEAD
-    VALUE ret = forward(v,id_setparameter,2,rb_tainted_str_new2(key),rb_tainted_str_new2(value));
+    volatile VALUE v_key = rb_tainted_str_new2(key);
+    volatile VALUE v_value = rb_tainted_str_new2(value);
+    VALUE ret = forward(v,id_setparameter,2,v_key,v_value);
     return 0;
 }
 void rb_startpage(gfxdevice_t*dev, int width, int height)
@@ -427,7 +441,8 @@ void rb_startpage(gfxdevice_t*dev, int width, int height)
 void rb_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     HEAD
-    VALUE ret = forward(v,id_startclip,1,convert_line(line));
+    volatile VALUE v_line = convert_line(line);
+    VALUE ret = forward(v,id_startclip,1,v_line);
 }
 void rb_endclip(gfxdevice_t*dev)
 {
@@ -448,49 +463,27 @@ void rb_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*col
     else if(joint_style == gfx_joinMiter) joint = id_miter;
     else if(joint_style == gfx_joinBevel) joint = id_bevel;
 
-    VALUE v_line = convert_line(line);
-    rb_gc_register_address(&v_line);
-    VALUE v_width = rb_float_new(width);
-    rb_gc_register_address(&v_width);
-    VALUE v_color = convert_color(color);
-    rb_gc_register_address(&v_color);
-    VALUE v_miter = rb_float_new(miterLimit);
-    rb_gc_register_address(&v_miter);
-
+    volatile VALUE v_line = convert_line(line);
+    volatile VALUE v_width = rb_float_new(width);
+    volatile VALUE v_color = convert_color(color);
+    volatile VALUE v_miter = rb_float_new(miterLimit);
     forward(v, id_stroke, 6, v_line, v_width, v_color, ID2SYM(cap), ID2SYM(joint), v_miter);
-
-    rb_gc_unregister_address(&v_miter);
-    rb_gc_unregister_address(&v_color);
-    rb_gc_unregister_address(&v_width);
-    rb_gc_unregister_address(&v_line);
 }
 void rb_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     HEAD
     
-    VALUE v_line = convert_line(line);
-    rb_gc_register_address(&v_line);
-    VALUE v_color = convert_color(color);
-    rb_gc_register_address(&v_color);
-
+    volatile VALUE v_line = convert_line(line);
+    volatile VALUE v_color = convert_color(color);
     forward(v, id_fill, 2, v_line, v_color);
-    
-    rb_gc_unregister_address(&v_color);
-    rb_gc_unregister_address(&v_line);
 }
 void rb_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
 {
     HEAD
-    VALUE v_image = convert_image(img);
-    rb_gc_register_address(&v_image);
-    VALUE v_line = convert_line(line);
-    rb_gc_register_address(&v_line);
-    VALUE v_matrix = convert_matrix(matrix);
-    rb_gc_register_address(&v_matrix);
+    volatile VALUE v_image = convert_image(i->doc, img);
+    volatile VALUE v_line = convert_line(line);
+    volatile VALUE v_matrix = convert_matrix(matrix);
     forward(v, id_fillbitmap, 4, v_line, v_image, v_matrix, Qnil);
-    rb_gc_unregister_address(&v_matrix);
-    rb_gc_unregister_address(&v_line);
-    rb_gc_unregister_address(&v_image);
     invalidate_image(v_image);
 }
 void rb_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
@@ -498,31 +491,36 @@ void rb_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gf
     HEAD
     ID typeid = (type == gfxgradient_linear)? id_linear : id_radial;
     
-    VALUE v_line = convert_line(line);
-    rb_gc_register_address(&v_line);
-    VALUE v_matrix = convert_matrix(matrix);
-    rb_gc_register_address(&v_matrix);
-    VALUE v_gradient = convert_gradient(gradient);
-    rb_gc_register_address(&v_gradient);
-    forward(v, id_fillgradient, 4, v_line, v_gradient, ID2SYM(typeid), convert_matrix(matrix));
-    rb_gc_unregister_address(&v_gradient);
-    rb_gc_unregister_address(&v_matrix);
-    rb_gc_unregister_address(&v_line);
+    volatile VALUE v_line = convert_line(line);
+    volatile VALUE v_matrix = convert_matrix(matrix);
+    volatile VALUE v_gradient = convert_gradient(gradient);
+    forward(v, id_fillgradient, 4, v_line, v_gradient, ID2SYM(typeid), v_matrix);
 }
 void rb_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     HEAD
-    forward(v, id_addfont, 1, convert_font(i, font));
+
+    volatile VALUE f = font_is_cached(i, font);
+    if(!f) {f=convert_font(font);cache_font(i,font,v);}
+
+    forward(v, id_addfont, 1, f);
 }
 void rb_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     HEAD
-    forward(v, id_drawchar, 4, convert_font(i, font), INT2FIX(glyphnr), convert_color(color), convert_matrix(matrix));
+    volatile VALUE f = font_is_cached(i, font);
+    if(!f) {f=convert_font(font);cache_font(i,font,v);}
+
+    volatile VALUE v_color = convert_color(color);
+    volatile VALUE v_matrix = convert_matrix(matrix);
+    forward(v, id_drawchar, 4, f, INT2FIX(glyphnr), v_color, v_matrix);
 }
 void rb_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 {
     HEAD
-    forward(v, id_drawlink, convert_line(line), rb_tainted_str_new2(action));
+    volatile VALUE v_line = convert_line(line);
+    volatile VALUE v_action = rb_tainted_str_new2(action);
+    forward(v, id_drawlink, v_line, v_action);
 }
 void rb_endpage(gfxdevice_t*dev)
 {
