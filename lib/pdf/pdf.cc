@@ -22,18 +22,6 @@ static char* global_page_range = 0;
 
 static int globalparams_count=0;
 
-typedef struct _parameter
-{
-    struct _parameter *next;
-    const char*name;
-    const char*value;
-} parameter_t;
-typedef struct _parameterlist
-{
-    parameter_t* device_config;
-    parameter_t* device_config_next;
-} parameterlist_t;
-
 typedef struct _pdf_page_info
 {
     int xMin, yMin, xMax, yMax;
@@ -49,7 +37,7 @@ typedef struct _pdf_doc_internal
     char config_bitmap_optimizing;
     char config_full_bitmap_optimizing;
     char config_print;
-    parameterlist_t parameters;
+    gfxparams_t* parameters;
 
     int protect;
     int nocopy;
@@ -82,7 +70,7 @@ typedef struct _dev_output_internal
 
 typedef struct _gfxsource_internal
 {
-    parameterlist_t parameters;
+    gfxparams_t* parameters;
 } gfxsource_internal_t;
 
 
@@ -94,34 +82,6 @@ static const char* dirseparator()
     return "/";
 #endif
 }
-
-static void storeDeviceParameter(parameterlist_t*i, const char*name, const char*value)
-{
-    parameter_t*o = i->device_config;
-    while(o) {
-        if(!strcmp(name, o->name)) {
-            /* overwrite old value */
-            free((void*)o->value);
-            o->value = strdup(value);
-            return;
-        }
-        o = o->next;
-    }
-    parameter_t*p = new parameter_t();
-    p->name = strdup(name);
-    p->value = strdup(value);
-    p->next = 0;
-
-    if(i->device_config_next) {
-	i->device_config_next->next = p;
-	i->device_config_next = p;
-    } else {
-	i->device_config = p;
-	i->device_config_next = p;
-    }
-}
-
-
 
 void pdfpage_destroy(gfxpage_t*pdf_page)
 {
@@ -150,14 +110,14 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 	outputDev = (CommonOutputDev*)d;
     }
     /* pass global parameters to PDF driver*/
-    parameter_t*p = i->parameters.device_config;
+    gfxparam_t*p = i->parameters->params;
     while(p) {
-	outputDev->setParameter(p->name, p->value);
+	outputDev->setParameter(p->key, p->value);
 	p = p->next;
     }
-    p = pi->parameters.device_config;
+    p = pi->parameters->params;
     while(p) {
-	outputDev->setParameter(p->name, p->value);
+	outputDev->setParameter(p->key, p->value);
 	p = p->next;
     }
 
@@ -276,7 +236,7 @@ static void add_page_to_map(gfxdocument_t*gfx, int pdfpage, int outputpage)
 	i->pagemap_pos = pdfpage;
 }
 
-void pdf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
+void pdf_doc_setparameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
     if(!strcmp(name, "pagemap")) {
@@ -290,7 +250,7 @@ void pdf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
     } else if(!strcmp(name, "asprint")) {
         i->config_print = 1;
     } else {
-        storeDeviceParameter(&i->parameters, name, value);
+        gfxparams_store(i->parameters, name, value);
     }
 }
 
@@ -399,9 +359,11 @@ extern int config_addspace;
 extern int config_fontquality;
 extern int config_bigchar;
 
-static void pdf_set_parameter(gfxsource_t*src, const char*name, const char*value)
+static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 {
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
+        
+    gfxparams_store(i->parameters, name, value);
 
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
     if(!strncmp(name, "fontdir", strlen("fontdir"))) {
@@ -454,6 +416,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)malloc(sizeof(pdf_doc_internal_t));
     memset(i, 0, sizeof(pdf_doc_internal_t));
     i->parent = src;
+    i->parameters = gfxparams_new();
     pdf_doc->internal = i;
     char*userPassword=0;
     
@@ -530,7 +493,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 
     pdf_doc->get = 0;
     pdf_doc->destroy = pdf_doc_destroy;
-    pdf_doc->set_parameter = pdf_doc_set_parameter;
+    pdf_doc->setparameter = pdf_doc_setparameter;
     pdf_doc->getinfo = pdf_doc_getinfo;
     pdf_doc->getpage = pdf_doc_getpage;
     pdf_doc->prepare = pdf_doc_prepare;
@@ -544,16 +507,9 @@ void pdf_destroy(gfxsource_t*src)
     if(!src->internal)
 	return;
     gfxsource_internal_t*i = (gfxsource_internal_t*)src->internal;
-    
-    parameter_t*p = i->parameters.device_config;
-    while(p) {
-	parameter_t*next = p->next;
-	if(p->name) free((void*)p->name);p->name = 0;
-	if(p->value) free((void*)p->value);p->value =0;
-	p->next = 0;delete p;
-	p = next;
-    }
-    i->parameters.device_config=i->parameters.device_config_next=0;
+   
+    gfxparams_free(i->parameters);
+    i->parameters=0;
     
     free(src->internal);src->internal=0;
 
@@ -565,11 +521,12 @@ gfxsource_t*gfxsource_pdf_create()
 {
     gfxsource_t*src = (gfxsource_t*)malloc(sizeof(gfxsource_t));
     memset(src, 0, sizeof(gfxsource_t));
-    src->set_parameter = pdf_set_parameter;
+    src->setparameter = pdf_setparameter;
     src->open = pdf_open;
     src->destroy = pdf_destroy;
-    src->internal = malloc(sizeof(gfxsource_internal_t));
-    memset(src->internal, 0, sizeof(gfxsource_internal_t));
+    gfxsource_internal_t*i = (gfxsource_internal_t*)rfx_calloc(sizeof(gfxsource_internal_t));
+    src->internal = (void*)i;
+    i->parameters = gfxparams_new();
 
     if(!globalParams) {
         globalParams = new GFXGlobalParams();

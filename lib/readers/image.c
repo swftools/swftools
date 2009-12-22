@@ -87,7 +87,7 @@ void image_doc_destroy(gfxdocument_t*gfx)
     free(gfx);gfx=0;
 }
 
-void image_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
+void image_doc_setparameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     image_doc_internal_t*i= (image_doc_internal_t*)gfx->internal;
 }
@@ -113,7 +113,7 @@ gfxpage_t* image_doc_getpage(gfxdocument_t*doc, int page)
     return image_page;
 }
 
-static void image_set_parameter(gfxsource_t*src, const char*name, const char*value)
+static void image_setparameter(gfxsource_t*src, const char*name, const char*value)
 {
     msg("<verbose> (gfxsource_image) setting parameter %s to \"%s\"", name, value);
 }
@@ -143,7 +143,7 @@ static gfxdocument_t*image_open(gfxsource_t*src, const char*filename)
     image_doc->internal = i;
     image_doc->get = 0;
     image_doc->destroy = image_doc_destroy;
-    image_doc->set_parameter = image_doc_set_parameter;
+    image_doc->setparameter = image_doc_setparameter;
     image_doc->getpage = image_doc_getpage;
 
     return image_doc;
@@ -153,7 +153,7 @@ gfxsource_t*gfxsource_image_create()
 {
     gfxsource_t*src = (gfxsource_t*)malloc(sizeof(gfxsource_t));
     memset(src, 0, sizeof(gfxsource_t));
-    src->set_parameter = image_set_parameter;
+    src->setparameter = image_setparameter;
     src->open = image_open;
     return src;
 }

@@ -95,9 +95,9 @@ int args_callback_option(char*name,char*val) {
 	if(c && *c && c[1])  {
 	    *c = 0;
 	    c++;
-	    driver->set_parameter(driver, s,c);
+	    driver->setparameter(driver, s,c);
 	} else {
-	    driver->set_parameter(driver, s,"1");
+	    driver->setparameter(driver, s,"1");
         }
         free(s);
 	return 1;
@@ -212,7 +212,7 @@ int main(int argn, char *argv[])
 
     is_in_range(0x7fffffff, pagerange);
     if(pagerange)
-	driver->set_parameter(driver, "pages", pagerange);
+	driver->setparameter(driver, "pages", pagerange);
 
     if(!filename) {
 	args_callback_usage(argv[0]);
@@ -220,8 +220,8 @@ int main(int argn, char *argv[])
     }
 
     gfxdocument_t* doc = driver->open(driver, filename);
-    //doc->set_parameter(doc, "drawonlyshapes", "1");
-    doc->set_parameter(doc, "disable_polygon_conversion", "1");
+    //doc->setparameter(doc, "drawonlyshapes", "1");
+    doc->setparameter(doc, "disable_polygon_conversion", "1");
 
     if(!doc) {
         msg("<error> Couldn't open %s", filename);

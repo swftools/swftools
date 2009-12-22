@@ -266,7 +266,7 @@ int args_callback_option(char*name,char*val) {
 	} else if(!strcmp(s,"help")) {
 	    printf("PDF Parameters:\n");
 	    gfxsource_t*pdf = gfxsource_pdf_create();
-	    pdf->set_parameter(pdf, "help", "");
+	    pdf->setparameter(pdf, "help", "");
 	    gfxdevice_t swf;
 	    gfxdevice_swf_init(&swf);
 	    printf("SWF Parameters:\n");
@@ -630,7 +630,7 @@ int main(int argn, char *argv[])
     /* pass global parameters to PDF driver*/
     parameter_t*p = device_config;
     while(p) {
-	driver->set_parameter(driver, p->name, p->value);
+	driver->setparameter(driver, p->name, p->value);
 	p = p->next;
     }
 
@@ -671,11 +671,11 @@ int main(int argn, char *argv[])
     }
     
     if(pagerange)
-	driver->set_parameter(driver, "pages", pagerange);
+	driver->setparameter(driver, "pages", pagerange);
 
     /* add fonts */
     for(t=0;t<fontpathpos;t++) {
-	driver->set_parameter(driver, "fontdir", fontpaths[t]);
+	driver->setparameter(driver, "fontdir", fontpaths[t]);
     }
 
     if(info_only) {
@@ -713,7 +713,7 @@ int main(int argn, char *argv[])
     /* pass global parameters document */
     p = device_config;
     while(p) {
-	pdf->set_parameter(pdf, p->name, p->value);
+	pdf->setparameter(pdf, p->name, p->value);
 	p = p->next;
     }
 
@@ -732,7 +732,7 @@ int main(int argn, char *argv[])
 	if(is_in_range(pagenr, pagerange)) {
 	    char mapping[80];
 	    sprintf(mapping, "%d:%d", pagenr, frame);
-	    pdf->set_parameter(pdf, "pagemap", mapping);
+	    pdf->setparameter(pdf, "pagemap", mapping);
 	    pagenum++;
 	}
 	if(pagenum == xnup*ynup || (pagenr == pdf->num_pages && pagenum>1)) {

@@ -632,7 +632,7 @@ void swf_doc_destroy(gfxdocument_t*gfx)
     free(gfx);gfx=0;
 }
 
-void swf_doc_set_parameter(gfxdocument_t*gfx, const char*name, const char*value)
+void swf_doc_setparameter(gfxdocument_t*gfx, const char*name, const char*value)
 {
     swf_doc_internal_t*i= (swf_doc_internal_t*)gfx->internal;
 }
@@ -660,7 +660,7 @@ gfxpage_t* swf_doc_getpage(gfxdocument_t*doc, int page)
     return swf_page;
 }
 
-void swf_set_parameter(gfxsource_t*src, const char*name, const char*value)
+void swf_setparameter(gfxsource_t*src, const char*name, const char*value)
 {
     msg("<verbose> setting parameter %s to \"%s\"", name, value);
 }
@@ -705,7 +705,7 @@ gfxdocument_t*swf_open(gfxsource_t*src, const char*filename)
     swf_doc->internal = i;
     swf_doc->get = 0;
     swf_doc->destroy = swf_doc_destroy;
-    swf_doc->set_parameter = swf_doc_set_parameter;
+    swf_doc->setparameter = swf_doc_setparameter;
     swf_doc->getpage = swf_doc_getpage;
 
     return swf_doc;
@@ -722,7 +722,7 @@ gfxsource_t*gfxsource_swf_create()
 {
     gfxsource_t*src = (gfxsource_t*)malloc(sizeof(gfxsource_t));
     memset(src, 0, sizeof(gfxsource_t));
-    src->set_parameter = swf_set_parameter;
+    src->setparameter = swf_setparameter;
     src->open = swf_open;
     src->destroy = swf_destroy;
     return src;

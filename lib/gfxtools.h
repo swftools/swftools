@@ -101,6 +101,19 @@ gfxline_t*gfxline_makerectangle(double x1, double y1, double x2, double y2);
 gfxline_t*gfxline_makecircle(double x,double y,double rx, double ry);
 void gfxline_show(gfxline_t*line, FILE*fi);
 
+typedef struct _gfxparam {
+    const char*key;
+    const char*value;
+    struct _gfxparam* next;
+} gfxparam_t;
+typedef struct _gfxparams {
+    gfxparam_t*params;
+    gfxparam_t*last;
+} gfxparams_t;
+gfxparams_t* gfxparams_new();
+void gfxparams_store(gfxparams_t*params, const char*name, const char*value);
+void gfxparams_free(gfxparams_t*params);
+
 #ifdef __cplusplus
 }
 #endif

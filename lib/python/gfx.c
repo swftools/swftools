@@ -918,7 +918,7 @@ static PyObject* doc_setparameter(PyObject* _self, PyObject* args, PyObject* kwa
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &key,&value))
 	return NULL;
 
-    self->doc->set_parameter(self->doc, key, value);
+    self->doc->setparameter(self->doc, key, value);
     return PY_NONE;
 }
 
@@ -1118,7 +1118,7 @@ static PyObject* f_setparameter(PyObject* self, PyObject* args, PyObject* kwargs
     char*key=0,*value=0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ss", kwlist, &key, &value))
 	return NULL;
-    pdfdriver->set_parameter(pdfdriver,key,value);
+    pdfdriver->setparameter(pdfdriver,key,value);
     return PY_NONE;
 }
 
@@ -1158,7 +1158,7 @@ static PyObject* f_addfont(PyObject* self, PyObject* args, PyObject* kwargs)
     char*filename=0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
 	return NULL;
-    pdfdriver->set_parameter(pdfdriver,"font", filename);
+    pdfdriver->setparameter(pdfdriver,"font", filename);
     return PY_NONE;
 }
 
@@ -1174,7 +1174,7 @@ static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
     char*filename=0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
 	return NULL;
-    pdfdriver->set_parameter(pdfdriver,"fontdir", filename);
+    pdfdriver->setparameter(pdfdriver,"fontdir", filename);
     return PY_NONE;
 }
 

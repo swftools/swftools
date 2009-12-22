@@ -151,11 +151,11 @@ int main(int argn, char*argv[])
 
 	gfxsource_t*src = gfxsource_swf_create();
 	for(p=params;p;p=p->next) {
-	    src->set_parameter(src, p->name, p->value);
+	    src->setparameter(src, p->name, p->value);
 	}
 	gfxdocument_t*doc = src->open(src, filename);
 	for(p=params;p;p=p->next) {
-	    doc->set_parameter(doc, p->name, p->value);
+	    doc->setparameter(doc, p->name, p->value);
 	}
 	if(!doc) {
 	    fprintf(stderr,"Couldn't open %s\n", filename);

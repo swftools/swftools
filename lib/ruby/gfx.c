@@ -501,7 +501,7 @@ void rb_addfont(gfxdevice_t*dev, gfxfont_t*font)
     HEAD
 
     volatile VALUE f = font_is_cached(i, font);
-    if(!f) {f=convert_font(font);cache_font(i,font,v);}
+    if(!f) {f=convert_font(font);cache_font(i,font,f);}
 
     forward(v, id_addfont, 1, f);
 }
@@ -509,7 +509,7 @@ void rb_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color,
 {
     HEAD
     volatile VALUE f = font_is_cached(i, font);
-    if(!f) {f=convert_font(font);cache_font(i,font,v);}
+    if(!f) {f=convert_font(font);cache_font(i,font,f);}
 
     volatile VALUE v_color = convert_color(color);
     volatile VALUE v_matrix = convert_matrix(matrix);
@@ -561,11 +561,26 @@ static VALUE page_render(VALUE cls, VALUE device)
     dev.endpage = rb_endpage;
     dev.finish = rb_finish;
 
+    dev.startpage(&dev, page->page->width, page->page->height);
     page->page->render(page->page, &dev);
+    dev.endpage(&dev);
 
     return cls;
 }
 
+// ---------------------- global functions ----------------------------------
+
+VALUE gfx_setparameter(VALUE module, VALUE _key, VALUE _value)
+{
+    Check_Type(_key, T_STRING);
+    Check_Type(_value, T_STRING);
+    const char*key = StringValuePtr(_key);
+    const char*value = StringValuePtr(_value);
+    pdfdriver->setparameter(pdfdriver, key, value);
+    swfdriver->setparameter(swfdriver, key, value);
+    imagedriver->setparameter(imagedriver, key, value);
+    return GFX;
+}
 
 // --------------------------------------------------------------------------
 
@@ -577,6 +592,8 @@ void Init_gfx()
     imagedriver = gfxsource_image_create();
 
     GFX = rb_define_module("GFX");
+    
+    rb_define_module_function(GFX, "setparameter", gfx_setparameter, 2);
     
     DocumentPage = rb_define_class_under(GFX, "DocumentPage", rb_cObject);
     rb_define_method(DocumentPage, "width", page_width, 0);

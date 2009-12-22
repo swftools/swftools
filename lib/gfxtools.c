@@ -1152,3 +1152,46 @@ void gfximage_save_jpeg(gfximage_t*img, char*filename, int quality)
     jpeg_save(data, img->width, img->height, quality, filename);
 }
 
+gfxparams_t* gfxparams_new()
+{
+    return (gfxparams_t*)rfx_calloc(sizeof(gfxparams_t));
+}
+
+void gfxparams_store(gfxparams_t*params, const char*key, const char*value)
+{
+    gfxparam_t*o = params->params;
+    while(o) {
+        if(!strcmp(key, o->key)) {
+            /* overwrite old value */
+            free((void*)o->value);
+            o->value = strdup(value);
+            return;
+        }
+        o = o->next;
+    }
+    gfxparam_t*p = (gfxparam_t*)malloc(sizeof(gfxparam_t));
+    p->key = strdup(key);
+    p->value = strdup(value);
+    p->next = 0;
+
+    if(params->last) {
+	params->last->next = p;
+	params->last = p;
+    } else {
+	params->params = p;
+	params->last = p;
+    }
+}
+
+void gfxparams_free(gfxparams_t*params)
+{
+    gfxparam_t*p = params->params;
+    while(p) {
+	gfxparam_t*next = p->next;
+	free((void*)p->key);
+	if(p->value) free((void*)p->value);
+	free(p);
+	p = next;
+    }
+}
+

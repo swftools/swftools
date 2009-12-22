@@ -1,7 +1,6 @@
 require 'gfx'
 
-#pdf = GFX::PDF.new('test.pdf')
-pdf = GFX::PDF.new('/home/kramm/paper5.pdf')
+pdf = GFX::PDF.new('file.pdf')
 
 class TestRender < GFX::Device
     def startpage(width,height)
