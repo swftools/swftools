@@ -497,9 +497,15 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
     pdf_doc->getinfo = pdf_doc_getinfo;
     pdf_doc->getpage = pdf_doc_getpage;
     pdf_doc->prepare = pdf_doc_prepare;
+
+    /* pass global parameters to PDF driver*/
+    gfxparam_t*p = isrc->parameters->params;
+    while(p) {
+	pdf_doc->setparameter(pdf_doc, p->key, p->value);
+	p = p->next;
+    }
     
     return pdf_doc;
-
 }
     
 void pdf_destroy(gfxsource_t*src)

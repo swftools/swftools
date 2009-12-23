@@ -743,7 +743,6 @@ void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height); //WARNING:
 RGBA* swf_DefineLosslessBitsTagToImage(TAG*tag, int*width, int*height);
 
 RGBA* swf_ExtractImage(TAG*tag, int*dwidth, int*dheight);
-RGBA* swf_ImageScale(RGBA*data, int width, int height, int newwidth, int newheight);
 TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quality);
 
 // swfsound.c

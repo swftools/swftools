@@ -2,6 +2,7 @@
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../gfxtools.h"
+#include "../gfximage.h"
 #include "../devices/pdf.h"
 #include "../readers/swf.h"
 #include "../readers/image.h"
@@ -200,18 +201,34 @@ static VALUE image_height(VALUE cls)
     Get_Image(image,cls)
     return INT2FIX(image->image->height);
 }
+static VALUE image_rescale(VALUE cls, VALUE _width, VALUE _height)
+{
+    Get_Image(image,cls)
+    Check_Type(_width, T_FIXNUM);
+    Check_Type(_height, T_FIXNUM);
+    int width = FIX2INT(_width);
+    int height = FIX2INT(_height);
+    volatile VALUE v_image2 = image_allocate(Bitmap);
+    Get_Image(image2,v_image2)
+    image2->doc = image->doc;
+    image2->image = gfximage_rescale(image->image, width, height);
+    return v_image2;
+}
 static VALUE image_save_jpeg(VALUE cls, VALUE _filename, VALUE quality)
 {
     Get_Image(image,cls)
     Check_Type(_filename, T_STRING);
     Check_Type(quality, T_FIXNUM);
     const char*filename = StringValuePtr(_filename);
-    int l = strlen(filename);
-    char jpeg = 0;
-    if(l>=4 && !strcmp(&filename[l-4], ".jpg")) jpeg = 1;
-    if(l>=5 && !strcmp(&filename[l-5], ".jpeg")) jpeg = 1;
-    if(l>=4 && !strcmp(&filename[l-4], ".JPG")) jpeg = 1;
-    jpeg_save(image->image->data, image->image->width, image->image->height, FIX2INT(quality), filename);
+    gfximage_save_jpeg(image->image, FIX2INT(quality), filename);
+    return cls;
+}
+static VALUE image_save_png(VALUE cls, VALUE _filename)
+{
+    Get_Image(image,cls)
+    Check_Type(_filename, T_STRING);
+    const char*filename = StringValuePtr(_filename);
+    gfximage_save_png(image->image, filename);
     return cls;
 }
 VALUE convert_image(doc_internal_t*doc,gfximage_t*_image)
@@ -608,6 +625,10 @@ void Init_gfx()
     
     Bitmap = rb_define_class_under(GFX, "Bitmap", rb_cObject);
     rb_define_method(Bitmap, "save_jpeg", image_save_jpeg, 2);
+    rb_define_method(Bitmap, "save_png", image_save_png, 1);
+    rb_define_method(Bitmap, "width", image_width, 0);
+    rb_define_method(Bitmap, "height", image_height, 0);
+    rb_define_method(Bitmap, "rescale", image_rescale, 2);
     
     Glyph = rb_define_class_under(GFX, "Glyph", rb_cObject);
     rb_define_method(Glyph, "polygon", glyph_polygon, 0);

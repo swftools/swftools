@@ -42,7 +42,7 @@
 #include "../gfxtools.h"
 #include "swf.h"
 #include "../gfxpoly.h"
-#include "../png.h"
+#include "../gfximage.h"
 
 #define CHARDATAMAX 1024
 #define CHARMIDX 0
@@ -2255,7 +2255,9 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     
     if(newsizex<sizex || newsizey<sizey) {
 	msg("<verbose> Scaling %dx%d image to %dx%d", sizex, sizey, newsizex, newsizey);
-	newpic = swf_ImageScale(mem, sizex, sizey, newsizex, newsizey);
+	gfximage_t*ni = gfximage_rescale(img, newsizex, newsizey);
+	newpic = (RGBA*)ni->data;
+	free(ni);
 	*newwidth = sizex = newsizex;
 	*newheight  = sizey = newsizey;
 	mem = newpic;
