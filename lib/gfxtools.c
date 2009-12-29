@@ -728,8 +728,8 @@ void gfxline_transform(gfxline_t*line, gfxmatrix_t*matrix)
 
 void gfxmatrix_dump(gfxmatrix_t*m, FILE*fi, char*prefix)
 {
-    fprintf(fi, "%f %f | %f\n", m->m00, m->m10, m->tx);
-    fprintf(fi, "%f %f | %f\n", m->m01, m->m11, m->ty);
+    fprintf(fi, "%s%f %f | %f\n", prefix, m->m00, m->m10, m->tx);
+    fprintf(fi, "%s%f %f | %f\n", prefix, m->m01, m->m11, m->ty);
 }
 
 void gfxmatrix_transform(gfxmatrix_t*m, double* v, double*dest)
