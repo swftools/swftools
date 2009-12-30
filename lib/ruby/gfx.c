@@ -220,7 +220,7 @@ static VALUE image_save_jpeg(VALUE cls, VALUE _filename, VALUE quality)
     Check_Type(_filename, T_STRING);
     Check_Type(quality, T_FIXNUM);
     const char*filename = StringValuePtr(_filename);
-    gfximage_save_jpeg(image->image, FIX2INT(quality), filename);
+    gfximage_save_jpeg(image->image, filename, FIX2INT(quality));
     return cls;
 }
 static VALUE image_save_png(VALUE cls, VALUE _filename)

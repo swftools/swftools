@@ -6,7 +6,7 @@
 #include "gfximage.h"
 #include "types.h"
 
-void gfximage_save_jpeg(gfximage_t*img, int quality, const char*filename)
+void gfximage_save_jpeg(gfximage_t*img, const char*filename, int quality)
 {
     int x,y;
     int l = img->width*img->height;
