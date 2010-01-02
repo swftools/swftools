@@ -175,9 +175,7 @@ static void import_code(void*_abc, char*filename, int pass, asset_bundle_t*asset
         classinfo_t*c = (classinfo_t*)registry_find(package, name);
         if(!c) continue;
 
-	if(cls->asset) {
-	    c->assets = asset_bundle;
-	}
+	c->assets = asset_bundle;
 
         int nr = 0;
         multiname_list_t*i = cls->interfaces;

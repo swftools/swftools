@@ -73,6 +73,17 @@ type_t memberinfo_type = {
 };
 
 // ----------------------- assets -------------------------------------
+static void use_asset(asset_bundle_t*a)
+{
+    a->used = 1;
+    asset_bundle_list_t*l = a->dependencies;
+    while(l) {
+	if(!l->asset_bundle->used) {
+	    use_asset(l->asset_bundle);
+	}
+	l = l->next;
+    }
+}
 void registry_use(slotinfo_t*s)
 {
     if(!s) return;
@@ -80,7 +91,9 @@ void registry_use(slotinfo_t*s)
 	s->flags |= FLAG_USED;
 	if(s->kind == INFOTYPE_CLASS) {
 	    classinfo_t*c=(classinfo_t*)s;
-	    if(c->assets) c->assets->used = 1;
+	    if(c->assets) {
+		use_asset(c->assets);
+	    }
 	    int t=0;
 	    while(c->interfaces[t]) {
 		registry_use((slotinfo_t*)c->interfaces[t]);

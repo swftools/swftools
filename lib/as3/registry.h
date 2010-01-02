@@ -117,6 +117,7 @@ struct _varinfo /*extends memberinfo*/ {
 
 struct _asset_bundle {
     abc_file_t*file;
+    asset_bundle_list_t*dependencies;
     char used;
 };
 
