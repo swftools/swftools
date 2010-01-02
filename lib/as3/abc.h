@@ -34,7 +34,9 @@ DECLARE(abc_interface);
 DECLARE(abc_class);
 DECLARE(abc_exception);
 DECLARE(abc_asset);
+DECLARE(asset_dependency);
 DECLARE_LIST(abc_asset);
+DECLARE_LIST(asset_dependency);
 DECLARE_LIST(abc_exception);
 DECLARE_LIST(TAG);
 
@@ -202,9 +204,15 @@ typedef struct _abc_script {
     trait_list_t*traits;
 } abc_script_t;
 
+struct _asset_dependency {
+    abc_asset_t*asset;
+    int*patch;
+    int patch_size;
+};
 struct _abc_asset {
     TAG_list_t*tags;
-    abc_asset_list_t*dependencies;
+    U16 id;
+    asset_dependency_list_t*dependencies;
 };
 
 abc_method_t* abc_nullmethod(abc_file_t*file);

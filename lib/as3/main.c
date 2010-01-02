@@ -126,10 +126,14 @@ int main(int argn, char*argv[])
     swf.movieSize.xmin = swf.movieSize.ymin = 0;
     swf.movieSize.xmax = 20*20;
     swf.movieSize.ymax = 10*20;
-    TAG*tag = (TAG*)as3_getassets(0);
-    if(!swf.firstTag && tag) swf.firstTag = tag;
 
-    while(tag && tag->next) tag = tag->next;
+
+    TAG*tag = swf.firstTag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
+    swf_SetU8(tag, 0xff);
+    swf_SetU8(tag, 0xff);
+    swf_SetU8(tag, 0xff);
+	
+    tag = as3_getassets(tag);
 
     tag = swf_InsertTag(tag, ST_DOABC);
     if(!swf.firstTag && tag) swf.firstTag = tag;
