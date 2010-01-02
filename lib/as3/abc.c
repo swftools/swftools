@@ -26,6 +26,7 @@
 #include "../rfxswf.h"
 #include "../q.h"
 #include "abc.h"
+#include "assets.h"
 
 char stringbuffer[2048];
 
@@ -49,12 +50,12 @@ static void params_dump(FILE*fo, multiname_list_t*l, constant_list_t*o)
     fprintf(fo, "(");
     while(l) {
         char*s = multiname_tostring(l->multiname);
-        fprintf(fo, s);
+        fprintf(fo, "%s", s);
         free(s);
         if(i>=n-no) {
             s = constant_tostring(o->constant);
             fprintf(fo, " = ");
-            fprintf(fo, s);
+            fprintf(fo, "%s", s);
             free(s);
             o = o->next;
         }
@@ -74,7 +75,7 @@ static void parse_metadata(TAG*tag, abc_file_t*file, pool_t*pool)
     int t;
     int num_metadata = swf_GetU30(tag);
 
-    DEBUG printf("%d metadata\n");
+    DEBUG printf("%d metadata\n", num_metadata);
     for(t=0;t<num_metadata;t++) {
         const char*entry_name = pool_lookup_string(pool, swf_GetU30(tag));
         int num = swf_GetU30(tag);
@@ -156,6 +157,20 @@ void abc_class_protectedNS(abc_class_t*c, char*namespace)
 void abc_class_add_interface(abc_class_t*c, multiname_t*interface)
 {
     list_append(c->interfaces, multiname_clone(interface));
+}
+char*abc_class_fullname(abc_class_t*cls)
+{
+    const char*package = cls->classname->ns->name;
+    const char*name = cls->classname->name;
+    int l1 = strlen(package);
+    int l2 = strlen(name);
+    char*fullname = malloc(l1+l2+2);
+    if(l1) {
+	memcpy(fullname, package, l1);
+	fullname[l1++]='.';
+    }
+    memcpy(fullname+l1, name, l2+1);
+    return fullname;
 }
 
 void abc_method_init(abc_method_t*m, abc_file_t*file, multiname_t*returntype, char body)
@@ -451,7 +466,7 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
 	} else if(kind == TRAIT_CLASS) { // class
 	    trait->slot_id = swf_GetU30(tag);
 	    trait->cls = (abc_class_t*)array_getvalue(file->classes, swf_GetU30(tag));
-	    DEBUG printf("  class %s %d %d\n", name, trait->slot_id, trait->cls);
+	    DEBUG printf("  class %s %d %08x\n", name, trait->slot_id, (int)trait->cls);
 	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
 	    trait->slot_id = swf_GetU30(tag);
             trait->type_name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
@@ -620,7 +635,7 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
         int s;
         array_t*items = (array_t*)array_getvalue(file->metadata, t);
         for(s=0;s<items->num;s++) {
-            fprintf(fo, "%s#  %s=%s\n", prefix, array_getkey(items, s), array_getvalue(items,s));
+            fprintf(fo, "%s#  %s=%s\n", prefix, (char*)array_getkey(items, s), (char*)array_getvalue(items,s));
         }
         fprintf(fo, "%s#\n", prefix);
     }
@@ -678,6 +693,11 @@ void* swf_DumpABC(FILE*fo, void*code, char*prefix)
 	    dump_method(fo, prefix2, "", "constructor", n, cls->constructor, file, methods_seen);
         free(n);
 	traits_dump(fo, prefix2,cls->traits, file, methods_seen);
+
+	if(cls->asset) {
+	    swf_DumpAsset(fo, cls->asset, prefix2);
+	}
+
         fprintf(fo, "%s}\n", prefix);
     }
     fprintf(fo, "%s\n", prefix);
@@ -755,7 +775,7 @@ void* swf_ReadABC(TAG*tag)
 
 	m->flags = swf_GetU8(tag);
 	
-        DEBUG printf("method %d) %s ", m->name);
+        DEBUG printf("method %d) %s ", t, m->name);
         DEBUG params_dump(stdout, m->parameters, m->optional_parameters);
         DEBUG printf("flags=%02x\n", t, m->flags);
 

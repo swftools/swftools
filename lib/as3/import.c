@@ -23,11 +23,11 @@
 #include "abc.h"
 #include "registry.h"
 #include "common.h"
-#include "common.h"
 #include "tokenizer.h"
+#include "assets.h"
 #include "../os.h"
 
-static void import_code(void*_abc, char*filename, int pass);
+static void import_code(void*_abc, char*filename, int pass, asset_bundle_t*a);
 
 void as3_import_abc(char*filename)
 {
@@ -36,8 +36,8 @@ void as3_import_abc(char*filename)
     tag->data = file->data;
     tag->len = file->len;
     abc_file_t*abc = swf_ReadABC(tag);
-    import_code(abc, filename, 0);
-    import_code(abc, filename, 1);
+    import_code(abc, filename, 0, 0);
+    import_code(abc, filename, 1, 0);
     swf_FreeABC(abc);
     memfile_close(file);
     free(tag);
@@ -48,13 +48,17 @@ void as3_import_swf(char*filename)
     SWF* swf = swf_OpenSWF(filename);
     if(!swf)
         return;
+    swf_FoldAll(swf);
+
     TAG*tag = swf->firstTag;
+
+    asset_resolver_t* assets =  swf_ParseAssets(swf);
 
     /* pass 1 */
     while(tag) {
         if(tag->id == ST_DOABC || tag->id == ST_RAWABC) {
             abc_file_t*abc = swf_ReadABC(tag);
-            import_code(abc, filename, 0);
+            import_code(abc, filename, 0, 0);
             swf_FreeABC(abc);
         }
         tag = tag->next;
@@ -64,15 +68,19 @@ void as3_import_swf(char*filename)
     /* pass 2 */
     while(tag) {
         if(tag->id == ST_DOABC || tag->id == ST_RAWABC) {
-            abc_file_t*abc = swf_ReadABC(tag);
-            import_code(abc, filename, 1);
-            swf_FreeABC(abc);
+            abc_file_t*abc = swf_ReadABC(tag); //FIXME: mem leak
+	    swf_ResolveAssets(assets, abc);
+	    NEW(asset_bundle_t, a);
+	    a->file = abc;
+	    registry_add_asset(a);
+            import_code(abc, filename, 1, a);
         }
         tag = tag->next;
     }
 
-    swf_FreeTags(swf);
+    //swf_FreeTags(swf); // FIXME: mem leak
     free(swf);
+
 }
 
 void as3_import_file(char*filename)
@@ -129,7 +137,7 @@ static classinfo_t*resolve_class(char*filename, char*what, multiname_t*n)
     return c;
 }
 
-static void import_code(void*_abc, char*filename, int pass)
+static void import_code(void*_abc, char*filename, int pass, asset_bundle_t*asset_bundle)
 {
     abc_file_t*abc = _abc;
     int t;
@@ -148,7 +156,7 @@ static void import_code(void*_abc, char*filename, int pass)
 
             multiname_list_t*i=cls->interfaces;
             classinfo_t*c = classinfo_register(access, package, name, list_length(i));
-            c->flags|=FLAG_BUILTIN;
+            c->flags|=FLAG_ASSET;
 
             if(cls->flags & CLASS_FINAL)
                 c->flags |= FLAG_FINAL;
@@ -166,6 +174,10 @@ static void import_code(void*_abc, char*filename, int pass)
         const char*name = strdup(cls->classname->name);
         classinfo_t*c = (classinfo_t*)registry_find(package, name);
         if(!c) continue;
+
+	if(cls->asset) {
+	    c->assets = asset_bundle;
+	}
 
         int nr = 0;
         multiname_list_t*i = cls->interfaces;
@@ -281,7 +293,7 @@ static void import_code(void*_abc, char*filename, int pass)
                 v->flags |= trait->kind==TRAIT_CONST?FLAG_CONST:0;
                 m = (memberinfo_t*)v;
             }
-            m->flags |= FLAG_BUILTIN;
+            m->flags |= FLAG_ASSET;
             m->parent = 0;
         }
     }
@@ -289,6 +301,6 @@ static void import_code(void*_abc, char*filename, int pass)
 
 void as3_import_code(void*_abc)
 {
-    import_code(_abc, "", 0);
-    import_code(_abc, "", 1);
+    import_code(_abc, "", 0, 0);
+    import_code(_abc, "", 1, 0);
 }

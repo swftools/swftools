@@ -76,7 +76,7 @@ static char* strf(char*format, ...)
     va_end(arglist);
     return strdup(buf);
 }
-#define PY_ERROR(s,args...) (PyErr_SetString(PyExc_Exception, strf(s, ## args)),(PyObject*)NULL)
+#define PY_ERROR(s,args...) (PyErr_SetString(PyExc_Exception, strf(s, ## args)),(void*)NULL)
 #define PY_NONE Py_BuildValue("s", 0)
 
 //---------------------------------------------------------------------
@@ -158,8 +158,9 @@ static gfxline_t*toLine(PyObject*_line)
     gfxline_t*last=&first;
     for(t=0;t<num;t++) {
         PyObject*p= PySequence_GetItem(_line, t);
-        if(!PyTuple_Check(p))
+        if(!PyTuple_Check(p)) {
             return PY_ERROR("each point must be a tuple");
+	}
         PyObject*_type = PyTuple_GetItem(p, 0);
         if(!PyString_Check(_type))
             return PY_ERROR("point tuples must start with a string");

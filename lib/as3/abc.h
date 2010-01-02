@@ -33,7 +33,10 @@ DECLARE(abc_method_body);
 DECLARE(abc_interface);
 DECLARE(abc_class);
 DECLARE(abc_exception);
+DECLARE(abc_asset);
+DECLARE_LIST(abc_asset);
 DECLARE_LIST(abc_exception);
+DECLARE_LIST(TAG);
 
 #include "code.h"
 #include "opcodes.h"
@@ -133,8 +136,9 @@ struct _abc_class {
     
     U8 flags;
 
+    abc_asset_t*asset; // swf tags needed for this class
+
     int init_scope_depth; // volatile, might be increased during code verification
-    
     int index; //filled in during writing
 };
 
@@ -148,6 +152,7 @@ void abc_class_final(abc_class_t*c);
 void abc_class_interface(abc_class_t*c);
 void abc_class_protectedNS(abc_class_t*c, char*namespace);
 void abc_class_add_interface(abc_class_t*c, multiname_t*interface);
+char*abc_class_fullname(abc_class_t*cls);
 
 trait_t* traits_find_slotid(trait_list_t*traits, int slotid);
 
@@ -196,6 +201,11 @@ typedef struct _abc_script {
     abc_file_t*file;
     trait_list_t*traits;
 } abc_script_t;
+
+struct _abc_asset {
+    TAG_list_t*tags;
+    abc_asset_list_t*dependencies;
+};
 
 abc_method_t* abc_nullmethod(abc_file_t*file);
 abc_script_t* abc_initscript(abc_file_t*file);

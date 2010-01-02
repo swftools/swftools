@@ -1232,7 +1232,7 @@ int main (int argc,char ** argv)
 	else
 	    printf("\n");
     }
-    printf("[HEADER]        File size: %ld%s\n", swf.fileSize, swf.compressed?" (Depacked)":"");
+    printf("[HEADER]        File size: %d%s\n", swf.fileSize, swf.compressed?" (Depacked)":"");
     printf("[HEADER]        Frame rate: %f\n",swf.frameRate/256.0);
     printf("[HEADER]        Frame count: %d\n",swf.frameCount);
     printf("[HEADER]        Movie width: %.2f",(swf.movieSize.xmax-swf.movieSize.xmin)/20.0);
@@ -1269,9 +1269,9 @@ int main (int argc,char ** argv)
 	}
 	if(cumulative) {
 	    filepos += tag->len;
-	    printf("[%03x] %9ld %9ld %s%s", tag->id, tag->len, filepos, prefix, swf_TagGetName(tag));
+	    printf("[%03x] %9d %9d %s%s", tag->id, tag->len, filepos, prefix, swf_TagGetName(tag));
 	} else {
-	    printf("[%03x] %9ld %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
+	    printf("[%03x] %9d %s%s", tag->id, tag->len, prefix, swf_TagGetName(tag));
 	}
 	
         if(tag->id == ST_PLACEOBJECT) {

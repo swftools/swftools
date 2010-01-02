@@ -27,6 +27,8 @@
 #include "parser.h"
 #include "parser.tab.h"
 #include "compiler.h"
+#include "registry.h"
+#include "assets.h"
 #include "../os.h"
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
@@ -341,6 +343,10 @@ void* as3_getcode()
         as3code = finish_parser();
     }
     return as3code;
+}
+void* as3_getassets(void*t)
+{
+    return swf_AssetsToTags((TAG*)t, registry_getassets());
 }
 char* as3_getglobalclass()
 {

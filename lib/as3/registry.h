@@ -24,8 +24,10 @@
 #ifndef __abc_registry_h__
 #define __abc_registry_h__
 
-#include "pool.h"
+#include "abc.h"
 
+DECLARE(asset_bundle);
+DECLARE_LIST(asset_bundle);
 DECLARE(slotinfo);
 DECLARE(classinfo);
 DECLARE(memberinfo);
@@ -38,6 +40,7 @@ DECLARE_LIST(slotinfo);
 /* member/class flags */
 #define FLAG_FINAL 1
 #define FLAG_BUILTIN 128
+#define FLAG_ASSET 64
 
 /* member flags */
 #define FLAG_STATIC 2
@@ -79,6 +82,7 @@ struct _classinfo {
     dict_t members;
     dict_t static_members;
     void*data; //TODO: get rid of this- parser.y should pass type/value/code triples around
+    asset_bundle_t*assets;
     classinfo_t*interfaces[];
 };
 struct _memberinfo {
@@ -109,6 +113,11 @@ struct _varinfo /*extends memberinfo*/ {
     classinfo_t*type;
     classinfo_t*parent;
     constant_t*value;
+};
+
+struct _asset_bundle {
+    abc_file_t*file;
+    char used;
 };
 
 extern type_t memberinfo_type;
@@ -149,6 +158,10 @@ classinfo_t* slotinfo_gettype(slotinfo_t*);
 namespace_t access2namespace(U8 access, char*package);
 
 char registry_ispackage(const char*package);
+
+void registry_add_asset(asset_bundle_t*bundle);
+void registry_use(slotinfo_t*s);
+asset_bundle_list_t*registry_getassets();
 
 // static multinames
 classinfo_t voidclass;

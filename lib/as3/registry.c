@@ -27,6 +27,7 @@
 #include "builtin.h"
 
 dict_t*registry_classes=0;
+asset_bundle_list_t*assets=0;
 
 // ----------------------- class signature ------------------------------
 
@@ -71,6 +72,32 @@ type_t memberinfo_type = {
     free: (free_func)dummy_destroy,
 };
 
+// ----------------------- assets -------------------------------------
+void registry_use(slotinfo_t*s)
+{
+    if(s->kind == INFOTYPE_CLASS) {
+	classinfo_t*c=(classinfo_t*)s;
+	if(c->assets) c->assets->used = 1;
+    } else if(s->kind == INFOTYPE_METHOD) {
+	methodinfo_t*m=(methodinfo_t*)s;
+	if(m->parent) {
+	    registry_use((slotinfo_t*)m->parent);
+	}
+    } else if(s->kind == INFOTYPE_VAR) {
+	varinfo_t*v=(varinfo_t*)s;
+	if(v->parent) {
+	    registry_use((slotinfo_t*)v->parent);
+	}
+    }
+}
+void registry_add_asset(asset_bundle_t*bundle)
+{
+    list_append(assets, bundle);
+}
+asset_bundle_list_t*registry_getassets()
+{
+    return assets;
+}
 // ----------------------- resolving ----------------------------------
 slotinfo_t* registry_resolve(slotinfo_t*_s)
 {

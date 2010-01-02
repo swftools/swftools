@@ -8,7 +8,7 @@ D=-g -pg
 #BISONDEBUG=yes
 
 MODULES = abc.o opcodes.o code.o pool.o scripts.o expr.o common.o initcode.o
-SOURCES = abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h common.c common.h initcode.c initcode.h
+SOURCES = abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h common.c common.h initcode.c initcode.h assets.c assets.h
 
 tokenizer.yy.c: tokenizer.lex tokenizer.h
 	flex -Pas3_ -8 -B -otokenizer.yy.c tokenizer.lex
@@ -18,7 +18,7 @@ BISONDEBUGFLAGS=-t
 BISONDEBUGDEFINE=-DBISONDEBUG
 endif
 parser.tab.h parser.tab.c: parser.y parser.h skeleton.m4 Makefile
-	bison $(BISONDEBUGFLAGS) -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
+	/usr/local/bin/bison $(BISONDEBUGFLAGS) -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
 
 main.o: main.c parser.tab.h parser.h
 	$(C) $(BISONDEBUGDEFINE) main.c -o main.o
@@ -30,8 +30,8 @@ parser: main.o tokenizer.yy.c ../librfxswf.a ../libbase.a parser.tab.h
 	$(L) main.o ../librfxswf.a ../libbase.a -o parser -lz
 
 rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o $(MODULES)
-mklib: mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o ../libbase.a
-	$(L) mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o ../libbase.a -o mklib $(LIBS)
+mklib: mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o assets.o ../libbase.a
+	$(L) mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o assets.o ../libbase.a -o mklib $(LIBS)
 
 ../q.o: ../q.c ../q.h ../mem.h
 	cd ..; make q.o; cd -

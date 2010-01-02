@@ -2586,7 +2586,7 @@ IMPORT : "import" T_IDENTIFIER {
 IMPORT : "import" PACKAGEANDCLASS {
        PASS12
        slotinfo_t*s = registry_find($2->package, $2->name);
-       if(!s && as3_pass==1) {// || !(s->flags&FLAG_BUILTIN)) {
+       if(!s && as3_pass==1) {
            as3_schedule_class($2->package, $2->name);
        }
        /*if(s && s->kind == INFOTYPE_VAR && TYPE_IS_NAMESPACE(s->type)) {
@@ -3088,6 +3088,7 @@ CLASS: X_IDENTIFIER {
     slotinfo_t*s = find_class($1);
     if(!s) syntaxerror("Could not find class/method %s (current package: %s)\n", $1, state->package);
     $$ = (classinfo_t*)s;
+    registry_use(s);
 }
 
 PACKAGEANDCLASS : PACKAGE '.' X_IDENTIFIER {
@@ -3102,6 +3103,7 @@ PACKAGEANDCLASS : PACKAGE '.' X_IDENTIFIER {
     if(!s) syntaxerror("Couldn't find class/method %s.%s\n", $1, $3);
     free($1);$1=0;
     $$ = (classinfo_t*)s;
+    registry_use(s);
 }
 
 CLASS_SPEC: PACKAGEANDCLASS
@@ -3802,6 +3804,7 @@ MEMBER : E '.' SUBNODE {
         
         /* look at actual classes, in the current package and imported */
         if(!state->xmlfilter && (a = find_class(name))) {
+	    registry_use(a);
             if(state->cls && state->cls->info == (classinfo_t*)a && i_am_static) {
                 o.c = abc_getlocal_0(0);
                 o.t = TYPE_CLASS((classinfo_t*)a);

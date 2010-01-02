@@ -42,6 +42,7 @@ void as3_schedule_class_noerror(const char*package, const char*cls);
 void as3_warning(const char*format, ...);
 char* as3_getglobalclass();
 void* as3_getcode();
+void* as3_getassets(void*);
 void as3_destroy();
 
 #endif //__as3_compiler_h__

@@ -126,7 +126,13 @@ int main(int argn, char*argv[])
     swf.movieSize.xmin = swf.movieSize.ymin = 0;
     swf.movieSize.xmax = 20*20;
     swf.movieSize.ymax = 10*20;
-    TAG*tag = swf.firstTag = swf_InsertTag(0, ST_DOABC);
+    TAG*tag = (TAG*)as3_getassets(0);
+    if(!swf.firstTag && tag) swf.firstTag = tag;
+
+    while(tag && tag->next) tag = tag->next;
+
+    tag = swf_InsertTag(tag, ST_DOABC);
+    if(!swf.firstTag && tag) swf.firstTag = tag;
     swf_WriteABC(tag, code);
 
     if(!mainclass)
