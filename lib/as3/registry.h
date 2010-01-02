@@ -40,7 +40,7 @@ DECLARE_LIST(slotinfo);
 /* member/class flags */
 #define FLAG_FINAL 1
 #define FLAG_BUILTIN 128
-#define FLAG_ASSET 64
+#define FLAG_USED 64
 
 /* member flags */
 #define FLAG_STATIC 2

@@ -156,7 +156,7 @@ static void import_code(void*_abc, char*filename, int pass, asset_bundle_t*asset
 
             multiname_list_t*i=cls->interfaces;
             classinfo_t*c = classinfo_register(access, package, name, list_length(i));
-            c->flags|=FLAG_ASSET;
+            c->flags|=FLAG_BUILTIN;
 
             if(cls->flags & CLASS_FINAL)
                 c->flags |= FLAG_FINAL;
@@ -293,7 +293,7 @@ static void import_code(void*_abc, char*filename, int pass, asset_bundle_t*asset
                 v->flags |= trait->kind==TRAIT_CONST?FLAG_CONST:0;
                 m = (memberinfo_t*)v;
             }
-            m->flags |= FLAG_ASSET;
+            m->flags |= FLAG_BUILTIN;
             m->parent = 0;
         }
     }

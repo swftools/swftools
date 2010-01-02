@@ -75,18 +75,31 @@ type_t memberinfo_type = {
 // ----------------------- assets -------------------------------------
 void registry_use(slotinfo_t*s)
 {
-    if(s->kind == INFOTYPE_CLASS) {
-	classinfo_t*c=(classinfo_t*)s;
-	if(c->assets) c->assets->used = 1;
-    } else if(s->kind == INFOTYPE_METHOD) {
-	methodinfo_t*m=(methodinfo_t*)s;
-	if(m->parent) {
-	    registry_use((slotinfo_t*)m->parent);
-	}
-    } else if(s->kind == INFOTYPE_VAR) {
-	varinfo_t*v=(varinfo_t*)s;
-	if(v->parent) {
-	    registry_use((slotinfo_t*)v->parent);
+    if(!s) return;
+    if(!(s->flags&FLAG_USED)) {
+	s->flags |= FLAG_USED;
+	if(s->kind == INFOTYPE_CLASS) {
+	    classinfo_t*c=(classinfo_t*)s;
+	    if(c->assets) c->assets->used = 1;
+	    int t=0;
+	    while(c->interfaces[t]) {
+		registry_use((slotinfo_t*)c->interfaces[t]);
+		t++;
+	    }
+	    while(c->superclass) {
+		c = c->superclass;
+		registry_use((slotinfo_t*)c);
+	    }
+	} else if(s->kind == INFOTYPE_METHOD) {
+	    methodinfo_t*m=(methodinfo_t*)s;
+	    if(m->parent) {
+		registry_use((slotinfo_t*)m->parent);
+	    }
+	} else if(s->kind == INFOTYPE_VAR) {
+	    varinfo_t*v=(varinfo_t*)s;
+	    if(v->parent) {
+		registry_use((slotinfo_t*)v->parent);
+	    }
 	}
     }
 }
