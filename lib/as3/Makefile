@@ -18,7 +18,7 @@ BISONDEBUGFLAGS=-t
 BISONDEBUGDEFINE=-DBISONDEBUG
 endif
 parser.tab.h parser.tab.c: parser.y parser.h skeleton.m4 Makefile
-	/usr/local/bin/bison $(BISONDEBUGFLAGS) -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
+	bison $(BISONDEBUGFLAGS) -S ./skeleton.m4 -v --defines -pa3_ parser.y -o parser.tab.c
 
 main.o: main.c parser.tab.h parser.h
 	$(C) $(BISONDEBUGDEFINE) main.c -o main.o

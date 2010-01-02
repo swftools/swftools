@@ -35,8 +35,10 @@ DECLARE(abc_class);
 DECLARE(abc_exception);
 DECLARE(abc_asset);
 DECLARE(asset_dependency);
+DECLARE(asset_tag);
 DECLARE_LIST(abc_asset);
 DECLARE_LIST(asset_dependency);
+DECLARE_LIST(asset_tag);
 DECLARE_LIST(abc_exception);
 DECLARE_LIST(TAG);
 
@@ -206,13 +208,16 @@ typedef struct _abc_script {
 
 struct _asset_dependency {
     abc_asset_t*asset;
-    int*patch;
-    int patch_size;
+    int patch_pos;
+};
+struct _asset_tag {
+    TAG*tag;
+    asset_dependency_t*deps;
+    int num_deps;
 };
 struct _abc_asset {
-    TAG_list_t*tags;
+    asset_tag_list_t*tags;
     U16 id;
-    asset_dependency_list_t*dependencies;
 };
 
 abc_method_t* abc_nullmethod(abc_file_t*file);

@@ -3,43 +3,21 @@
 #include "../rfxswf.h"
 #include "assets.h"
 
-static void add_dependencies(asset_resolver_t*assets, abc_asset_t*asset, TAG*tag)
+static void add_dependencies(asset_resolver_t*assets, abc_asset_t*asset, asset_tag_t*atag)
 {
-    int num = swf_GetNumUsedIDs(tag);
-    int*positions = malloc(sizeof(int)*num);
+    TAG*tag = atag->tag;
+    atag->num_deps = swf_GetNumUsedIDs(tag);
+    int*positions = malloc(sizeof(int)*atag->num_deps);
+    atag->deps = malloc(atag->num_deps*sizeof(atag->deps[0]));
     swf_GetUsedIDs(tag, positions);
     int t;
-    for(t=0;t<num;t++) {
+    for(t=0;t<atag->num_deps;t++) {
+	asset_dependency_t*d = &atag->deps[t];
+	d->patch_pos = positions[t];
 	U16 id = GET16(&tag->data[positions[t]]);
-
-	/* check whether we already processed this one */
-	int s;
-	for(s=0;s<t;s++) {
-	    if(GET16(&tag->data[positions[s]])==id) break; //seen before
-	}
-	if(s!=t) continue;
-	
-	/* count number of occurences */
-	int count=0;
-	for(s=t;s<num;s++) {
-	    if(GET16(&tag->data[positions[s]])==id) 
-		count++;
-	}
-
-	/* create dependency */
-	NEW(asset_dependency_t,d);
 	d->asset = assets->id2asset[id];
-	d->patch = malloc(sizeof(int)*count);
-	d->patch_size = count;
-	count = 0;
-	for(s=t;s<num;s++) {
-	    if(GET16(&tag->data[positions[s]])==id) 
-		d->patch[count++] = positions[s];
-	}
 	if(!d->asset) {
 	    fprintf(stderr, "Error: ID %d referenced, but not defined\n", id);
-	} else {
-	    list_append(asset->dependencies, d);
 	}
     }
     free(positions);
@@ -55,7 +33,6 @@ asset_resolver_t* swf_ParseAssets(SWF*swf)
     while(tag) {
 	if(swf_isDefiningTag(tag)) {
 	    NEW(abc_asset_t, asset);
-	    list_append(asset->tags, tag);
 	    assets->id2asset[swf_GetDefineID(tag)] = asset;
 	}
 	tag = tag->next;
@@ -66,12 +43,19 @@ asset_resolver_t* swf_ParseAssets(SWF*swf)
 	if(swf_isDefiningTag(tag)) {
 	    abc_asset_t*asset = assets->id2asset[swf_GetDefineID(tag)];
 	    assert(asset);
-	    add_dependencies(assets, asset, tag);
+	    if(asset) {
+		NEW(asset_tag_t,t);
+		t->tag = tag;
+		list_append(asset->tags, t);
+		add_dependencies(assets, asset, t);
+	    }
 	} else if(swf_isPseudoDefiningTag(tag)) {
 	    abc_asset_t*asset = assets->id2asset[swf_GetDefineID(tag)];
 	    if(asset) {
-		list_append(asset->tags, tag);
-		add_dependencies(assets, asset, tag);
+		NEW(asset_tag_t,t);
+		t->tag = tag;
+		list_append(asset->tags, t);
+		add_dependencies(assets, asset, t);
 	    }
 	} else if(tag->id == ST_SYMBOLCLASS) {
 	    int t, num = swf_GetU16(tag);
@@ -114,19 +98,19 @@ void swf_ResolveAssets(asset_resolver_t*assets, abc_file_t*file)
 
 static void dump_asset(FILE*fo, abc_asset_t*a, const char*prefix)
 {
-    TAG_list_t*t = a->tags;
+    asset_tag_list_t*t = a->tags;
     while(t) {
-	TAG*tag = t->TAG;
+	TAG*tag = t->asset_tag->tag;
 	fprintf(fo, "%s[tag] %s defines ID %d\n", prefix, swf_TagGetName(tag), swf_GetDefineID(tag));
+	char*prefix2 = allocprintf("%s    ", prefix);
+	int i;
+	for(i=0;i<t->asset_tag->num_deps;i++) {
+	    asset_dependency_t*d = &t->asset_tag->deps[i];
+	    dump_asset(fo, d->asset, prefix2);
+	}
+	free(prefix2);
 	t = t->next;
     }
-    char*prefix2 = allocprintf("%s    ", prefix);
-    asset_dependency_list_t*l = a->dependencies;
-    while(l) {
-	dump_asset(fo, l->asset_dependency->asset, prefix2);
-	l = l->next;
-    }
-    free(prefix2);
 }
 
 void swf_DumpAsset(FILE*fo, abc_asset_t*asset, const char*prefix)
@@ -149,22 +133,18 @@ static TAG*write_asset(TAG*tag, abc_asset_t*a, dict_t*written, U16*currentid)
     if(!dict_contains(written, a)) {
 	dict_put(written, a, 0);
 	a->id = (*currentid)++;
-	TAG_list_t*tags = a->tags;
-
-	asset_dependency_list_t*deps = a->dependencies;
-	while(deps) {
-	    asset_dependency_t*dep = deps->asset_dependency;
-	    tag = write_asset(tag, dep->asset, written, currentid);
-	    int t;
-	    for(t=0;t<dep->patch_size;t++) {
-		PUT16(&tag->data[dep->patch[t]], dep->asset->id);
-	    }
-	    deps = deps->next;
-	}
+	asset_tag_list_t*tags = a->tags;
 
 	while(tags) {
-	    swf_SetDefineID(tags->TAG, a->id);
-	    tag = write_tag(tag, tags->TAG);
+	    asset_tag_t*t = tags->asset_tag;
+	    int i;
+	    for(i=0;i<t->num_deps;i++) {
+		asset_dependency_t*dep = &t->deps[i];
+		tag = write_asset(tag, dep->asset, written, currentid);
+		PUT16(&t->tag->data[dep->patch_pos], dep->asset->id);
+	    }
+	    swf_SetDefineID(t->tag, a->id);
+	    tag = write_tag(tag, t->tag);
 	    tags = tags->next;
 	}
     }
@@ -187,7 +167,7 @@ void swf_WriteABCSymbols(TAG*tag, abc_file_t*file)
 	abc_class_t*cls = (abc_class_t*)array_getvalue(file->classes, t);
 	abc_asset_t*a = cls->asset;
 	if(a && a->tags) {
-	    U16 id = swf_GetDefineID(a->tags->TAG);
+	    U16 id = swf_GetDefineID(a->tags->asset_tag->tag);
 	    char*fullname = abc_class_fullname(cls);
 	    swf_SetU16(tag, id);
 	    swf_SetString(tag, fullname);
