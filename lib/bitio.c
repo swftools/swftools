@@ -71,6 +71,9 @@ static int reader_fileread(reader_t*reader, void* data, int len)
 }
 static void reader_fileread_dealloc(reader_t*r)
 {
+    if(r->type == READER_TYPE_FILE2) {
+	close((ptroff_t)r->internal);
+    }
     memset(r, 0, sizeof(reader_t));
 }
 void reader_init_filereader(reader_t*r, int handle)
@@ -82,6 +85,16 @@ void reader_init_filereader(reader_t*r, int handle)
     r->mybyte = 0;
     r->bitpos = 8;
     r->pos = 0;
+}
+void reader_init_filereader2(reader_t*r, const char*filename)
+{
+    int fi = open(filename,
+#ifdef O_BINARY
+	    O_BINARY|
+#endif
+	    O_RDONLY);
+    reader_init_filereader(r, fi);
+    r->type = READER_TYPE_FILE2;
 }
 
 /* ---------------------------- mem reader ------------------------------- */
@@ -294,7 +307,7 @@ void writer_init_filewriter(writer_t*w, int handle)
 }
 void writer_init_filewriter2(writer_t*w, char*filename)
 {
-    int fi = open("movie.swf",
+    int fi = open(filename,
 #ifdef O_BINARY
 	    O_BINARY|
 #endif

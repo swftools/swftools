@@ -12,4 +12,5 @@ transtest
 hexfont
 protect
 zlibtest
+alignzones
 test.html

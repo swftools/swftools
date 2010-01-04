@@ -18,7 +18,7 @@ gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfx
 
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c modules/swfalignzones.c
 
-base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) MD5.$(O)
+base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) MD5.$(O) xml.$(O)
 gfx_objects=gfximage.$(O) gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
 
 rfxswf_objects=modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O) modules/swfalignzones.$(O)
@@ -53,6 +53,8 @@ mp3.$(O): mp3.c mp3.h $(top_builddir)/config.h
 	$(C) mp3.c -o $@
 wav.$(O): wav.c wav.h $(top_builddir)/config.h
 	$(C) wav.c -o $@
+xml.$(O): xml.c xml.h bitio.h
+	$(C) xml.c -o $@
 os.$(O): os.c os.h $(top_builddir)/config.h
 	$(C) -DSWFTOOLS_DATADIR=\"$(pkgdatadir)\" os.c -o $@
 modules/swfaction.$(O): modules/swfaction.c rfxswf.h
