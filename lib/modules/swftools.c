@@ -643,7 +643,6 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 
 	case ST_FREECHARACTER: /* unusual tags, which all start with an ID */
 	case ST_NAMECHARACTER:
-	case ST_DEFINEBINARY:
 	case ST_DEFINEFONTNAME:
 	case ST_GENERATORTEXT:
 	    callback(tag, tag->pos + base, callback_data);
