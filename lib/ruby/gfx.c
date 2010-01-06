@@ -281,6 +281,16 @@ static VALUE glyph_advance(VALUE cls)
     return rb_float_new(glyph->font->font->glyphs[glyph->nr].advance);
 }
 
+static VALUE glyph_bbox(VALUE cls)
+{
+    Get_Glyph(glyph,cls);
+    gfxbbox_t bbox = gfxline_getbbox(glyph->font->font->glyphs[glyph->nr].line);
+    return rb_ary_new3(4, rb_float_new(bbox.xmin), 
+	                  rb_float_new(bbox.ymin), 
+			  rb_float_new(bbox.xmax), 
+			  rb_float_new(bbox.ymax));
+}
+
 static VALUE glyph_unicode(VALUE cls)
 {
     Get_Glyph(glyph,cls);
@@ -646,6 +656,7 @@ void Init_gfx()
     rb_define_method(Glyph, "polygon", glyph_polygon, 0);
     rb_define_method(Glyph, "unicode", glyph_unicode, 0);
     rb_define_method(Glyph, "advance", glyph_advance, 0);
+    rb_define_method(Glyph, "bbox", glyph_bbox, 0);
     
     Font = rb_define_class_under(GFX, "Font", rb_cObject);
     rb_define_method(Font, "name", font_name, 0);
