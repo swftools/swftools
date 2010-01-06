@@ -310,6 +310,18 @@ static VALUE font_allocate(VALUE cls)
     return v;
 }
 
+static VALUE font_ascent(VALUE cls)
+{
+    Get_Font(font,cls);
+    return rb_float_new(font->font->ascent);
+}
+
+static VALUE font_descent(VALUE cls)
+{
+    Get_Font(font,cls);
+    return rb_float_new(font->font->descent);
+}
+
 static VALUE font_name(VALUE cls)
 {
     Get_Font(font,cls);
@@ -637,6 +649,8 @@ void Init_gfx()
     
     Font = rb_define_class_under(GFX, "Font", rb_cObject);
     rb_define_method(Font, "name", font_name, 0);
+    rb_define_method(Font, "ascent", font_ascent, 0);
+    rb_define_method(Font, "descent", font_descent, 0);
     rb_define_method(Font, "glyphs", font_glyphs, 0);
     
     Device = rb_define_class_under(GFX, "Device", rb_cObject);
