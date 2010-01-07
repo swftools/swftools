@@ -241,6 +241,8 @@ static void dumpFont(writer_t*w, gfxfont_t*font)
     writer_writeString(w, font->id);
     writer_writeU32(w, font->num_glyphs);
     writer_writeU32(w, font->max_unicode);
+    writer_writeDouble(w, font->ascent);
+    writer_writeDouble(w, font->descent);
     int t;
     for(t=0;t<font->num_glyphs;t++) {
 	dumpLine(w, font->glyphs[t].line);
@@ -262,6 +264,8 @@ static gfxfont_t*readFont(reader_t*r)
     font->id = reader_readString(r);
     font->num_glyphs = reader_readU32(r);
     font->max_unicode = reader_readU32(r);
+    font->ascent = reader_readDouble(r);
+    font->descent = reader_readDouble(r);
     font->glyphs = (gfxglyph_t*)rfx_calloc(sizeof(gfxglyph_t)*font->num_glyphs);
     font->unicode2glyph = (int*)rfx_calloc(sizeof(font->unicode2glyph[0])*font->max_unicode);
     int t;
