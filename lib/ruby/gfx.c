@@ -63,6 +63,9 @@ static VALUE doc_initialize(VALUE cls, VALUE _filename)
     const char*filename = StringValuePtr(_filename);
     doc->fontlist = gfxfontlist_create();
     doc->doc = pdfdriver->open(pdfdriver, filename);
+    if(!doc->doc) {
+	rb_raise(rb_eIOError, "couldn't open %s", filename);
+    }
     return cls;
 }
 
