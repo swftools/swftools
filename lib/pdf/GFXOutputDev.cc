@@ -2046,8 +2046,6 @@ void GFXOutputDev::updateFont(GfxState *state)
     device->addfont(device, current_gfxfont);
     free(id);
     
-    device->addfont(device, current_gfxfont);
-
     updateFontMatrix(state);
 }
 
