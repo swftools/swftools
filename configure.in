@@ -7,6 +7,15 @@ dnl new autoconf
 dnl AC_INIT
 dnl AC_CONFIG_SRCDIR([src/])
 
+# ------------------- option parsing -------------------------------
+
+DEBUG=
+CHECKMEM=
+PROFILING=
+ENABLE_WARNINGS=
+OPTIMIZE=
+DISABLE_LAME=
+
 AC_ARG_ENABLE(checkmem,
 [  --enable-checkmem       turn on ccmalloc debugging], CHECKMEM=true)
 AC_ARG_ENABLE(debug,
@@ -19,13 +28,13 @@ AC_ARG_ENABLE(optimizations,
 [  --enable-optimizations  turn on compiler optimizations (recommended for avi2swf)], OPTIMIZE=true)
 AC_ARG_ENABLE(lame,
 [  --disable-lame          don't compile any L.A.M.E. mp3 encoding code in],
+
 if test "x$enable_lame" = "xno";then
     DISABLE_LAME=yes
 fi,DISABLE_LAME=)
 
 PACKAGE=swftools
 VERSION=2009-08-12-1514
-
 
 # ------------------------------------------------------------------
 
@@ -34,9 +43,9 @@ if test "x${srcdir}" != "x."; then
     exit 1
 fi
 
-WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
+WARNINGS="-Wparentheses -Wimplicit -Wreturn-type -Wno-write-strings"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
-    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -D_FORTIFY_SOURCE=2 "
+    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -Wno-write-strings -D_FORTIFY_SOURCE=2 "
 fi
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -49,11 +58,11 @@ if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
         CFLAGS="$WARNINGS -O2 -g $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
-        LDFLAGS="-g $LIBS"
+        LDFLAGS="-g $LDFLAGS"
     else
         CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
-        LDFLAGS="-g -pg $LIBS"
+        LDFLAGS="-g -pg $LDFLAGS"
     fi
 else if test "x$OPTIMIZE" '!=' "x"; then
     CFLAGS="$WARNINGS -O3 -fomit-frame-pointer -Winline $CFLAGS"

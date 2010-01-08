@@ -1847,6 +1847,15 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+# ------------------- option parsing -------------------------------
+
+DEBUG=
+CHECKMEM=
+PROFILING=
+ENABLE_WARNINGS=
+OPTIMIZE=
+DISABLE_LAME=
+
 # Check whether --enable-checkmem was given.
 if test "${enable_checkmem+set}" = set; then
   enableval=$enable_checkmem; CHECKMEM=true
@@ -1885,7 +1894,6 @@ fi
 PACKAGE=swftools
 VERSION=2009-08-12-1514
 
-
 # ------------------------------------------------------------------
 
 if test "x${srcdir}" != "x."; then
@@ -1893,9 +1901,9 @@ if test "x${srcdir}" != "x."; then
     exit 1
 fi
 
-WARNINGS="-Wparentheses -Wimplicit -Wreturn-type"
+WARNINGS="-Wparentheses -Wimplicit -Wreturn-type -Wno-write-strings"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
-    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -D_FORTIFY_SOURCE=2 "
+    WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -Wno-write-strings -D_FORTIFY_SOURCE=2 "
 fi
 
 if test "x$CHECKMEM" '!=' "x";then
@@ -1908,11 +1916,11 @@ if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
         CFLAGS="$WARNINGS -O2 -g $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
-        LDFLAGS="-g $LIBS"
+        LDFLAGS="-g $LDFLAGS"
     else
         CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
         CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
-        LDFLAGS="-g -pg $LIBS"
+        LDFLAGS="-g -pg $LDFLAGS"
     fi
 else if test "x$OPTIMIZE" '!=' "x"; then
     CFLAGS="$WARNINGS -O3 -fomit-frame-pointer -Winline $CFLAGS"
@@ -10107,7 +10115,7 @@ LIBPDF='libpdf$(A)'
 if test "x${DISABLEPDF2SWF}" = "xtrue"; then
   echo "* Disabling pdf2swf tool..."
   rm -f lib/pdf/Makefile
-  echo all install uninstall clean libpdf: > lib/pdf/Makefile
+  echo all install uninstall clean libpdf libgfxpdf: > lib/pdf/Makefile
   pdf2swf_makefile=""
   PDF2SWF=
   LIBPDF=
