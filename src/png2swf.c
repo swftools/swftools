@@ -197,7 +197,7 @@ int png_read_header(FILE*fi, struct png_header*header)
 		exit(1);
 	    }
 	    if(a!=8 && (b==2 || b==6)) {
-		fprintf(stderr, "Bpp %d in mode %d not supported!\n", a);
+		fprintf(stderr, "Bpp %d in mode %d not supported!\n", b, a);
 		exit(1);
 	    }
 	    if(c!=0) {
@@ -553,7 +553,7 @@ TAG* PNG2Image(TAG*t, U16 id, char*filename, int*width, int*height)
     }
     
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
-	fprintf(stderr, "Couldn't uncompress IDAT chunk (%d bytes) in %s!\n", imagedatalen, filename);
+	fprintf(stderr, "Couldn't uncompress IDAT chunk (%lu bytes) in %s!\n", imagedatalen, filename);
 	if(zimagedata)
 	    free(zimagedata);
 	return 0;
@@ -1067,7 +1067,7 @@ void args_callback_usage(char *name)
     printf("-q , --quiet                   Omit normal log messages, only log errors\n");
     printf("-C , --cgi                     For use as CGI- prepend http header, write to stdout\n");
     printf("-V , --version                 Print version information and exit\n");
-    printf("-s , --scale <percent>         Scale image to <percent>% size.\n");
+    printf("-s , --scale <percent>         Scale image to <percent>%% size.\n");
     printf("\n");
 }
 

@@ -1917,7 +1917,7 @@ void GFXOutputDev::restoreState(GfxState *state) {
       if(verbose) {
 	  int t;
 	  for(t=0;t<=statepos;t++) {
-	      printf("%08x ", states[t].state);
+	      printf("%08x ", (unsigned int)states[t].state);
 	  }
 	  printf("\n");
       }

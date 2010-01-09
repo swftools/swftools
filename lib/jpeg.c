@@ -227,7 +227,7 @@ boolean mem_fill_input_buffer (j_decompress_ptr cinfo)
 void mem_skip_input_data (j_decompress_ptr cinfo, long num_bytes)
 {
     struct jpeg_source_mgr* mgr = cinfo->src;
-    printf("skip %d +%d\n", size - mgr->bytes_in_buffer, num_bytes);
+    printf("skip %d +%ld\n", size - mgr->bytes_in_buffer, num_bytes);
     if(num_bytes<=0)
 	return;
     mgr->next_input_byte += num_bytes;

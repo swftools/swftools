@@ -235,7 +235,7 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
 	int fontid = (int)(ptroff_t)gfxfontlist_getuserdata(i->fontlist, font->id);
 	PDF_setfont(i->p, fontid, matrix->m00);
 	char name[32];
-	sprintf(name, "%c\0", glyphnr+32);
+	sprintf(name, "%c", glyphnr+32);
 
 	if(fabs(matrix->tx - i->lastx) > 0.001 || matrix->ty != i->lasty) {
 	    PDF_show_xy2(i->p, name, strlen(name), matrix->tx, matrix->ty);

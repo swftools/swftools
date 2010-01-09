@@ -175,7 +175,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
         }
         if(fill.is_filled && lastx!=buf->width) {
             /* we're bleeding, fill over padding, too. */
-            fprintf(stderr, "Polygon %08x is bleeding in line %d\n", polygon, y);
+            fprintf(stderr, "Polygon %08x is bleeding in line %d\n", (int)polygon, y);
             fill_bitwise(line, lastx, width8*8);
 	    assert(line[width8-1]&0x01);
 	    bleeding = 1;

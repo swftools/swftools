@@ -255,10 +255,10 @@ code_t* code_atposition(codelookup_t*l, int pos)
 
 void lookupswitch_print(lookupswitch_t*l)
 {
-    printf("default: %08x\n", l->def);
+    printf("default: %08x\n", (int)l->def);
     code_list_t*t = l->targets;
     while(t) {
-        printf("target: %08x\n", t->code);
+        printf("target: %08x\n", (int)t->code);
         t = t->next;
     }
 }
@@ -990,7 +990,7 @@ int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*
                     if(c->branch)
                         fprintf(fo, "->%d", c->branch->pos);
                     else
-                        fprintf(fo, "%08x", c->branch);
+                        fprintf(fo, "%08x", (unsigned int)c->branch);
                 } else if(*p == 's') {
                     char*s = string_escape((string_t*)data);
                     fprintf(fo, "\"%s\"", s);

@@ -1881,7 +1881,7 @@ int swf_WriteCGI(SWF * swf)
 
   sprintf(s,"Content-type: application/x-shockwave-flash\n"
             "Accept-Ranges: bytes\n"
-            "Content-Length: %lu\n"
+            "Content-Length: %d\n"
             "Expires: Thu, 13 Apr 2000 23:59:59 GMT\n"
             "\n",len);
             

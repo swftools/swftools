@@ -632,7 +632,7 @@ int main(int argc, char **argv)
 	int i;
 	for (i = 0; i < global.nfiles; i++) {
 	    if (VERBOSE(3))
-		fprintf(stderr, "[%03i] %s (%i%%, 1/%i)\n", i,
+		fprintf(stderr, "[%03i] %s (%i%%)\n", i,
 			image[i].filename, image[i].quality);
 	    t = MovieAddFrame(&swf, t, image[i].filename, image[i].quality,
 			      image[i].width, image[i].height);

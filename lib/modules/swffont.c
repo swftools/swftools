@@ -146,7 +146,7 @@ SWFFONT* swf_LoadTrueTypeFont(const char*filename, char flashtype)
     FT_Set_Pixel_Sizes (face, 16*loadfont_scale*scale, 16*loadfont_scale*scale);
 
     if(face->num_glyphs <= 0) {
-	fprintf(stderr, "File %s contains %d glyphs\n", face->num_glyphs);
+	fprintf(stderr, "File %s contains %d glyphs\n", filename, (int)face->num_glyphs);
 	return 0;
     }
 

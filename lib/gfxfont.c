@@ -173,7 +173,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 	return 0;
     }
     if(face->num_glyphs <= 0) {
-	fprintf(stderr, "File %s contains %d glyphs\n", face->num_glyphs);
+	fprintf(stderr, "File %s contains %d glyphs\n", filename, (int)face->num_glyphs);
 	return 0;
     }
 
@@ -333,9 +333,9 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 	    error = FT_Load_Glyph(face, t, FT_LOAD_NO_BITMAP);
 	    if(error) {
 		if(hasname)
-		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d, name %s) has return code %d\n", t, face->num_glyphs, glyph2unicode[t], name, error);
+		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d, name %s) has return code %d\n", t, (int)face->num_glyphs, glyph2unicode[t], name, error);
 		else
-		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d) has return code %d\n", t, face->num_glyphs, glyph2unicode[t], error);
+		    fprintf(stderr, "Warning: glyph %d/%d (unicode %d) has return code %d\n", t, (int)face->num_glyphs, glyph2unicode[t], error);
 		omit = 2;
 
 #if 0
@@ -358,7 +358,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 	if(!omit) {
 	    error = FT_Get_Glyph(face->glyph, &glyph);
 	    if(error) {
-		fprintf(stderr, "Couldn't get glyph %d/%d, error:%d\n", t, face->num_glyphs, error);
+		fprintf(stderr, "Couldn't get glyph %d/%d, error:%d\n", t, (int)face->num_glyphs, error);
 		omit = 3;
 	    }
 	}

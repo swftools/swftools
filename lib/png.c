@@ -122,7 +122,7 @@ static int png_read_header(FILE*fi, struct png_header*header)
 		return 0;
 	    }
 	    if(a!=8 && (b==2 || b==6)) {
-		printf("Bpp %d in mode %d not supported!\n", a);
+		printf("Bpp %d in mode %d not supported!\n", b, a);
 		return 0;
 	    }
 	    if(c!=0) {

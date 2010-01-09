@@ -1901,7 +1901,7 @@ if test "x${srcdir}" != "x."; then
     exit 1
 fi
 
-WARNINGS="-Wimplicit -Wreturn-type -Wno-write-strings"
+WARNINGS="-Wimplicit -Wreturn-type -Wno-write-strings -Wformat"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
     WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -Wno-write-strings -D_FORTIFY_SOURCE=2 "
 fi

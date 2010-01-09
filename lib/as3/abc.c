@@ -777,7 +777,7 @@ void* swf_ReadABC(TAG*tag)
 	
         DEBUG printf("method %d) %s ", t, m->name);
         DEBUG params_dump(stdout, m->parameters, m->optional_parameters);
-        DEBUG printf("flags=%02x\n", t, m->flags);
+        DEBUG printf("flags=%02x\n", m->flags);
 
         if(m->flags&0x08) {
             m->optional_parameters = list_new();

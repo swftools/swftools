@@ -210,7 +210,7 @@ char* mktempname(char*ptr) {
  //   used to be mktemp. This does remove the warnings, but
  //   It's not exactly an improvement.
 #ifdef HAVE_LRAND48
-    sprintf(ptr, "%s%s%08x%08x",dir,sep,lrand48(),lrand48());
+    sprintf(ptr, "%s%s%08x%08x",dir,sep,(unsigned int)lrand48(),(unsigned int)lrand48());
 #else
 #   ifdef HAVE_RAND
 	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());

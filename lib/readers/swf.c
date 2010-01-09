@@ -92,7 +92,7 @@ void map16_free(map16_t*map)
 void map16_add_id(map16_t*map, int nr, void*id)
 {
     if(map->ids[nr])
-	fprintf(stderr, "Warning: ID %d defined more than once\n");
+	fprintf(stderr, "Warning: ID %d defined more than once\n", nr);
     map->ids[nr] = id;
 }
 void map16_remove_id(map16_t*map, int nr)

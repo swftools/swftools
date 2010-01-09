@@ -701,7 +701,7 @@ void handlejpeg(TAG*tag)
     }
     else {
 	int id = GET16(tag->data);
-	fprintf(stderr, "Object %d is not a JPEG picture!\n",id, jpegtables);
+	fprintf(stderr, "Object %d is not a JPEG picture!\n", id);
 	exit(1);
     }
 }

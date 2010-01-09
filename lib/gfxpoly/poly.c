@@ -201,10 +201,10 @@ void gfxpoly_dump(gfxpoly_t*poly)
 {
     int s,t;
     double g = poly->gridsize;
-    fprintf(stderr, "polyon %08x (gridsize: %f)\n", poly, poly->gridsize);
+    fprintf(stderr, "polyon %08x (gridsize: %f)\n", (int)poly, poly->gridsize);
     gfxpolystroke_t*stroke = poly->strokes;
     for(;stroke;stroke=stroke->next) {
-	fprintf(stderr, "%08x", stroke);
+	fprintf(stderr, "%08x", (int)stroke);
 	for(s=0;s<stroke->num_points-1;s++) {
 	    point_t a = stroke->points[s];
 	    point_t b = stroke->points[s+1];

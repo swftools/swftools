@@ -92,7 +92,7 @@ static void convert_file(const char*filename, polywriter_t*w, double gridsize)
             break;
         double x,y;
         char s[256];
-        if(sscanf(line, "%lf %lf %s", &x, &y, &s) == 3) {
+        if(sscanf(line, "%lf %lf %s", &x, &y, (char*)&s) == 3) {
             if(s && !strcmp(s,"moveto")) {
 		w->moveto(w, convert_coord(x,z), convert_coord(y,z));
                 count++;

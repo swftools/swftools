@@ -74,16 +74,14 @@ int wav_read(struct WAV*wav, const char* filename)
         return 0;
     }
     if(block.size + 8 < filesize)
-        fprintf(stderr, "wav_read: warning - more tags (%d extra bytes)\n",
-    filesize - block.size - 8);
+        fprintf(stderr, "wav_read: warning - more tags (%lu extra bytes)\n", filesize - block.size - 8);
 
     if(block.size == filesize)
 	/* some buggy software doesn't generate the right tag length */
         block.size = filesize - 8;
 
     if(block.size + 8 > filesize)
-        fprintf(stderr, "wav_read: warning - short file (%d bytes missing)\n",
-    block.size + 8 -  filesize);
+        fprintf(stderr, "wav_read: warning - short file (%lu bytes missing)\n", block.size + 8 -  filesize);
     if(fread(b, 1, 4, fi) < 4)
     {
         fclose(fi);
@@ -198,7 +196,7 @@ int wav_write(struct WAV*wav, const char*filename)
 
 void wav_print(struct WAV*wav)
 {
-    printf("tag:%04x channels:%d samples/sec:%d bytes/sec:%d align:%d bits/sample:%d size:%d\n",
+    printf("tag:%04x channels:%d samples/sec:%lu bytes/sec:%lu align:%d bits/sample:%d size:%d\n",
 	    wav->tag, wav->channels, wav->sampsPerSec, wav->bytesPerSec, 
 	    wav->align, wav->bps, wav->size);
 }

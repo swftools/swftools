@@ -609,7 +609,7 @@ void handleVideoFrame(TAG*tag, char*prefix)
 
     deblock = swf_GetBits(tag, 1);
     if(deblock)
-	printf(" deblock ", deblock);
+	printf(" deblock %d ", deblock);
     quantizer = swf_GetBits(tag, 5);
     printf(" quant: %d ", quantizer);
 }

@@ -833,7 +833,7 @@ static void change_state(int y, state_t* state, renderpoint_t*p)
     layer_t*before=0, *self=0, *after=0;
 
     if(DEBUG&2) { 
-        printf("[(%d,%d)/%d/%d-%d]", p->x, y, p->depth, p->shapeline->fillstyle0, p->shapeline->fillstyle1);
+        printf("[(%f,%d)/%d/%d-%d]", p->x, y, p->depth, p->shapeline->fillstyle0, p->shapeline->fillstyle1);
     }
 
     search_layer(state, p->depth, &before, &self, &after);

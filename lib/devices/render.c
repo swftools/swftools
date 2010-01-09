@@ -822,7 +822,7 @@ char*gfximage_asXPM(gfximage_t*img, int depth)
     int d= 256/depth;
     char*str = (char*)malloc(img->width*img->height*4 + 500 + 16*depth*depth*depth);
     char*p = str;
-    p+= sprintf(p, "static char *noname[] = {\n\"%d %d 262144 3\",\n");
+    p+= sprintf(p, "static char *noname[] = {\n\"%d %d 262144 3\",\n", img->width, img->height);
     int r,g,b;
     for(r=0;r<depth;r++)
     for(g=0;g<depth;g++)

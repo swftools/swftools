@@ -2691,7 +2691,7 @@ int parseColor2(const char*str, RGBA*color)
 	return 1;
     }
     int len=strlen(str);
-    U8 alpha = 255;
+    int alpha = 255;
     if(strchr(str, '/')) {
 	len = strchr(str, '/')-str;
 	sscanf(str+len+1,"%02x", &alpha);

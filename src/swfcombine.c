@@ -316,7 +316,7 @@ void args_callback_usage(char *name)
     printf("-f , --frame                   The following identifier is a frame or framelabel, not an id or objectname\n");
     printf("-x , --movex <xpos>            x Adjust position of slave by <xpos> pixels\n");
     printf("-y , --movey <ypos>            y Adjust position of slave by <ypos> pixels\n");
-    printf("-s , --scale <scale>           Adjust size of slave by <scale> percent (e.g. 100% = original size)\n");
+    printf("-s , --scale <scale>           Adjust size of slave by <scale> percent (e.g. 100%% = original size)\n");
     printf("-r , --rate <fps>              Set movie framerate to <fps> (frames/sec)\n");
     printf("-X , --width <width>           Force movie bbox width to <width> (default: use master width (not with -t))\n");
     printf("-Y , --height <height>          Force movie bbox height to <height> (default: use master height (not with -t))\n");

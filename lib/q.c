@@ -508,7 +508,7 @@ void _trie_dump(trielayer_t*t, char*buffer, int pos)
     }
     if(t->rest) {
         buffer[pos]=0;
-        printf("%s%s %08x\n", buffer, t->rest, t->data);
+        printf("%s%s %08x\n", buffer, t->rest, (int)t->data);
     }
 }
 
@@ -1083,9 +1083,9 @@ void dict_dump(dict_t*h, FILE*fi, const char*prefix)
         dictentry_t*e = h->slots[t];
         while(e) {
             if(h->key_type!=&charptr_type) {
-                fprintf(fi, "%s%08x=%08x\n", prefix, e->key, e->data);
+                fprintf(fi, "%s%08x=%08x\n", prefix, (int)e->key, (int)e->data);
             } else {
-                fprintf(fi, "%s%s=%08x\n", prefix, e->key, e->data);
+                fprintf(fi, "%s%s=%08x\n", prefix, (char*)e->key, (int)e->data);
             }
             e = e->next;
         }
@@ -1337,7 +1337,7 @@ static void freestring(void*data)
 static void dumpmapentry(void*data, const void*key, void*value)
 {
     FILE*fi = (FILE*)data;
-    fprintf(fi, "%s=%s\n", key, (char*)value);
+    fprintf(fi, "%s=%s\n", (char*)key, (char*)value);
 }
 void map_dump(map_t*map, FILE*fi, const char*prefix)
 {

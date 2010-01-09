@@ -185,9 +185,9 @@ char* namespace_tostring(namespace_t*ns)
     char*s = escape_string(ns->name);
     char*string = (char*)malloc(strlen(access)+strlen(s)+7);
     if(!s)
-        sprintf(string, "[%s]NULL", access, s);
+        sprintf(string, "[%s]NULL", access);
     else if(!*s)
-        sprintf(string, "[%s]\"\"", access, s);
+        sprintf(string, "[%s]\"\"", access);
     else 
         sprintf(string, "[%s]%s", access, s);
     free(s);
@@ -953,7 +953,7 @@ int pool_find_float(pool_t*pool, double x)
 {
     int i = array_find(pool->x_ints, &x);
     if(i<=0) {
-        fprintf(stderr, "Couldn't find int \"%d\" in constant pool\n", x);
+        fprintf(stderr, "Couldn't find int \"%f\" in constant pool\n", x);
         return 0;
     }
     return i;
@@ -965,7 +965,7 @@ int pool_find_namespace(pool_t*pool, namespace_t*ns)
     int i = array_find(pool->x_namespaces, ns);
     if(i<0) {
         char*s = namespace_tostring(ns);
-        fprintf(stderr, "Couldn't find namespace \"%s\" %08x in constant pool\n", s, ns);
+        fprintf(stderr, "Couldn't find namespace \"%s\" %08x in constant pool\n", s, (int)ns);
         free(s);
         return 0;
     }
@@ -991,7 +991,7 @@ int pool_find_string(pool_t*pool, const char*str)
     string_t s = string_new2(str);
     int i = array_find(pool->x_strings, &s);
     if(i<=0) {
-        fprintf(stderr, "Couldn't find string \"%s\" in constant pool\n", s);
+        fprintf(stderr, "Couldn't find string \"%s\" in constant pool\n", str);
         return 0;
     }
     return i;
@@ -1232,7 +1232,7 @@ void pool_dump(pool_t*pool, FILE*fo, char flags)
         int freq = (int)(ptroff_t)array_getvalue(pool->x_strings, t);
         if(flags&1) fprintf(fo, "%5d %d) ", freq, t);
         if(flags&1) fwrite(str.str, str.len, 1, fo);
-        if(flags&1) fprintf(fo, "\n", t);
+        if(flags&1) fprintf(fo, "\n");
     }
     fprintf(fo, "%d namespaces\n", pool->x_namespaces->num);
     for(t=1;t<pool->x_namespaces->num;t++) {
