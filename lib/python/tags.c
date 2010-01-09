@@ -186,7 +186,7 @@ static PyObject* po_create(PyObject* self, PyObject* args, PyObject* kwargs,char
     po->depth = depth;
     po->clipdepth = clipdepth;
     po->ratio = ratio;
-    po->name = (unsigned char*)name;
+    po->name = name;
     po->move = move;
     if(clipdepth) po->clipdepth = clipdepth;
     if(matrix) po->matrix = matrix_getMatrix(matrix);

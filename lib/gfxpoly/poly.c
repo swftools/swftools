@@ -260,8 +260,8 @@ static void event_dump(event_t*e)
     }
 }
 
-static inline max32(int32_t v1, int32_t v2) {return v1>v2?v1:v2;}
-static inline min32(int32_t v1, int32_t v2) {return v1<v2?v1:v2;}
+static inline int32_t max32(int32_t v1, int32_t v2) {return v1>v2?v1:v2;}
+static inline int32_t min32(int32_t v1, int32_t v2) {return v1<v2?v1:v2;}
 
 static void segment_dump(segment_t*s)
 {

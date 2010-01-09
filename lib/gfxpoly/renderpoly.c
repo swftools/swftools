@@ -198,8 +198,8 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 #define MAX_WIDTH 8192
 #define MAX_HEIGHT 4096
 
-static inline max(double a, double b) {return a>b?a:b;}
-static inline min(double a, double b) {return a<b?a:b;}
+static inline double max(double a, double b) {return a>b?a:b;}
+static inline double min(double a, double b) {return a<b?a:b;}
 
 static int adjust_x(int xmin, int xmax)
 {

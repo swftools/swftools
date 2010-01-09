@@ -33,6 +33,7 @@
 #include "../mem.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#include "../gfximage.h"
 
 typedef struct _internal {
     PDF* p;

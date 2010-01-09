@@ -55,20 +55,20 @@ static t* name##_get(name##_t*h)                                       \
             break;                                                     \
 	}                                                              \
         if(child+1 < h->size && lt(h->elements[child+1],               \
-		                   h->elements[child]))              \
+		                   h->elements[child]))                \
 	    child++;                                                   \
 	h->elements[node] = h->elements[child];                        \
     } while(lt(h->elements[child],node_p));                            \
     h->elements[node] = node_p;                                        \
     return r;                                                          \
 }                                                                      \
-static name##_init(name##_t*h)                                         \
+static void name##_init(name##_t*h)                                    \
 {                                                                      \
     memset(h, 0, sizeof(*h));                                          \
     h->max_size = 15;                                                  \
     h->elements = malloc(h->max_size*sizeof(t*));                      \
 }                                                                      \
-static name##_destroy(name##_t*h)                                      \
+static void name##_destroy(name##_t*h)                                 \
 {                                                                      \
     free((h)->elements);                                               \
 }
