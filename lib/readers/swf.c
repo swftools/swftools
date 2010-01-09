@@ -183,20 +183,13 @@ gfxline_t* swfline_to_gfxline(SHAPELINE*line, int linestyle, int fillstyle0)
 
 //---- bitmap handling ----
 
-gfximage_t* gfximage_new(RGBA*data, int width, int height)
+static gfximage_t* gfximage_new(RGBA*data, int width, int height)
 {
     gfximage_t* b = (gfximage_t*)rfx_calloc(sizeof(gfximage_t));
     b->data = (gfxcolor_t*)data;
     b->width = width;
     b->height = height;
     return b;
-}
-
-void gfximage_free(gfximage_t*b)
-{
-    free(b->data); //!
-    b->data = 0;
-    free(b);
 }
 
 static gfximage_t* findimage(render_t*r, U16 id)

@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <math.h>
 #include <memory.h>
 #include "jpeg.h"
@@ -340,3 +341,11 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     image2->height = newheight;
     return image2;
 }
+
+void gfximage_free(gfximage_t*b)
+{
+    free(b->data);
+    b->data = 0;
+    free(b);
+}
+
