@@ -30,6 +30,11 @@ typedef struct _gfxglyph
     const char*name;
 } gfxglyph_t;
 
+typedef struct _gfxkerning
+{
+    int c1,c2,advance;
+} gfxkerning_t;
+
 typedef struct _gfxfont
 {
     const char*id;
@@ -40,6 +45,9 @@ typedef struct _gfxfont
 
     gfxglyph_t*glyphs;
     int* unicode2glyph;
+
+    gfxkerning_t*kerning;
+    int kerning_size;
 } gfxfont_t;
 
 typedef struct _gfxcolor

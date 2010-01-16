@@ -15,6 +15,7 @@
 #endif
 #include "GfxState.h"
 #include "../log.h"
+#include "../types.h"
 #include "../q.h"
 #include <math.h>
 #include <assert.h>
@@ -52,11 +53,14 @@ InfoOutputDev::~InfoOutputDev()
     delete id2font;id2font=0;
     delete splash;splash=0;
 }
+
 void FontInfo::grow(int size)
 {
     if(size >= this->num_glyphs) {
 	this->glyphs = (GlyphInfo**)realloc(this->glyphs, sizeof(GlyphInfo*)*(size));
+	this->kerning = (dict_t**)realloc(this->kerning, sizeof(dict_t*)*(size));
 	memset(&this->glyphs[this->num_glyphs], 0, sizeof(SplashPath*)*((size)-this->num_glyphs));
+	memset(&this->kerning[this->num_glyphs], 0, sizeof(dict_t*)*((size)-this->num_glyphs));
 	this->num_glyphs = size;
     }
 }
@@ -67,6 +71,7 @@ FontInfo::FontInfo(char*id)
     this->seen = 0;
     this->num_glyphs = 0;
     this->glyphs = 0;
+    this->kerning = 0;
     this->splash_font = 0;
     this->lastchar = -1;
     this->lastx = 0;
@@ -93,6 +98,17 @@ FontInfo::~FontInfo()
     free(glyphs);glyphs=0;
     if(this->gfxfont)
         gfxfont_free(this->gfxfont);
+   
+    if(kerning) {
+	for(t=0;t<num_glyphs;t++) {
+	    dict_t* d = kerning[t];
+	    if(!d) continue;
+	    DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
+		mtf_destroy(m);
+	    }
+	    dict_destroy(d);
+	}
+    }
 }
 
 static int findSpace(gfxfont_t*font)
@@ -214,6 +230,34 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	}
 
     }
+
+    int kerning_size = 0;
+    for(t=0;t<font->num_glyphs;t++) {
+	dict_t* d = src->kerning[t];
+	if(!d) continue;
+	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
+	    if(m) {
+		kerning_size++;
+	    }
+	}
+    }
+    font->kerning_size = kerning_size;
+    font->kerning = (gfxkerning_t*)malloc(sizeof(gfxkerning_t)*kerning_size);
+    int pos = 0;
+    for(t=0;t<font->num_glyphs;t++) {
+	dict_t* d = src->kerning[t];
+	if(!d) continue;
+	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
+	    if(m) {
+		font->kerning[pos].c1 = t;
+		font->kerning[pos].c2 = (int)(ptroff_t)key;
+		font->kerning[pos].advance = (int)(ptroff_t)m->first->key;
+		pos++;
+	    }
+	}
+    }
+    //int advance = (int)(ptroff_t)m->first->key;
+
     return font;
 }
 
@@ -407,15 +451,31 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
 	g->unicode = u[0];
     }
     if(currentfont->lastchar>=0 && currentfont->lasty == y) {
-	double xshift = x - currentfont->lastx;
+	double xshift = (x - currentfont->lastx);
 	if(xshift>=0 && xshift > g->advance_max) {
 	    g->advance_max = xshift;
+	}
+	int advance = (int)xshift;
+	if(advance>=0 && advance<g->advance*4 && advance!=currentfont->lastadvance) {
+	    int c1 = currentfont->lastchar;
+	    int c2 = code;
+	    dict_t*d = currentfont->kerning[c1];
+	    if(!d) {
+		d = currentfont->kerning[c1] = dict_new2(&int_type);
+	    }
+	    mtf_t*k = (mtf_t*)dict_lookup(d, (void*)(ptroff_t)c2);
+	    if(!k) {
+		k = mtf_new(&int_type);
+		dict_put(d, (void*)(ptroff_t)c2, k);
+	    }
+	    mtf_increase(k, (void*)(ptroff_t)advance);
 	}
     }
 
     currentfont->lastx = x;
     currentfont->lasty = y;
     currentfont->lastchar = code;
+    currentfont->lastadvance = (int)(g->advance+0.5);
 }
 
 GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen)

@@ -73,6 +73,7 @@ typedef struct _type_t {
 extern type_t charptr_type;
 extern type_t stringstruct_type;
 extern type_t ptr_type;
+extern type_t int_type;
 
 typedef struct _dictentry {
     void*key;
@@ -131,6 +132,18 @@ typedef struct _trie {
     trielayer_t* start;
     void*rollback;
 } trie_t;
+
+/* move to front list structure */
+typedef struct _mtf_item {
+    const void*key;
+    int num;
+    struct _mtf_item*next;
+} mtf_item_t;
+
+typedef struct _mtf {
+    mtf_item_t*first;
+    type_t*type;
+} mtf_t;
 
 char* strdup_n(const char*str, int size);
 char* allocprintf(const char*str, ...);
@@ -241,6 +254,10 @@ int trie_contains(trie_t*t, unsigned const char*id);
 void trie_remember(trie_t*t);
 void trie_rollback(trie_t*t);
 void trie_dump(trie_t*t);
+
+mtf_t* mtf_new(type_t*type);
+void mtf_increase(mtf_t*m, const void*key);
+void mtf_destroy(mtf_t*m);
 
 array_t* array_new();
 array_t* array_new2(type_t*type);

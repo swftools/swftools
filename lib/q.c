@@ -887,6 +887,23 @@ void ptr_free(void*o)
     return;
 }
 
+char int_equals(const void*o1, const void*o2) 
+{
+    return o1==o2;
+}
+unsigned int int_hash(const void*o) 
+{
+    return string_hash3((const char*)&o, sizeof(o));
+}
+void* int_dup(const void*o) 
+{
+    return (void*)o;
+}
+void int_free(void*o) 
+{
+    return;
+}
+
 char charptr_equals(const void*o1, const void*o2) 
 {
     if(!o1 || !o2)
@@ -951,6 +968,13 @@ void stringstruct_free(void*o)
     if(o)
         string_free(o);
 }
+
+type_t int_type = {
+    equals: int_equals,
+    hash: int_hash,
+    dup: int_dup,
+    free: int_free,
+};
 
 type_t ptr_type = {
     equals: ptr_equals,
@@ -1300,6 +1324,49 @@ void dict_destroy(dict_t*dict)
         return;
     dict_clear(dict);
     rfx_free(dict);
+}
+
+// ------------------------------- mtf_t --------------------------------------
+mtf_t* mtf_new(type_t*type)
+{
+    NEW(mtf_t, mtf);
+    mtf->type = type;
+    return mtf;
+}
+void mtf_increase(mtf_t*m, const void*key)
+{
+    mtf_item_t*item = m->first;
+    mtf_item_t*last = 0;
+    while(item) {
+	if(m->type->equals(item->key, key)) {
+	    item->num++;
+	    if(last) last->next = item->next;
+	    else m->first = item->next;
+            item->next = m->first;
+            m->first = item;
+            return;
+	}
+	last = item;
+	item = item->next;
+    }
+    NEW(mtf_item_t,n);
+    if(last) last->next = n;
+    else m->first = n;
+    n->key = key;
+    n->num = 1;
+}
+void mtf_destroy(mtf_t*m)
+{
+    if(!m) return;
+    mtf_item_t*item = m->first;
+    m->first = 0;
+    while(item) {
+	mtf_item_t*next = item->next;
+	item->next = 0;
+	free(item);
+	item = next;
+    }
+    free(m);
 }
 
 // ------------------------------- map_t --------------------------------------

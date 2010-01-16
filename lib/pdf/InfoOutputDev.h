@@ -44,6 +44,7 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfxfont.h"
+#include "../q.h"
 
 #define INTERNAL_FONT_SIZE 1024.0
 #define GLYPH_IS_SPACE(g) ((!(g)->line || ((g)->line->type==gfx_moveTo && !(g)->line->next)) && (g)->advance)
@@ -72,6 +73,7 @@ public:
 
     double lastx,lasty;
     int lastchar;
+    int lastadvance;
 
     double ascender,descender;
 
@@ -81,6 +83,8 @@ public:
     double max_size;
     int num_glyphs;
     GlyphInfo**glyphs;
+    dict_t**kerning;
+
     int*charid2glyph;
     SplashFont*splash_font;
     char seen;
