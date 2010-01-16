@@ -257,6 +257,12 @@ static void dumpFont(writer_t*w, gfxfont_t*font)
     for(t=0;t<font->max_unicode;t++) {
 	writer_writeU32(w, font->unicode2glyph[t]);
     }
+    writer_writeU32(w, font->kerning_size);
+    for(t=0;t<font->kerning_size;t++) {
+	writer_writeU32(w, font->kerning[t].c1);
+	writer_writeU32(w, font->kerning[t].c2);
+	writer_writeU32(w, font->kerning[t].advance);
+    }
 }
 static gfxfont_t*readFont(reader_t*r)
 {
@@ -281,6 +287,15 @@ static gfxfont_t*readFont(reader_t*r)
     }
     for(t=0;t<font->max_unicode;t++) {
 	font->unicode2glyph[t] = reader_readU32(r);
+    }
+    font->kerning_size = reader_readU32(r);
+    if(font->kerning_size) {
+	font->kerning = malloc(sizeof(gfxkerning_t)*font->kerning_size);
+	for(t=0;t<font->kerning_size;t++) {
+	    font->kerning[t].c1 = reader_readU32(r);
+	    font->kerning[t].c2 = reader_readU32(r);
+	    font->kerning[t].advance = reader_readU32(r);
+	}
     }
     return font;
 }
