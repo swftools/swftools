@@ -1443,7 +1443,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
     //m.tx += originX; m.ty += originY;
     
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%08x",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
 
     if((render == RENDER_FILL && !config_drawonlyshapes) ||
        (render == RENDER_FILLSTROKE && state->getTransformedLineWidth()<1.0) ||
@@ -1504,7 +1504,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 void GFXOutputDev::endString(GfxState *state) 
 { 
     int render = state->getRender();
-    msg("<trace> endString() render=%d textstroke=%08x", render, current_text_stroke);
+    msg("<trace> endString() render=%d textstroke=%p", render, current_text_stroke);
     
     if(current_text_stroke) {
 	/* fillstroke and stroke text rendering objects we can process right
@@ -1533,7 +1533,7 @@ void GFXOutputDev::endString(GfxState *state)
 void GFXOutputDev::endTextObject(GfxState *state)
 {
     int render = state->getRender();
-    msg("<trace> endTextObject() render=%d textstroke=%08x clipstroke=%08x", render, current_text_stroke, current_text_clip);
+    msg("<trace> endTextObject() render=%d textstroke=%p clipstroke=%p", render, current_text_stroke, current_text_clip);
     
     if(current_text_clip) {
 	device->setparameter(device, "mark","TXT");
@@ -1864,9 +1864,9 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 }
 
 void GFXOutputDev::saveState(GfxState *state) {
-    dbg("saveState %08x", state); dbgindent+=2;
+    dbg("saveState %p", state); dbgindent+=2;
 
-    msg("<trace> saveState %08x", state);
+    msg("<trace> saveState %p", state);
     updateAll(state);
     if(statepos>=64) {
       msg("<fatal> Too many nested states in pdf.");
@@ -1886,13 +1886,13 @@ void GFXOutputDev::saveState(GfxState *state) {
 };
 
 void GFXOutputDev::restoreState(GfxState *state) {
-  dbgindent-=2; dbg("restoreState %08x", state);
+  dbgindent-=2; dbg("restoreState %p", state);
 
   if(statepos==0) {
       msg("<fatal> Invalid restoreState");
       exit(1);
   }
-  msg("<trace> restoreState %08x%s%s", state,
+  msg("<trace> restoreState %p%s%s", state,
 	                          states[statepos].softmask?" (end softmask)":"",
 	                          states[statepos].clipping?" (end clipping)":"");
   if(states[statepos].softmask) {
@@ -1917,7 +1917,7 @@ void GFXOutputDev::restoreState(GfxState *state) {
       if(verbose) {
 	  int t;
 	  for(t=0;t<=statepos;t++) {
-	      printf("%08x ", (unsigned int)states[t].state);
+	      printf("%p ", states[t].state);
 	  }
 	  printf("\n");
       }
@@ -2649,7 +2649,7 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
     if(blendingColorSpace) {
 	colormodename = GfxColorSpace::getColorSpaceModeName(blendingColorSpace->getMode());
     }
-    dbg("beginTransparencyGroup device=%08x %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", device, bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
+    dbg("beginTransparencyGroup device=%p %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", device, bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     msg("<verbose> beginTransparencyGroup %.1f/%.1f/%.1f/%.1f %s isolated=%d knockout=%d forsoftmask=%d", bbox[0],bbox[1],bbox[2],bbox[3], colormodename, isolated, knockout, forSoftMask);
     
     //states[statepos].createsoftmask |= forSoftMask;
@@ -2659,7 +2659,7 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
 
     states[statepos].olddevice = this->device;
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
-    dbg("this->device now %08x (old: %08x)", this->device, states[statepos].olddevice);
+    dbg("this->device now %p (old: %p)", this->device, states[statepos].olddevice);
 
     gfxdevice_record_init(this->device);
     
@@ -2674,7 +2674,7 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
     dbgindent-=2;
     gfxdevice_t*r = this->device;
 
-    dbg("endTransparencyGroup this->device now back to %08x (destroying %08x)", states[statepos].olddevice, this->device);
+    dbg("endTransparencyGroup this->device now back to %p (destroying %p)", states[statepos].olddevice, this->device);
     
     this->device = states[statepos].olddevice;
     if(!this->device) {
@@ -2684,8 +2684,8 @@ void GFXOutputDev::endTransparencyGroup(GfxState *state)
 
     gfxresult_t*recording = r->finish(r);
     
-    dbg("                     forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
-    msg("<verbose> endTransparencyGroup forsoftmask=%d recording=%08x/%08x", states[statepos].createsoftmask, r, recording);
+    dbg("                     forsoftmask=%d recording=%p/%p", states[statepos].createsoftmask, r, recording);
+    msg("<verbose> endTransparencyGroup forsoftmask=%d recording=%p/%p", states[statepos].createsoftmask, r, recording);
 
     if(states[statepos].createsoftmask) {
 	states[statepos-1].softmaskrecording = recording;
@@ -2704,7 +2704,7 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
                                "colordodge","colorburn","hardlight","softlight","difference",
                                "exclusion","hue","saturation","color","luminosity"};
 
-    dbg("paintTransparencyGroup blend=%s softmaskon=%d recording=%08x", blendmodes[state->getBlendMode()], states[statepos].softmask, states[statepos].grouprecording);
+    dbg("paintTransparencyGroup blend=%s softmaskon=%d recording=%p", blendmodes[state->getBlendMode()], states[statepos].softmask, states[statepos].grouprecording);
     msg("<verbose> paintTransparencyGroup blend=%s softmaskon=%d", blendmodes[state->getBlendMode()], states[statepos].softmask);
 
     if(state->getBlendMode() == gfxBlendNormal)
@@ -2723,7 +2723,7 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 	if(blendmode == gfxBlendMultiply && alpha>200)
 	    alpha = 128;
 	gfxdevice_t ops;
-	dbg("this->device=%08x, this->device->name=%s\n", this->device, this->device->name);
+	dbg("this->device=%p, this->device->name=%s\n", this->device, this->device->name);
 	gfxdevice_ops_init(&ops, this->device, alpha);
 	gfxresult_record_replay(grouprecording, &ops);
 	ops.finish(&ops);
@@ -2760,7 +2760,7 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
     gfxdevice_record_init(this->device);
 
-    dbg("softmaskrecording is %08x (dev=%08x) at statepos %d\n", states[statepos].softmaskrecording, this->device, statepos);
+    dbg("softmaskrecording is %p (dev=%p) at statepos %d\n", states[statepos].softmaskrecording, this->device, statepos);
     
     states[statepos].softmask = 1;
     states[statepos].softmask_alpha = alpha;
