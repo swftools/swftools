@@ -27,7 +27,7 @@ mklib.o: mklib.c parser.tab.h parser.h
 	$(C) mklib.c -o mklib.o
 
 parser: main.o tokenizer.yy.c ../librfxswf.a ../libbase.a parser.tab.h 
-	$(L) main.o ../librfxswf.a ../libbase.a -o parser -lz
+	$(L) main.o ../librfxswf.a ../libbase.a -o parser -lz -lzzip
 
 rfxswf_modules=../drawer.o ../rfxswf.o ../modules/*.o ../lame/*.o ../action/*.o ../MD5.o $(MODULES)
 mklib: mklib.o $(rfxswf_modules) import.o registry.o tokenizer.yy.o parser.tab.o files.o compiler.o assets.o ../libbase.a

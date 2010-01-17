@@ -27,7 +27,7 @@ asset_resolver_t* swf_ParseAssets(SWF*swf)
 {
     NEW(asset_resolver_t,assets);
     assets->name2asset = dict_new2(&charptr_type);
-    assets->id2asset = malloc(sizeof(abc_asset_t*)*65536);
+    assets->id2asset = rfx_calloc(sizeof(abc_asset_t*)*65536);
 
     TAG*tag = swf->firstTag;
     while(tag) {

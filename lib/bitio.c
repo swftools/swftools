@@ -136,6 +136,28 @@ void reader_init_memreader(reader_t*r, void*newdata, int newlength)
     r->pos = 0;
 } 
 
+/* ---------------------------- zzip reader ------------------------------ */
+#ifdef HAVE_ZZIP
+static int reader_zzip_read(reader_t*reader, void* data, int len) 
+{
+    return zzip_file_read((ZZIP_FILE*)reader->internal, data, len);
+}
+static void reader_zzip_dealloc(reader_t*reader)
+{
+    memset(reader, 0, sizeof(reader_t));
+}
+void reader_init_zzipreader(reader_t*r,ZZIP_FILE*z)
+{
+    r->read = reader_zzip_read;
+    r->dealloc = reader_zzip_dealloc;
+    r->internal = z;
+    r->type = READER_TYPE_ZZIP;
+    r->mybyte = 0;
+    r->bitpos = 8;
+    r->pos = 0;
+}
+#endif
+
 /* ---------------------------- mem writer ------------------------------- */
 
 typedef struct _memwrite

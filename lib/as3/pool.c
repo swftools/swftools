@@ -1359,13 +1359,17 @@ void pool_write(pool_t*pool, TAG*tag)
         } else {
             assert(m->type!=0x07 && m->type!=0x0d);
         }
+	
         if(m->name) {
             assert(m->type==0x09 || m->type==0x0e || m->type==0x07 || m->type==0x0d || m->type==0x0f || m->type==0x10);
 	    int i = pool_find_string(pool, m->name);
             if(i<0) fprintf(stderr, "internal error: unregistered name\n");
 	    swf_SetU30(tag, i);
         } else {
-            assert(m->type!=0x09 && m->type!=0x0e && m->type!=0x07 && m->type!=0x0d && m->type!=0x0f && m->type!=0x10);
+	    if(m->type == 0x09) {
+		swf_SetU30(tag, 0);
+	    }
+            assert(m->type!=0x0e && m->type!=0x07 && m->type!=0x0d && m->type!=0x0f && m->type!=0x10);
         }
         if(m->namespace_set) {
             assert(m->type==0x09 || m->type==0x0e || m->type==0x1c || m->type==0x1b);

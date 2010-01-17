@@ -130,6 +130,9 @@
 /* Define if you have the <zlib.h> header file.  */
 #undef HAVE_ZLIB_H
 
+/* Define if you have the <zzip/lib.h> header file.  */
+#undef HAVE_ZZIP_LIB_H
+
 /* Define if you have the <pdflib.h> header file.  */
 #undef HAVE_PDFLIB_H
 
@@ -166,8 +169,11 @@
 /* Define if you have the jpeg library (-ljpeg).  */
 #undef HAVE_LIBJPEG
 
-/* Define if you have the jpeg library (-ljpeg).  */
+/* Define if you have the pdf library (-lpdf).  */
 #undef HAVE_LIBPDF
+
+/* Define if you have the zzip library (-lzzip). */
+#undef HAVE_LIBZZIP
 
 /* Define if you have the m library (-lm).  */
 #undef HAVE_LIBM
@@ -257,6 +263,12 @@
 #ifdef HAVE_POPPLER
 #define GString GooString
 #define GHash GooHash
+#endif
+
+#ifdef HAVE_ZZIP_LIB_H
+#ifdef HAVE_LIBZZIP
+#define HAVE_ZZIP 1
+#endif
 #endif
 
 #endif

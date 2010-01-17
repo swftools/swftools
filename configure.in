@@ -240,6 +240,7 @@ if test "$UNGIFMISSING";then
     UNGIFMISSING=
     AC_CHECK_LIB(gif, DGifOpen,, UNGIFMISSING=true)
 fi
+AC_CHECK_LIB(zzip, zzip_file_open,, ZZIPMISSING=true)
 
 RFX_CHECK_BYTEORDER
 AC_SUBST(WORDS_BIGENDIAN)
@@ -253,7 +254,7 @@ dnl Checks for header files.
  AC_HEADER_DIRENT
  AC_HEADER_STDC
 
- AC_CHECK_HEADERS(zlib.h gif_lib.h io.h wchar.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/mman.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h sys/time.h sys/resource.h pdflib.h)
+ AC_CHECK_HEADERS(zlib.h gif_lib.h io.h wchar.h jpeglib.h assert.h signal.h pthread.h sys/stat.h sys/mman.h sys/types.h dirent.h sys/bsdtypes.h sys/ndir.h sys/dir.h ndir.h time.h sys/time.h sys/resource.h pdflib.h zzip/lib.h)
 
 AC_DEFINE_UNQUOTED([PACKAGE], ["$PACKAGE"], [Name of package])
 AC_DEFINE_UNQUOTED([VERSION], ["$VERSION"], [Version number of package])
@@ -557,6 +558,13 @@ AH_BOTTOM([
 #define GString GooString
 #define GHash GooHash
 #endif
+
+#ifdef HAVE_ZZIP_LIB_H
+#ifdef HAVE_LIBZZIP
+#define HAVE_ZZIP 1
+#endif
+#endif
+
 
 #endif // __config_h__
 ])

@@ -21,6 +21,11 @@
 
 #include <stdio.h>
 #include "types.h"
+#include "../config.h"
+
+#ifdef HAVE_ZZIP
+#include "zzip/lib.h"
+#endif
 
 #ifndef __rfxswf_bitio_h__
 #define __rfxswf_bitio_h__
@@ -32,6 +37,7 @@
 #define READER_TYPE_ZLIB READER_TYPE_ZLIB_U
 #define READER_TYPE_NULL 5
 #define READER_TYPE_FILE2 6
+#define READER_TYPE_ZZIP 7
 
 #define WRITER_TYPE_FILE 1
 #define WRITER_TYPE_MEM  2
@@ -95,6 +101,9 @@ void reader_init_filereader2(reader_t*r, const char*filename);
 void reader_init_zlibinflate(reader_t*r, reader_t*input);
 void reader_init_memreader(reader_t*r, void*data, int length);
 void reader_init_nullreader(reader_t*r);
+#ifdef HAVE_ZZIP
+void reader_init_zzipreader(reader_t*r,ZZIP_FILE*z);
+#endif
 
 void writer_init_filewriter(writer_t*w, int handle);
 void writer_init_filewriter2(writer_t*w, char*filename);
