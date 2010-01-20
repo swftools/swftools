@@ -156,7 +156,7 @@ xpdf/%.$(O): xpdf/%.cc
 
 xpdfapp_sources=xpdf/XPDFApp.cc xpdf/XPDFCore.cc xpdf/XPDFTree.cc xpdf/XPDFViewer.cc xpdf/PDFCore.cc xpdf/TextOutputDev.cc xpdf/xpdf.cc xpdf/CoreOutputDev.cc xpdf/UnicodeTypeTable.cc xpdf/PSOutputDev.cc
 splash_sources=xpdf/Splash.cc xpdf/SplashBitmap.cc xpdf/SplashClip.cc xpdf/SplashFTFont.cc xpdf/SplashFTFontEngine.cc xpdf/SplashFTFontFile.cc xpdf/SplashFont.cc xpdf/SplashFontEngine.cc xpdf/SplashFontFile.cc xpdf/SplashFontFileID.cc xpdf/SplashOutputDev.cc xpdf/SplashPath.cc xpdf/SplashPattern.cc xpdf/SplashScreen.cc xpdf/SplashState.cc xpdf/SplashT1Font.cc xpdf/SplashT1FontEngine.cc xpdf/SplashT1FontFile.cc xpdf/SplashXPath.cc xpdf/SplashXPathScanner.cc
-xpdfapp_objects=xpdf/XPDFApp.$(O) xpdf/XPDFCore.$(O) xpdf/XPDFTree.$(O) xpdf/XPDFViewer.$(O) xpdf/PDFCore.$(O) xpdf/TextOutputDev.$(O) xpdf/xpdf.$(O) xpdf/CoreOutputDev.$(O) xpdf/UnicodeTypeTable.$(O) xpdf/PSOutputDev.$(O)
+xpdfapp_objects=xpdf/XPDFApp.$(O) xpdf/XPDFCore.$(O) xpdf/XPDFTree.$(O) xpdf/XPDFViewer.$(O) xpdf/PDFCore.$(O) xpdf/xpdf.$(O) xpdf/CoreOutputDev.$(O) xpdf/PSOutputDev.$(O)
 
 xxpdf$(E): $(xpdf_objects) $(xpdfapp_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . $(xpdfapp_objects) $(xpdf_objects) $(splash_objects) xpdf/parseargs.c -o xxpdf$(E) $(LIBS) -lXm -lX11
