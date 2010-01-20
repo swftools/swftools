@@ -158,11 +158,37 @@ void BitmapOutputDev::setPageMap(int*page2page, int num_pages)
     this->gfxdev->setPageMap(page2page, num_pages);
 }
 
-static void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymin, int*xmax, int*ymax)
+typedef struct _ibbox {
+    int xmin,ymin,xmax,ymax;
+    struct _ibbox*next;
+} ibbox_t;
+
+static ibbox_t* ibbox_new(int x1, int y1, int x2, int y2)
 {
-    *ymin = -1;
-    *xmin = width;
-    *xmax = 0;
+    ibbox_t*b = (ibbox_t*)rfx_calloc(sizeof(ibbox_t)); 
+    b->xmin = x1;
+    b->ymin = y1;
+    b->xmax = x2;
+    b->ymax = y2;
+    return b;
+}
+
+static void ibbox_destroy(ibbox_t*b)
+{
+    while(b) {
+	ibbox_t*next = b->next;
+	free(b);
+	b = next;
+    }
+}
+
+static ibbox_t*getBitmapBBoxes(Guchar*alpha, int width, int height)
+{
+    int ymin = -1;
+    int ymax = -1;
+    int xmin = width;
+    int xmax = 0;
+
     int x,y;
     for(y=0;y<height;y++) {
 	Guchar*a = &alpha[y*width];
@@ -176,112 +202,117 @@ static void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymi
 	}
 
 	if(left!=width) {
-	    if(*ymin<0) 
-		*ymin=y;
-	    *ymax=y+1;
-	    if(left<*xmin) *xmin = left;
-	    if(right>*xmax) *xmax = right;
+	    if(ymin<0) 
+		ymin=y;
+	    ymax=y+1;
+	    if(left<xmin) xmin = left;
+	    if(right>xmax) xmax = right;
 	}
     }
-    if(*xmin>=*xmax || *ymin>=*ymax) {
-	*xmin = 0;
-	*ymin = 0;
-	*xmax = 0;
-	*ymax = 0;
+    ibbox_t* bbox = 0;
+    if(xmin<xmax || ymin<ymax) {
+	bbox = ibbox_new(xmin, ymin, xmax, ymax);
     }
+    return bbox;
 }
 
 void BitmapOutputDev::flushBitmap()
 {
     int width = rgbdev->getBitmapWidth();
     int height = rgbdev->getBitmapHeight();
-    
-    SplashColorPtr rgb = rgbbitmap->getDataPtr();
-    Guchar*alpha = rgbbitmap->getAlphaPtr();
-    Guchar*alpha2 = boolpolybitmap->getAlphaPtr();
-
-    int xmin,ymin,xmax,ymax;
-    getBitmapBBox(alpha, width, height, &xmin,&ymin,&xmax,&ymax);
-
-    /* clip against (-movex, -movey, -movex+width, -movey+height) */
-    if(xmin < -this->movex) xmin = -this->movex;
-    if(ymin < -this->movey) ymin = -this->movey;
-    if(xmax > -this->movex + width) xmax = -this->movex+this->width;
-    if(ymax > -this->movey + height) ymax = -this->movey+this->height;
-
-    msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d)", xmin,ymin,xmax,ymax);
-    
-    if((xmax-xmin)<=0 || (ymax-ymin)<=0) // no bitmap, nothing to do
-	return;
 
     if(sizeof(SplashColor)!=3) {
 	msg("<error> sizeof(SplashColor)!=3");
 	return;
     }
-    //xmin = ymin = 0;
-    //xmax = width;
-    //ymax = height;
     
-    int rangex = xmax-xmin;
-    int rangey = ymax-ymin;
-    gfximage_t*img = (gfximage_t*)malloc(sizeof(gfximage_t)); 
-    img->data = (gfxcolor_t*)malloc(rangex * rangey * 4);
-    img->width = rangex;
-    img->height = rangey;
-    int x,y;
-    for(y=0;y<rangey;y++) {
-	SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*sizeof(SplashColor)];
-	gfxcolor_t*out = &img->data[y*rangex];
-	Guchar*ain = &alpha[(y+ymin)*width+xmin];
-	Guchar*ain2 = &alpha2[(y+ymin)*width+xmin];
-	if(this->emptypage) {
-	    for(x=0;x<rangex;x++) {
-		/* the first bitmap on the page doesn't need to have an alpha channel-
-		   blend against a white background*/
-		out[x].r = (in[x*3+0]*ain[x])/255 + 255-ain[x];
-		out[x].g = (in[x*3+1]*ain[x])/255 + 255-ain[x];
-		out[x].b = (in[x*3+2]*ain[x])/255 + 255-ain[x];
-		out[x].a = 255;
-	    }
-	} else {
-	    for(x=0;x<rangex;x++) {
-                /*
-                if(!ain2[x]) {
-		    out[x].r = 0;out[x].g = 0;out[x].b = 0;out[x].a = 0;
-                } else {*/
+    SplashColorPtr rgb = rgbbitmap->getDataPtr();
+    Guchar*alpha = rgbbitmap->getAlphaPtr();
+    Guchar*alpha2 = boolpolybitmap->getAlphaPtr();
 
-		/* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
-		   have to premultiply alpha (mix background and pixel according to the alpha channel).
-		*/
-                out[x].r = (in[x*3+0]*ain[x])/255;
-                out[x].g = (in[x*3+1]*ain[x])/255;
-                out[x].b = (in[x*3+2]*ain[x])/255;
-                out[x].a = ain[x];
+    ibbox_t* boxes = getBitmapBBoxes(alpha, width, height);
+    ibbox_t*b;
+
+    for(b=boxes;boxes;boxes=boxes->next) {
+	int xmin = b->xmin;
+	int ymin = b->ymin;
+	int xmax = b->xmax;
+	int ymax = b->ymax;
+
+	/* clip against (-movex, -movey, -movex+width, -movey+height) */
+	if(xmin < -this->movex) xmin = -this->movex;
+	if(ymin < -this->movey) ymin = -this->movey;
+	if(xmax > -this->movex + width) xmax = -this->movex+this->width;
+	if(ymax > -this->movey + height) ymax = -this->movey+this->height;
+
+	msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d)", xmin,ymin,xmax,ymax);
+	
+	if((xmax-xmin)<=0 || (ymax-ymin)<=0) // no bitmap, nothing to do
+	    continue;
+
+	int rangex = xmax-xmin;
+	int rangey = ymax-ymin;
+	gfximage_t*img = (gfximage_t*)malloc(sizeof(gfximage_t)); 
+	img->data = (gfxcolor_t*)malloc(rangex * rangey * 4);
+	img->width = rangex;
+	img->height = rangey;
+	int x,y;
+	for(y=0;y<rangey;y++) {
+	    SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*sizeof(SplashColor)];
+	    gfxcolor_t*out = &img->data[y*rangex];
+	    Guchar*ain = &alpha[(y+ymin)*width+xmin];
+	    Guchar*ain2 = &alpha2[(y+ymin)*width+xmin];
+	    if(this->emptypage) {
+		for(x=0;x<rangex;x++) {
+		    /* the first bitmap on the page doesn't need to have an alpha channel-
+		       blend against a white background*/
+		    out[x].r = (in[x*3+0]*ain[x])/255 + 255-ain[x];
+		    out[x].g = (in[x*3+1]*ain[x])/255 + 255-ain[x];
+		    out[x].b = (in[x*3+2]*ain[x])/255 + 255-ain[x];
+		    out[x].a = 255;
+		}
+	    } else {
+		for(x=0;x<rangex;x++) {
+		    /*
+		    if(!ain2[x]) {
+			out[x].r = 0;out[x].g = 0;out[x].b = 0;out[x].a = 0;
+		    } else */
+
+		    /* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
+		       have to premultiply alpha (mix background and pixel according to the alpha channel).
+		    */
+		    out[x].r = (in[x*3+0]*ain[x])/255;
+		    out[x].g = (in[x*3+1]*ain[x])/255;
+		    out[x].b = (in[x*3+2]*ain[x])/255;
+		    out[x].a = ain[x];
+		}
 	    }
 	}
+
+	/* transform bitmap rectangle to "device space" */
+	xmin += movex;
+	ymin += movey;
+	xmax += movex;
+	ymax += movey;
+
+	gfxmatrix_t m;
+	m.tx = xmin;
+	m.ty = ymin;
+	m.m00 = m.m11 = 1;
+	m.m10 = m.m01 = 0;
+	m.tx -= 0.5;
+	m.ty -= 0.5;
+
+	gfxline_t* line = gfxline_makerectangle(xmin, ymin, xmax, ymax);
+	dev->fillbitmap(dev, line, img, &m, 0);
+	gfxline_free(line);
+    
+	free(img->data);img->data=0;free(img);img=0;
     }
-    /* transform bitmap rectangle to "device space" */
-    xmin += movex;
-    ymin += movey;
-    xmax += movex;
-    ymax += movey;
-
-    gfxmatrix_t m;
-    m.tx = xmin;
-    m.ty = ymin;
-    m.m00 = m.m11 = 1;
-    m.m10 = m.m01 = 0;
-    m.tx -= 0.5;
-    m.ty -= 0.5;
-
-    gfxline_t* line = gfxline_makerectangle(xmin, ymin, xmax, ymax);
-    dev->fillbitmap(dev, line, img, &m, 0);
-    gfxline_free(line);
+    ibbox_destroy(boxes);
 
     memset(rgbbitmap->getAlphaPtr(), 0, rgbbitmap->getWidth()*rgbbitmap->getHeight());
     memset(rgbbitmap->getDataPtr(), 0, rgbbitmap->getRowSize()*rgbbitmap->getHeight());
-
-    free(img->data);img->data=0;free(img);img=0;
 
     this->emptypage = 0;
 }
