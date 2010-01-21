@@ -994,3 +994,35 @@ diff -u -r1.5 -r1.6
  
    // End a page.
    virtual void endPage();
+--- xpdf/JBIG2Stream.cc.orig	2010-01-08 17:17:18.000000000 -0800
++++ xpdf/JBIG2Stream.cc	2010-01-21 15:28:26.000000000 -0800
+@@ -1514,11 +1514,14 @@
+   }
+ 
+   // compute symbol code length
+-  symCodeLen = 1;
+-  i = (numInputSyms + numNewSyms) >> 1;
+-  while (i) {
+-    ++symCodeLen;
+-    i >>= 1;
++  symCodeLen = 0;
++  i = 1;
++  while (i < numInputSyms + numNewSyms) {
++   ++symCodeLen;
++   i <<= 1;
++  }
++  if (huff && symCodeLen == 0) {
++   symCodeLen = 1;
+   }
+ 
+   // get the input symbol bitmaps
+@@ -1921,6 +1924,9 @@
+     ++symCodeLen;
+     i <<= 1;
+   }
++  if (huff && symCodeLen == 0) {
++    symCodeLen = 1;
++  }
+ 
+   // get the symbol bitmaps
+   syms = (JBIG2Bitmap **)gmallocn(numSyms, sizeof(JBIG2Bitmap *));
