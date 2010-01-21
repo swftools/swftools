@@ -247,10 +247,6 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 		font->kerning[pos].c1 = src->glyphs[t]->glyphid;
 		font->kerning[pos].c2 = src->glyphs[(int)(ptroff_t)key]->glyphid;
 		font->kerning[pos].advance = (int)(ptroff_t)m->first->key;
-		printf("kerning[%d] = (%d,%d,%d)\n", pos,
-			font->kerning[pos].c1,
-			font->kerning[pos].c2,
-			font->kerning[pos].advance);
 		pos++;
 	    }
 	}
