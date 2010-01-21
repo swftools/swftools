@@ -1340,10 +1340,12 @@ void mtf_increase(mtf_t*m, const void*key)
     while(item) {
 	if(m->type->equals(item->key, key)) {
 	    item->num++;
-	    if(last) last->next = item->next;
-	    else m->first = item->next;
-            item->next = m->first;
-            m->first = item;
+	    if(item->num>m->first->num) {
+		if(last) last->next = item->next;
+		else m->first = item->next;
+		item->next = m->first;
+		m->first = item;
+	    }
             return;
 	}
 	last = item;

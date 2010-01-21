@@ -67,7 +67,6 @@ void FontInfo::grow(int size)
 FontInfo::FontInfo(char*id)
 {
     this->id = strdup(id);
-    this->charid2glyph = 0;
     this->seen = 0;
     this->num_glyphs = 0;
     this->glyphs = 0;
@@ -83,10 +82,6 @@ FontInfo::~FontInfo()
 {
     if(this->id) {free(this->id);this->id=0;}
     this->font = 0;
-    if(this->charid2glyph) {
-	free(this->charid2glyph);
-	this->charid2glyph = 0;
-    }
     int t;
     for(t=0;t<num_glyphs;t++) {
 	if(glyphs[t]) {
@@ -232,7 +227,7 @@ static gfxfont_t* createGfxFont(FontInfo*src)
     }
 
     int kerning_size = 0;
-    for(t=0;t<font->num_glyphs;t++) {
+    for(t=0;t<src->num_glyphs;t++) {
 	dict_t* d = src->kerning[t];
 	if(!d) continue;
 	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
@@ -244,14 +239,18 @@ static gfxfont_t* createGfxFont(FontInfo*src)
     font->kerning_size = kerning_size;
     font->kerning = (gfxkerning_t*)malloc(sizeof(gfxkerning_t)*kerning_size);
     int pos = 0;
-    for(t=0;t<font->num_glyphs;t++) {
+    for(t=0;t<src->num_glyphs;t++) {
 	dict_t* d = src->kerning[t];
 	if(!d) continue;
 	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
 	    if(m) {
-		font->kerning[pos].c1 = t;
-		font->kerning[pos].c2 = (int)(ptroff_t)key;
+		font->kerning[pos].c1 = src->glyphs[t]->glyphid;
+		font->kerning[pos].c2 = src->glyphs[(int)(ptroff_t)key]->glyphid;
 		font->kerning[pos].advance = (int)(ptroff_t)m->first->key;
+		printf("kerning[%d] = (%d,%d,%d)\n", pos,
+			font->kerning[pos].c1,
+			font->kerning[pos].c2,
+			font->kerning[pos].advance);
 		pos++;
 	    }
 	}

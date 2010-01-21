@@ -85,7 +85,6 @@ public:
     GlyphInfo**glyphs;
     dict_t**kerning;
 
-    int*charid2glyph;
     SplashFont*splash_font;
     char seen;
     int space_char;
