@@ -225,7 +225,7 @@ void dict_destroy(dict_t*dict);
 #define DICT_ITERATE_ITEMS(d,t1,v1,t2,v2) \
     int v1##_i;dictentry_t*v1##_e;t1 v1;t2 v2; \
     for(v1##_i=0;v1##_i<(d)->hashsize;v1##_i++) \
-        for(v1##_e=(d)->slots[v1##_i]; v1##_e && (((v1=(t1)v1##_e->key)&&(v2=(t2)v1##_e->data))||1); v1##_e=v1##_e->next)
+        for(v1##_e=(d)->slots[v1##_i]; v1##_e && (((v1=(t1)v1##_e->key)||1)&&((v2=(t2)v1##_e->data)||1)); v1##_e=v1##_e->next)
 
 void map_init(map_t*map);
 void map_put(map_t*map, string_t t1, string_t t2);
