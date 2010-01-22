@@ -530,17 +530,6 @@ diff -u -r1.5 -r1.6
  
    // End a page.
    virtual void endPage();
---- SplashOutputDev.cc	2006-11-12 12:07:06.000000000 +0100
-+++ SplashOutputDev.cc	2006-11-12 12:09:36.000000000 +0100
-@@ -696,7 +696,7 @@
-   nT3Fonts = 0;
- }
- 
--void SplashOutputDev::startPage(int pageNum, GfxState *state) {
-+void SplashOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
-   int w, h;
-   double *ctm;
-   SplashCoord mat[6];
 --- TextOutputDev.cc	2006-11-12 12:22:53.000000000 +0100
 +++ TextOutputDev.cc	2006-11-12 12:25:03.000000000 +0100
 @@ -3805,7 +3805,7 @@
@@ -583,6 +572,27 @@ diff -u -r1.5 -r1.6
  #include <math.h>
  #include "gfile.h"
  #include "GlobalParams.h"
+@@ -702,7 +703,7 @@
+   nT3Fonts = 0;
+ }
+ 
+-void SplashOutputDev::startPage(int pageNum, GfxState *state) {
++void SplashOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
+   int w, h;
+   double *ctm;
+   SplashCoord mat[6];
+@@ -2646,9 +2647,9 @@
+ 
+   softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
+ 			      1, splashModeMono8, gFalse);
+-  memset(softMask->getDataPtr(), 0,
+-	 softMask->getRowSize() * softMask->getHeight());
++  memset(softMask->getDataPtr(), 0x00, softMask->getRowSize()*softMask->getHeight());
+   p = softMask->getDataPtr() + ty * softMask->getRowSize() + tx;
++  if (tx<softMask->getWidth() && ty<softMask->getHeight())
+   for (y = 0; y < tBitmap->getHeight(); ++y) {
+     for (x = 0; x < tBitmap->getWidth(); ++x) {
+       tBitmap->getPixel(x, y, color);
 --- SplashFontFile.cc	2007-09-09 12:33:00.000000000 +0200
 +++ SplashFontFile.cc	2007-09-09 12:33:07.000000000 +0200
 @@ -11,9 +11,7 @@
@@ -1026,3 +1036,31 @@ diff -u -r1.5 -r1.6
  
    // get the symbol bitmaps
    syms = (JBIG2Bitmap **)gmallocn(numSyms, sizeof(JBIG2Bitmap *));
+--- xpdf/SplashXPathScanner.cc.orig	2010-01-21 16:00:38.000000000 -0800
++++ xpdf/SplashXPathScanner.cc	2010-01-21 16:10:31.000000000 -0800
+@@ -394,10 +394,10 @@
+ 	  *p++ &= mask;
+ 	  xx = (xx & ~7) + 8;
+ 	}
+-	for (; xx + 7 <= xx0; xx += 8) {
++	for (; xx + 7 < xx0; xx += 8) {
+ 	  *p++ = 0x00;
+ 	}
+-	if (xx <= xx0) {
++	if (xx < xx0) {
+ 	  *p &= 0xff >> (xx0 & 7);
+ 	}
+       }
+@@ -417,10 +417,10 @@
+ 	*p++ &= mask;
+ 	xx = (xx & ~7) + 8;
+       }
+-      for (; xx + 7 <= xx0; xx += 8) {
++      for (; xx + 7 < xx0; xx += 8) {
+ 	*p++ = 0x00;
+       }
+-      if (xx <= xx0) {
++      if (xx < xx0) {
+ 	*p &= 0xff >> (xx0 & 7);
+       }
+     }
