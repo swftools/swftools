@@ -125,7 +125,7 @@ class DocFile
     convert()
     @pngname = @filename.gsub(/.pdf$/i,"")+".png"
     begin
-      output = `swfrender --legacy #{@swfname} -o #{@pngname} 2>&1`
+      output = `swfrender #{@swfname} -o #{@pngname} 2>&1`
       raise ConversionFailed.new(output,@pngname) unless File.exists?(@pngname)
       @img = Magick::Image.read(@pngname).first
     ensure
