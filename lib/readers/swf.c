@@ -340,7 +340,8 @@ static map16_t* extractDefinitions(SWF*swf)
 	    map16_add_id(map, id, c);
 	}
 	else if(tag->id == ST_DEFINEFONT ||
-		tag->id == ST_DEFINEFONT2) {
+		tag->id == ST_DEFINEFONT2 ||
+		tag->id == ST_DEFINEFONT3) {
 	    character_t*c = rfx_calloc(sizeof(character_t));
 	    SWFFONT*swffont = 0;
 	    font_t*font = (font_t*)rfx_calloc(sizeof(font_t));
@@ -355,6 +356,10 @@ static map16_t* extractDefinitions(SWF*swf)
                 }
                 SHAPE2*s2 = swf_ShapeToShape2(swffont->glyph[t].shape);
                 font->glyphs[t] = swfline_to_gfxline(s2->lines, 0, 1);
+		if(tag->id==ST_DEFINEFONT3) {
+		    gfxmatrix_t m = {1/20.0,0,0, 0,1/20.0,0};
+		    gfxline_transform(font->glyphs[t], &m);
+		}
                 swf_Shape2Free(s2);
             }
             swf_FontFree(swffont);
