@@ -215,6 +215,9 @@ static VALUE image_rescale(VALUE cls, VALUE _width, VALUE _height)
     Get_Image(image2,v_image2)
     image2->doc = image->doc;
     image2->image = gfximage_rescale(image->image, width, height);
+    if(!image2->image) {
+	rb_raise(rb_eArgError, "Can't rescale to size %dx%d", width, height);
+    }
     return v_image2;
 }
 static VALUE image_save_jpeg(VALUE cls, VALUE _filename, VALUE quality)
