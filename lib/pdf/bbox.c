@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <math.h>
 #include <assert.h>
 #include "../types.h"
 #include "../mem.h"
@@ -29,7 +30,7 @@ void ibbox_destroy(ibbox_t*b)
     }
 }
 
-ibbox_t*get_bitmap_bboxes_old(unsigned char*alpha, int width, int height)
+ibbox_t*get_bitmap_bboxes_simple(unsigned char*alpha, int width, int height)
 {
     int ymin = -1;
     int ymax = -1;
@@ -69,6 +70,8 @@ typedef struct _head {
     int nr;
     int pos;
     int rank;
+    int x,y;
+    char seen;
     struct _head*next;
     struct _head*prev;
 } head_t;
@@ -84,13 +87,15 @@ typedef struct _context {
 
 #define HEAD_MAGIC ((ptroff_t)-1)
 
-head_t*head_new(context_t*context, int x, int y)
+static head_t*head_new(context_t*context, int x, int y)
 {
     int pos = context->width*y+x;
     head_t*h = rfx_calloc(sizeof(head_t));
     h->magic = HEAD_MAGIC;
     h->nr = context->count++;
     h->pos = pos;
+    h->x = x;
+    h->y = y;
     h->bbox.xmin = h->bbox.xmax = x;
     h->bbox.ymin = h->bbox.ymax = y;
     h->next = context->heads;
@@ -101,7 +106,7 @@ head_t*head_new(context_t*context, int x, int y)
     return h;
 }
 
-void head_delete(context_t*context, head_t*h)
+static void head_delete(context_t*context, head_t*h)
 {
     if(h->prev) {
 	h->prev->next = h->next;
@@ -117,13 +122,14 @@ void head_delete(context_t*context, head_t*h)
 
 #define POINTS_TO_HEAD(ptr) (((head_t*)(ptr))->magic==HEAD_MAGIC)
 
-static inline link_to(context_t*context, int from, int to)
+static inline void link_to(context_t*context, int from, int to)
 {
     // path compression
     void**data = context->group;
     int head = to;
     assert(data[head]);
     while(!POINTS_TO_HEAD(data[head])) {
+	assert(data[head]!=(void*)&data[head]); // check that we're not in an infinite loop
 	head=(void**)data[head]-(void**)data;
     }
     head_t*h = (head_t*)data[head];
@@ -138,10 +144,10 @@ static inline link_to(context_t*context, int from, int to)
 }
 static char ibbox_does_overlap(ibbox_t*b1, ibbox_t*b2)
 {
-    if(b1->xmax < b1->xmin) return 0;
-    if(b2->xmax < b2->xmin) return 0;
-    if(b1->ymax < b1->ymin) return 0;
-    if(b2->ymax < b2->ymin) return 0;
+    if(b1->xmax < b2->xmin) return 0;
+    if(b2->xmax < b1->xmin) return 0;
+    if(b1->ymax < b2->ymin) return 0;
+    if(b2->ymax < b1->ymin) return 0;
     return 1;
 }
 static void ibbox_expand(ibbox_t*src, ibbox_t*add) 
@@ -155,7 +161,7 @@ static void ibbox_expand(ibbox_t*src, ibbox_t*add)
     if(add->ymax > src->ymax)
 	src->ymax = add->ymax;
 }
-static inline merge(context_t*context, int set1, int set2)
+static inline void merge(context_t*context, int set1, int set2)
 {
     void**data = context->group;
     assert(data[set1]);
@@ -170,6 +176,8 @@ static inline merge(context_t*context, int set1, int set2)
     }
     head_t*h1 = (head_t*)data[head1];
     head_t*h2 = (head_t*)data[head2];
+    if(h1==h2)
+	return;
 
     if(h1->rank>h2->rank) {
 	h1->rank++;
@@ -184,7 +192,7 @@ static inline merge(context_t*context, int set1, int set2)
     }
 }
 
-void** annotate(context_t*context)
+static void** annotate(context_t*context)
 {
     unsigned char*alpha = context->alpha;
     int width = context->width;
@@ -232,20 +240,104 @@ void** annotate(context_t*context)
     return group;
 }
 
-ibbox_t*get_bitmap_bboxes(unsigned char*alpha, int width, int height)
+static void overlap_bboxes(context_t*context)
 {
-    int size = width*height;
-    if(width<=1 || height<=1)
-	return get_bitmap_bboxes_old(alpha, width, height);
-    
-    context_t context;
-    context.alpha = alpha;
-    context.width = width;
-    context.height = height;
-    context.heads = 0;
-    context.count = 1;
+    char changed;
+    do {
+	head_t*h1 = context->heads;
+	changed = 0;
+	while(h1) {
+	    head_t*next = h1->next;
+	    head_t*h2 = context->heads;
+	    while(h2) {
+		if(h1!=h2) {
+		    if(ibbox_does_overlap(&h1->bbox, &h2->bbox)) {
+			merge(context, h1->pos, h2->pos);
+			changed = 1;
+			break;
+		    }
+		}
+		h2 = h2->next;
+	    }
+	    h1 = next;
+	}
+    } while(changed);
+}
 
-    void**group = annotate(&context);
+static head_t* search_vicinity(context_t*context, head_t*h, int max_radius, double*cos, double*sin)
+{
+    int t;
+    void**data = context->group;
+    /* FIXME: this function isn't very efficient. We need a better way to iterate
+       through all points, sorted by distance, in the neighborhood of a coordinate */
+    for(t=3;t<max_radius*2;t++) {
+	int s;
+	for(s=0;s<256;s++) {
+	    int x=h->x+cos[s]*t/4.0+0.5;
+	    int y=h->y+sin[s]*t/4.0+0.5;
+	    if(x>=0 && y>=0 && x<context->width && y<context->height) {
+		int pos = y*context->width+x;
+		if(data[pos]) {
+		    while(!POINTS_TO_HEAD(data[pos])) {
+			pos=(void**)data[pos]-(void**)data;
+		    }
+		    head_t*new_head = (head_t*)data[pos];
+		    if(new_head != h) {
+			return new_head;
+		    }
+		}
+	    }
+	}
+    }
+    return 0;
+}
+
+static void fix_small_boxes(context_t*context)
+{
+    double sintab[256];
+    double costab[256];
+    int t;
+    for(t=0;t<256;t++) {
+	sintab[t] = sin(t*M_PI/128);
+	costab[t] = cos(t*M_PI/128);
+    }
+	
+    head_t*h = context->heads;
+    while(h) {
+	h->seen = 0;
+	h = h->next;
+    }
+
+    char changed;
+    do {
+	changed = 0;
+	head_t*h = context->heads;
+	while(h) {
+	    head_t*next = h->next;
+	    if(!h->seen) {
+		if(h->bbox.xmax - h->bbox.ymin < 16
+		&& h->bbox.ymax - h->bbox.ymin < 16) {
+		    head_t*other = search_vicinity(context, h, 64, costab, sintab);
+		    if(other) {
+			merge(context, h->pos, other->pos);
+			changed = 1;
+			break;
+		    } else {
+			h->seen = 1;
+		    }
+		}
+	    }
+	    h = next;
+	}
+    } while(changed);
+}
+
+static void display(context_t*context)
+{
+    int width = context->width;
+    int height = context->height;
+    void**group = context->group;
+
     int x,y;
     for(y=0;y<height;y++) {
 	for(x=0;x<width;x++) {
@@ -260,27 +352,51 @@ ibbox_t*get_bitmap_bboxes(unsigned char*alpha, int width, int height)
 	printf("\n");
     }
 
-    head_t*h1 = context.heads;
-    while(h1) {
-	head_t*next = h1->next;
-	head_t*h2 = context.heads;
-	while(h2) {
-	    if(ibbox_does_overlap(&h1->bbox, &h2->bbox)) {
-		merge(&context, h1->pos, h2->pos);
-		break;
-	    }
-	    h2 = h2->next;
-	}
-	h1 = next;
-    }
-
-    head_t*h = context.heads;
+    head_t*h = context->heads;
     while(h) {
 	printf("head: %d\n", h->nr);
 	printf(" pos: %d/%d\n", h->pos%width, h->pos/width);
 	printf(" bbox: [%d/%d,%d/%d]\n", h->bbox.xmin, h->bbox.ymin, h->bbox.xmax, h->bbox.ymax);
 	h = h->next;
     }
+}
+
+ibbox_t*get_bitmap_bboxes(unsigned char*alpha, int width, int height)
+{
+    int size = width*height;
+    if(width<=1 || height<=1)
+	return get_bitmap_bboxes_simple(alpha, width, height);
+    
+    context_t context;
+    context.alpha = alpha;
+    context.width = width;
+    context.height = height;
+    context.heads = 0;
+    context.count = 1;
+
+    void**group = annotate(&context);
+    fix_small_boxes(&context);
+    overlap_bboxes(&context);
+
+    ibbox_t*bboxes = 0;
+
+    head_t*h = context.heads;
+    while(h) {
+	head_t*next = h->next;
+	ibbox_t*bbox = malloc(sizeof(ibbox_t));
+	memcpy(bbox, &h->bbox, sizeof(ibbox_t));
+
+	/* ibbox_t defines the open upper bound */
+	bbox->xmax++;
+	bbox->ymax++;
+
+	bbox->next = bboxes;
+	bboxes = bbox;
+	free(h);
+	h = next;
+    }
+    free(context.group);
+    return bboxes;
 }
 
 #ifdef MAIN

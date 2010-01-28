@@ -8,7 +8,7 @@ all: ../libgfxpdf$(A) pdf2swf$(E)
 
 libgfxpdf: ../libgfxpdf$(A)
 
-libgfxpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O)
+libgfxpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O) bbox.$(O)
 
 xpdf_in_source = @xpdf_in_source@
 
@@ -33,6 +33,8 @@ splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState
 
 fonts.$(O): fonts.c
 	$(C) fonts.c -o $@
+bbox.$(O): bbox.c
+	$(C) bbox.c -o $@
 cmyk.$(O): cmyk.cc
 	$(CC) -I ./ -I xpdf cmyk.cc -o $@
 GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h

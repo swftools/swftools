@@ -30,6 +30,7 @@
 #include "../png.h"
 #include "../devices/record.h"
 #include "../types.h"
+#include "bbox.h"
 
 #define UNKNOWN_BOUNDING_BOX 0,0,0,0
 
@@ -158,64 +159,6 @@ void BitmapOutputDev::setPageMap(int*page2page, int num_pages)
     this->gfxdev->setPageMap(page2page, num_pages);
 }
 
-typedef struct _ibbox {
-    int xmin,ymin,xmax,ymax;
-    struct _ibbox*next;
-} ibbox_t;
-
-static ibbox_t* ibbox_new(int x1, int y1, int x2, int y2)
-{
-    ibbox_t*b = (ibbox_t*)rfx_calloc(sizeof(ibbox_t)); 
-    b->xmin = x1;
-    b->ymin = y1;
-    b->xmax = x2;
-    b->ymax = y2;
-    return b;
-}
-
-static void ibbox_destroy(ibbox_t*b)
-{
-    while(b) {
-	ibbox_t*next = b->next;
-	free(b);
-	b = next;
-    }
-}
-
-static ibbox_t*getBitmapBBoxes(Guchar*alpha, int width, int height)
-{
-    int ymin = -1;
-    int ymax = -1;
-    int xmin = width;
-    int xmax = 0;
-
-    int x,y;
-    for(y=0;y<height;y++) {
-	Guchar*a = &alpha[y*width];
-	for(x=0;x<width;x++) {
-	    if(a[x]) break;
-	}
-	int left = x; //first occupied pixel from left
-	int right = x+1; //last non-occupied pixel from right
-	for(;x<width;x++) {
-	    if(a[x]) right=x+1;
-	}
-
-	if(left!=width) {
-	    if(ymin<0) 
-		ymin=y;
-	    ymax=y+1;
-	    if(left<xmin) xmin = left;
-	    if(right>xmax) xmax = right;
-	}
-    }
-    ibbox_t* bbox = 0;
-    if(xmin<xmax || ymin<ymax) {
-	bbox = ibbox_new(xmin, ymin, xmax, ymax);
-    }
-    return bbox;
-}
-
 void BitmapOutputDev::flushBitmap()
 {
     int width = rgbdev->getBitmapWidth();
@@ -230,10 +173,10 @@ void BitmapOutputDev::flushBitmap()
     Guchar*alpha = rgbbitmap->getAlphaPtr();
     Guchar*alpha2 = boolpolybitmap->getAlphaPtr();
 
-    ibbox_t* boxes = getBitmapBBoxes(alpha, width, height);
+    ibbox_t* boxes = get_bitmap_bboxes((unsigned char*)alpha, width, height);
     ibbox_t*b;
 
-    for(b=boxes;boxes;boxes=boxes->next) {
+    for(b=boxes;b;b=b->next) {
 	int xmin = b->xmin;
 	int ymin = b->ymin;
 	int xmax = b->xmax;
