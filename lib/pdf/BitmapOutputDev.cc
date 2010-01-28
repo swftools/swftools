@@ -159,6 +159,8 @@ void BitmapOutputDev::setPageMap(int*page2page, int num_pages)
     this->gfxdev->setPageMap(page2page, num_pages);
 }
 
+void writeBitmap(SplashBitmap*bitmap, char*filename);
+
 void BitmapOutputDev::flushBitmap()
 {
     int width = rgbdev->getBitmapWidth();
@@ -168,13 +170,21 @@ void BitmapOutputDev::flushBitmap()
 	msg("<error> sizeof(SplashColor)!=3");
 	return;
     }
+
+    /*static int counter=0;
+    if(!counter) {
+	writeBitmap(rgbdev->getBitmap(), "test.png");
+    } counter++;*/
     
     SplashColorPtr rgb = rgbbitmap->getDataPtr();
     Guchar*alpha = rgbbitmap->getAlphaPtr();
-    Guchar*alpha2 = boolpolybitmap->getAlphaPtr();
+    
+    Guchar*alpha2 = boolpolybitmap->getDataPtr();
+    int width8 = (boolpolybitmap->getWidth()+7)/8;
 
     ibbox_t* boxes = get_bitmap_bboxes((unsigned char*)alpha, width, height);
     ibbox_t*b;
+
 
     for(b=boxes;b;b=b->next) {
 	int xmin = b->xmin;
@@ -204,7 +214,7 @@ void BitmapOutputDev::flushBitmap()
 	    SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*sizeof(SplashColor)];
 	    gfxcolor_t*out = &img->data[y*rangex];
 	    Guchar*ain = &alpha[(y+ymin)*width+xmin];
-	    Guchar*ain2 = &alpha2[(y+ymin)*width+xmin];
+	    Guchar*ain2 = &alpha2[(y+ymin)*width8];
 	    if(this->emptypage) {
 		for(x=0;x<rangex;x++) {
 		    /* the first bitmap on the page doesn't need to have an alpha channel-
@@ -216,18 +226,20 @@ void BitmapOutputDev::flushBitmap()
 		}
 	    } else {
 		for(x=0;x<rangex;x++) {
-		    /*
-		    if(!ain2[x]) {
+		    if(!(ain2[(x+xmin)/8]&(0x80>>(x&7)))) {
+			/* cut away pixels that we don't remember drawing (i.e., that are
+			   not in the monochrome bitmap. Prevents some "hairlines" showing
+			   up to the left and right of bitmaps */
 			out[x].r = 0;out[x].g = 0;out[x].b = 0;out[x].a = 0;
-		    } else */
-
-		    /* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
-		       have to premultiply alpha (mix background and pixel according to the alpha channel).
-		    */
-		    out[x].r = (in[x*3+0]*ain[x])/255;
-		    out[x].g = (in[x*3+1]*ain[x])/255;
-		    out[x].b = (in[x*3+2]*ain[x])/255;
-		    out[x].a = ain[x];
+		    } else {
+			/* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we
+			   have to premultiply alpha (mix background and pixel according to the alpha channel).
+			*/
+			out[x].r = (in[x*3+0]*ain[x])/255;
+			out[x].g = (in[x*3+1]*ain[x])/255;
+			out[x].b = (in[x*3+2]*ain[x])/255;
+			out[x].a = ain[x];
+		    }
 		}
 	    }
 	}
