@@ -264,17 +264,49 @@ static void overlap_bboxes(context_t*context)
     } while(changed);
 }
 
+typedef struct _circle_coord {
+    S16 x,y;
+} circle_coord_t;
+
+static int compare_circle_coord(const void *_v1, const void *_v2)
+{
+    circle_coord_t*v1=(circle_coord_t*)_v1;
+    circle_coord_t*v2=(circle_coord_t*)_v2;
+    return (v1->x*v1->x + v1->y*v1->y) - (v2->x*v2->x + v2->y*v2->y);
+}
+
 static head_t* search_vicinity(context_t*context, head_t*h, int max_radius, double*cos, double*sin)
 {
+    static circle_coord_t*circle_order = 0;
+    static int circle_order_size = 0;
+    
+    if(!circle_order) {
+	circle_order_size = (max_radius*(max_radius+1))/2;
+	circle_order = malloc(sizeof(circle_coord_t)*circle_order_size);
+	int x,y;
+	int i = 0;
+	for(y=0;y<max_radius;y++) {
+	    for(x=0;x<=y;x++) {
+		circle_order[i].x=x;
+		circle_order[i].y=y;
+		i++;
+	    }
+	}
+	assert(i==circle_order_size);
+	qsort(circle_order, circle_order_size, sizeof(circle_coord_t), compare_circle_coord);
+    }
+
     int t;
     void**data = context->group;
-    /* FIXME: this function isn't very efficient. We need a better way to iterate
-       through all points, sorted by distance, in the neighborhood of a coordinate */
-    for(t=3;t<max_radius*2;t++) {
+    int signx[4] = {-1,1,-1,1};
+    int signy[4] = {-1,-1,1,1};
+    for(t=1;t<circle_order_size;t++) {
+	int xx = circle_order[t].x;
+	int yy = circle_order[t].y;
 	int s;
-	for(s=0;s<256;s++) {
-	    int x=h->x+cos[s]*t/4.0+0.5;
-	    int y=h->y+sin[s]*t/4.0+0.5;
+	for(s=0;s<4;s++) {
+	    int x=h->x+xx*signx[s];
+	    int y=h->y+yy*signy[s];
 	    if(x>=0 && y>=0 && x<context->width && y<context->height) {
 		int pos = y*context->width+x;
 		if(data[pos]) {
@@ -377,6 +409,9 @@ ibbox_t*get_bitmap_bboxes(unsigned char*alpha, int width, int height)
     void**group = annotate(&context);
     fix_small_boxes(&context);
     overlap_bboxes(&context);
+#ifdef MAIN
+    display(&context);
+#endif
 
     ibbox_t*bboxes = 0;
 
