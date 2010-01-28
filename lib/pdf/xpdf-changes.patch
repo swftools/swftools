@@ -1064,3 +1064,65 @@ diff -u -r1.5 -r1.6
  	*p &= 0xff >> (xx0 & 7);
        }
      }
+--- xpdf/CharCodeToUnicode.cc.orig	2010-01-25 12:43:00.000000000 -0800
++++ xpdf/CharCodeToUnicode.cc	2010-01-28 14:14:53.000000000 -0800
+@@ -208,13 +208,13 @@
+ 				   int nBits) {
+   PSTokenizer *pst;
+   char tok1[256], tok2[256], tok3[256];
+-  int nDigits, n1, n2, n3;
++  int maxCode, n1, n2, n3;
+   CharCode i;
+   CharCode code1, code2;
+   GString *name;
+   FILE *f;
+ 
+-  nDigits = nBits / 4;
++  maxCode = (nBits == 8) ? 0xff : (nBits == 16) ? 0xffff : 0xffffffff;
+   pst = new PSTokenizer(getCharFunc, data);
+   pst->getToken(tok1, sizeof(tok1), &n1);
+   while (pst->getToken(tok2, sizeof(tok2), &n2)) {
+@@ -241,9 +241,9 @@
+ 	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
+ 	  break;
+ 	}
+-	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
++	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
+ 	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
+-	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
++	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap.");
+ 	  continue;
+ 	}
+ 	tok1[n1 - 1] = tok2[n2 - 1] = '\0';
+@@ -251,6 +251,9 @@
+ 	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
+ 	  continue;
+ 	}
++        if (code1 > maxCode) {
++          error(-1, "Invalid entry in bfchar block in ToUnicode CMap");
++        }
+ 	addMapping(code1, tok2 + 1, n2 - 2, 0);
+       }
+       pst->getToken(tok1, sizeof(tok1), &n1);
+@@ -266,8 +269,8 @@
+ 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
+ 	  break;
+ 	}
+-	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
+-	      n2 == 2 + nDigits && tok2[0] == '<' && tok2[n2 - 1] == '>')) {
++	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
++	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
+ 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
+ 	  continue;
+ 	}
+@@ -277,6 +280,10 @@
+ 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
+ 	  continue;
+ 	}
++        if (code1 > maxCode || code2 > maxCode) {
++	    error(-1, "Invalid entry in bfrange block in ToUnicode CMap");
++	}
++
+ 	if (!strcmp(tok3, "[")) {
+ 	  i = 0;
+ 	  while (pst->getToken(tok1, sizeof(tok1), &n1) &&
