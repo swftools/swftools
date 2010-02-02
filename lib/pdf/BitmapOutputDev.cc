@@ -226,10 +226,10 @@ void BitmapOutputDev::flushBitmap()
 		}
 	    } else {
 		for(x=0;x<rangex;x++) {
-		    if(!(ain2[(x+xmin)/8]&(0x80>>(x&7)))) {
+		    if(!(ain2[(x+xmin)/8]&(0x80>>((x+xmin)&7)))) {
 			/* cut away pixels that we don't remember drawing (i.e., that are
-			   not in the monochrome bitmap. Prevents some "hairlines" showing
-			   up to the left and right of bitmaps */
+			   not in the monochrome bitmap). Prevents some "hairlines" showing
+			   up to the left and right of bitmaps. */
 			out[x].r = 0;out[x].g = 0;out[x].b = 0;out[x].a = 0;
 		    } else {
 			/* according to endPage()/compositeBackground() in xpdf/SplashOutputDev.cc, we

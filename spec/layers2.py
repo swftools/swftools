@@ -30,7 +30,7 @@ for i in range(100):
     PDF_lineto(p, x+5, y)
     PDF_stroke(p)
 
-PDF_setrgbcolor_fill(p, 1.0, 0, 0)
+PDF_setrgbcolor_fill(p, 0.5, 0.5, 1.0)
 x,y = 100,100
 def rect(x,y):
     PDF_moveto(p, x,y)

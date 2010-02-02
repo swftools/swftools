@@ -102,6 +102,7 @@ typedef struct _swfoutput_internal
     int config_storeallcharacters;
     int config_enablezlib;
     int config_insertstoptag;
+    int config_showimages;
     int config_watermark;
     int config_noclips;
     int config_flashversion;
@@ -2120,6 +2121,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "animate")) {
 	i->config_animate = atoi(value);
+    } else if(!strcmp(name, "showimages")) {
+	i->config_showimages = atoi(value);
     } else if(!strcmp(name, "disablelinks")) {
 	i->config_disablelinks = atoi(value);
     } else if(!strcmp(name, "simpleviewer")) {
@@ -2359,6 +2362,11 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     SHAPE*shape;
     swf_ShapeNew(&shape);
     int fsid = swf_ShapeAddBitmapFillStyle(shape,&m,bitid,1);
+    int lsid = 0;
+    if(i->config_showimages) {
+	RGBA pink = {255,255,0,255};
+	lsid = swf_ShapeAddLineStyle(shape, 20, &pink);
+    }
     swf_SetU16(i->tag, myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
     r = swf_ClipRect(i->pagebbox, r);
@@ -2366,7 +2374,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     swf_SetShapeStyles(i->tag,shape);
     swf_ShapeCountBits(shape,NULL,NULL);
     swf_SetShapeBits(i->tag,shape);
-    swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,0,fsid,0);
+    swf_ShapeSetAll(i->tag,shape,UNDEFINED_COORD,UNDEFINED_COORD,lsid,fsid,0);
     i->swflastx = i->swflasty = UNDEFINED_COORD;
     drawgfxline(dev, line, 1);
     swf_ShapeSetEnd(i->tag);
