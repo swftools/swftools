@@ -1126,3 +1126,13 @@ diff -u -r1.5 -r1.6
  	if (!strcmp(tok3, "[")) {
  	  i = 0;
  	  while (pst->getToken(tok1, sizeof(tok1), &n1) &&
+--- xpdf/Decrypt.cc.orig	2010-01-28 14:19:51.000000000 -0800
++++ xpdf/Decrypt.cc	2010-02-02 16:04:53.000000000 -0800
+@@ -596,6 +596,7 @@
+   s->bufIdx = 0;
+   if (last) {
+     n = s->buf[15];
++    if(!n || n>16) n=16;
+     for (i = 15; i >= n; --i) {
+       s->buf[i] = s->buf[i-n];
+     }
