@@ -1136,3 +1136,14 @@ diff -u -r1.5 -r1.6
      for (i = 15; i >= n; --i) {
        s->buf[i] = s->buf[i-n];
      }
+--- xpdf/Catalog.cc.orig	2010-02-02 16:17:24.000000000 -0800
++++ xpdf/Catalog.cc	2010-02-02 16:18:48.000000000 -0800
+@@ -193,7 +193,7 @@
+   if (!kids.isArray()) {
+     error(-1, "Kids object (page %d) is wrong type (%s)",
+ 	  start+1, kids.getTypeName());
+-    goto err1;
++    return start;
+   }
+   for (i = 0; i < kids.arrayGetLength(); ++i) {
+     kids.arrayGetNF(i, &kidRef);
