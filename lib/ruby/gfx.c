@@ -630,6 +630,35 @@ static VALUE page_render(VALUE cls, VALUE device)
     return cls;
 }
 
+static VALUE doc_prepare(VALUE cls, VALUE device)
+{
+    Get_Doc(doc,cls);
+
+    gfxdevice_t dev;
+    device_internal_t i;
+    i.v = device;
+    i.doc = doc;
+
+    dev.internal = &i;
+    dev.setparameter = rb_setparameter;
+    dev.startpage = rb_startpage;
+    dev.startclip = rb_startclip;
+    dev.endclip = rb_endclip;
+    dev.stroke = rb_stroke;
+    dev.fill = rb_fill;
+    dev.fillbitmap = rb_fillbitmap;
+    dev.fillgradient = rb_fillgradient;
+    dev.addfont = rb_addfont;
+    dev.drawchar = rb_drawchar;
+    dev.drawlink = rb_drawlink;
+    dev.endpage = rb_endpage;
+    dev.finish = rb_finish;
+
+    doc->doc->prepare(doc->doc, &dev);
+    return cls;
+}
+
+
 // ---------------------- global functions ----------------------------------
 
 VALUE gfx_setparameter(VALUE module, VALUE _key, VALUE _value)
@@ -667,6 +696,7 @@ void Init_gfx()
     rb_define_method(Document, "initialize", doc_initialize, 1);
     rb_define_method(Document, "page", doc_get_page, 1);
     rb_define_method(Document, "each_page", doc_each_page, 0);
+    rb_define_method(Document, "prepare", doc_prepare, 1);
     
     Bitmap = rb_define_class_under(GFX, "Bitmap", rb_cObject);
     rb_define_method(Bitmap, "save_jpeg", image_save_jpeg, 2);
