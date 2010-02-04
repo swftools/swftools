@@ -267,6 +267,7 @@ typedef struct pdfresult_internal {
 void pdfresult_destroy(gfxresult_t*gfx)
 {
     pdfresult_internal_t*i = (pdfresult_internal_t*)gfx->internal;
+    unlink(i->tempfile);
     free(i->tempfile);
     free(gfx->internal);gfx->internal = 0;
     free(gfx);
