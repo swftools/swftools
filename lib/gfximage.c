@@ -19,6 +19,7 @@ void gfximage_save_jpeg(gfximage_t*img, const char*filename, int quality)
 	data[s+2] = img->data[t].b;
     }
     jpeg_save(data, img->width, img->height, quality, filename);
+    free(data);
 }
 
 void gfximage_save_png(gfximage_t*image, const char*filename)
