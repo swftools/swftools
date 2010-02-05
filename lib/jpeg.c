@@ -124,6 +124,45 @@ int jpeg_save(unsigned char*data, int width, int height, int quality, const char
   return 1;
 }
 
+int jpeg_save_gray(unsigned char*data, int width, int height, int quality, const char*filename)
+{
+  struct jpeg_destination_mgr mgr;
+  struct jpeg_compress_struct cinfo;
+  struct jpeg_error_mgr jerr;
+
+  if(filename) fi = fopen(filename, "wb");
+  else         fi = 0;
+
+  memset(&cinfo, 0, sizeof(cinfo));
+  memset(&jerr, 0, sizeof(jerr));
+  memset(&mgr, 0, sizeof(mgr));
+  cinfo.err = jpeg_std_error(&jerr);
+  jpeg_create_compress(&cinfo);
+
+  mgr.init_destination = file_init_destination;
+  mgr.empty_output_buffer = file_empty_output_buffer;
+  mgr.term_destination = file_term_destination;
+  cinfo.dest = &mgr;
+  cinfo.image_width  = width;
+  cinfo.image_height = height;
+  cinfo.input_components = 1;
+  cinfo.in_color_space = JCS_GRAYSCALE;
+  jpeg_set_defaults(&cinfo);
+  jpeg_set_quality(&cinfo,quality,TRUE);
+  jpeg_start_compress(&cinfo, FALSE);
+  int t;
+  for(t=0;t<height;t++) {
+    unsigned char*data2 = &data[width*t];
+    jpeg_write_scanlines(&cinfo, &data2, 1);
+  }
+  jpeg_finish_compress(&cinfo);
+
+  if(fi) fclose(fi);
+  jpeg_destroy_compress(&cinfo);
+  return 1;
+}
+
+
 int jpeg_save_to_file(unsigned char*data, int width, int height, int quality, FILE*_fi)
 {
   struct jpeg_destination_mgr mgr;

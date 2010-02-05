@@ -31,13 +31,25 @@
 #include "../jpeg.h"
 #include "../types.h"
 #include "../mem.h"
+#include "../log.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfximage.h"
 
 typedef struct _internal {
     PDF* p;
+    
+    const char*config_pdfx;
+    char config_addblankpages;
+    double config_xpad;
+    double config_ypad;
+    int config_maxdpi;
+
+    int width,height;
+    int num_pages;
+
     char*tempfile;
+    char*page_opts;
     double lastx,lasty;
     gfxfontlist_t*fontlist;
 } internal_t;
@@ -134,6 +146,12 @@ void pdf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
     PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
+    if(color->a!=255) {
+	char opacityfill[80];
+	sprintf(opacityfill, "opacityfill %f", color->a/256.0);
+	int gstate = PDF_create_gstate(i->p, opacityfill);
+	PDF_set_gstate(i->p, gstate);
+    }
 	
     if(mkline(line, i->p, 1)) {
 	PDF_fill(i->p);
@@ -144,20 +162,81 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    double l1 = sqrt(matrix->m00*matrix->m00+matrix->m01*matrix->m01)*img->width;
-    double l2 = sqrt(matrix->m10*matrix->m10+matrix->m11*matrix->m11)*img->height;
+    int t,size=img->width*img->height;
+    int has_alpha=0;
+    for(t=0;t<size;t++) {
+	if(img->data[t].a!=255) {
+	    has_alpha=1;
+	    break;
+	}
+    }
+
+    double w = sqrt(matrix->m00*matrix->m00+matrix->m01*matrix->m01);
+    double h = sqrt(matrix->m10*matrix->m10+matrix->m11*matrix->m11);
+    double l1 = w*img->width;
+    double l2 = h*img->height;
     double r = atan2(matrix->m01, matrix->m00);
 
     /* fit_image needs the lower left corner of the image */
     double x = matrix->tx + matrix->m10*img->height;
     double y = matrix->ty + matrix->m11*img->height;
 
-    char*tempfile = mktempname(0);
+    double dpi_x = 72.0 / w;
+    double dpi_y = 72.0 / h;
+    double dpi = dpi_x>dpi_y?dpi_x:dpi_y;
+    gfximage_t*rescaled_image = 0;
+    if(i->config_maxdpi && dpi > i->config_maxdpi) {
+	int newwidth = img->width*i->config_maxdpi/dpi;
+	int newheight = img->height*i->config_maxdpi/dpi;
+	rescaled_image = gfximage_rescale(img, newwidth, newheight);
+	msg("<notice> Downscaling %dx%d image (dpi %f, %.0fx%.0f on page) to %dx%d (dpi %d)", 
+		img->width, img->height, dpi, l1, l2, newwidth, newheight, i->config_maxdpi);
+	img = rescaled_image;
+    }
+
+    char tempfile[128];
+    mktempname(tempfile);
+
+    gfximage_save_jpeg(img, tempfile, 96);
+
+    int imgid=-1;
+    if(has_alpha) {
+	char tempfile2[128];
+	mktempname(tempfile2);
+	int t;
+	int size = img->width*img->height;
+	unsigned char*alpha = malloc(size);
+	for(t=0;t<size;t++) {
+	    alpha[t] = img->data[t].a;
+	}
+	jpeg_save_gray(alpha, img->width, img->height, 97, tempfile2);
+	free(alpha);
+	int maskid = PDF_load_image(i->p, "jpeg", tempfile2, 0, "mask");
+	unlink(tempfile2);
+	char masked[80];
+	if(maskid<0) {
+	    msg("<error> Couldn't process mask jpeg of size %dx%d: error code %d", img->width, img->height, maskid);
+	    return;
+	}
+	sprintf(masked, "masked %d", maskid);
+	imgid = PDF_load_image(i->p, "jpeg", tempfile, 0, masked);
+    } else {
+	imgid = PDF_load_image(i->p, "jpeg", tempfile, 0, "");
+    }
+
+    if(imgid<0) {
+	msg("<error> Couldn't process jpeg of size %dx%d: error code %d, file %s", img->width, img->height, imgid, tempfile);
+	return;
+    }
+    unlink(tempfile);
+    
     char options[80];
     sprintf(options, "boxsize {%f %f} fitmethod meet rotate %f", l1, l2, r*180/M_PI);
-    gfximage_save_jpeg(img, tempfile, 99);
-    int imgid = PDF_load_image(i->p, "jpeg", tempfile, 0, "");
     PDF_fit_image(i->p, imgid, x, y, options);
+    PDF_close_image(i->p, imgid);
+
+    if(rescaled_image)
+	gfximage_free(rescaled_image);
 }
 
 void pdf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix)
