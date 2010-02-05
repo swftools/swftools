@@ -103,6 +103,8 @@ FontInfo::~FontInfo()
 	    }
 	    dict_destroy(d);
 	}
+	free(kerning);
+	kerning=0;
     }
 }
 

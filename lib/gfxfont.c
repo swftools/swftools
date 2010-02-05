@@ -511,6 +511,9 @@ void gfxfont_free(gfxfont_t*font)
     if(font->id) {
 	free((void*)font->id);font->id=0;
     }
+    if(font->kerning) {
+	free(font->kerning);font->kerning=0;
+    }
 
     free(font);
 }
