@@ -1178,5 +1178,6 @@ void gfxparams_free(gfxparams_t*params)
 	free(p);
 	p = next;
     }
+    free(params);
 }
 
