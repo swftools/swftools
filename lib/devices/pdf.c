@@ -77,13 +77,13 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
 
 static int mkline(gfxline_t*line, PDF*p, char fill)
 {
-    double x,y;
+    double x=0,y=0;
     char first = 1;
     int ret = 0;
-    char free_line = 0;
+    gfxline_t*free_line = 0;
     if(fill) {
 	line = gfxline_restitch(gfxline_clone(line));
-	free_line = 1;
+	free_line = line;
     }
     while(line) {
 	if(line->type == gfx_moveTo && (x!=line->x || y!=line->y || first)) {
@@ -108,7 +108,7 @@ static int mkline(gfxline_t*line, PDF*p, char fill)
 	line = line->next;
     }
     if(free_line)
-	gfxline_free(line);
+	gfxline_free(free_line);
     return ret;
 }
 
