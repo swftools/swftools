@@ -67,7 +67,7 @@ end
 
 def rgb_to_int(rgb)
   # ImageMagick rgb triples are 16 bit
-  (rgb.reverse+"\0").unpack("i")[0]
+  (rgb.reverse+[0]).map {|c| c>>8}.pack("CCCC").unpack("i")[0]
 end
 
 class Pixel
@@ -80,13 +80,13 @@ class Pixel
     color1 == color2 or raise WrongColor.new(self)
   end
   def should_be_brighter_than(pixel)
-    gray1 = @rgb.inject(0) {|sum,e| sum+e[0]}
-    gray2 = pixel.rgb.inject(0) {|sum,e| sum+e[0]}
+    gray1 = @rgb.inject(0) {|sum,e| sum+e}
+    gray2 = pixel.rgb.inject(0) {|sum,e| sum+e}
     gray1 > gray2 or raise PixelError.new(self,"is not brighter than",pixel)
   end
   def should_be_darker_than(pixel)
-    gray1 = @rgb.inject(0) {|sum,e| sum+e[0]}
-    gray2 = pixel.rgb.inject(0) {|sum,e| sum+e[0]}
+    gray1 = @rgb.inject(0) {|sum,e| sum+e}
+    gray2 = pixel.rgb.inject(0) {|sum,e| sum+e}
     gray1 < gray2 or raise PixelError.new(self,"is not less bright than",pixel)
   end
   def should_be_the_same_as(pixel)
@@ -162,7 +162,7 @@ class DocFile
   end
   def pixel_at(x,y)
     self.render()
-    data = @img.export_pixels_to_str(x, y, 1, 1, "RGB")
+    data = @img.export_pixels(x, y, 1, 1, "RGB")
     return Pixel.new(x,y,data)
   end
 end
