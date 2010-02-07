@@ -221,7 +221,7 @@ int xml_parse(reader_t*reader, xmlconsumer_t*out)
 
 	    /* inner loop */
 	    do {
-		state = new_state[old=state][group[buffer[pos++]]];
+		state = new_state[old=state][group[(unsigned char)buffer[pos++]]];
 	    } while(state>=0);
 
 	    switch(state) {

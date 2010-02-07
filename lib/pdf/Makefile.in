@@ -53,9 +53,11 @@ pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDe
 	$(CC) -I ./ -I xpdf pdf.cc -o $@
 
 XPDFOK = xpdf/Gfx.cc
+ifeq ($(shell echo inject*xpdf.pl),inject-xpdf.pl)
 $(XPDFOK): Makefile.in inject-xpdf.pl xpdf-*tar.gz xpdf*patch
 	@if test xpdf-changes.patch -nt $(XPDFOK);then perl inject-xpdf.pl xpdf-3.02.tar.gz;fi
 	@if test '!' -d xpdf;then perl inject-xpdf.pl xpdf-3.02.tar.gz;fi
+endif
 
 xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc
 	$(CC) -I ./ -I xpdf xpdf/UnicodeMap.cc -o $@

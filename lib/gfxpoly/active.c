@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <math.h>
+#include "../../config.h"
 #include "../q.h"
+#include "../types.h"
 #include "active.h"
 
 actlist_t* actlist_new()
@@ -503,7 +505,11 @@ void actlist_delete(actlist_t*a, segment_t*s)
     } else if(!a->root->rightchild) {
 	a->root = a->root->leftchild;
     } else {
+#ifdef HAVE_LRAND48
 	if(lrand48()&1) {
+#else
+	if(((ptroff_t)s)&16) {
+#endif
 	    // free up root->left->right
 	    segment_t*t = a->root->leftchild;
 	    while(t->rightchild) {
