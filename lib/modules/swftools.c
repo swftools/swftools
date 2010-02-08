@@ -584,10 +584,13 @@ void enumerateUsedIDs(TAG * tag, int base, void (*callback)(TAG*, int, void*), v
 	case ST_DEFINEBUTTONSOUND: {
 	    int t;
 	    callback(tag, tag->pos + base, callback_data);
+	    swf_GetU16(tag); //button id
 	    for(t=0;t<4;t++) {
 		int flags;
 		callback(tag, tag->pos + base, callback_data);
-		swf_GetU16(tag); //sound id
+		U16 sound_id = swf_GetU16(tag); //sound id
+		if(!sound_id)
+		    continue;
 		flags = swf_GetU8(tag);
 		if(flags&1)
 		    swf_GetU32(tag); // in point
