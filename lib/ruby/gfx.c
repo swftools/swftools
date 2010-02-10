@@ -220,6 +220,18 @@ static VALUE image_rescale(VALUE cls, VALUE _width, VALUE _height)
     }
     return v_image2;
 }
+static VALUE image_has_alpha(VALUE cls)
+{
+    Get_Image(image,cls)
+    int size = image->image->width * image->image->height;
+    gfxcolor_t*data = image->image->data;
+    int t;
+    for(t=0;t<size;t++) {
+	if(data->a!=255) 
+	    return Qtrue;
+    }
+    return Qfalse;
+}
 static VALUE image_save_jpeg(VALUE cls, VALUE _filename, VALUE quality)
 {
     Get_Image(image,cls)
@@ -704,6 +716,7 @@ void Init_gfx()
     rb_define_method(Bitmap, "width", image_width, 0);
     rb_define_method(Bitmap, "height", image_height, 0);
     rb_define_method(Bitmap, "rescale", image_rescale, 2);
+    rb_define_method(Bitmap, "has_alpha", image_has_alpha, 0);
     
     Glyph = rb_define_class_under(GFX, "Glyph", rb_cObject);
     rb_define_method(Glyph, "polygon", glyph_polygon, 0);
