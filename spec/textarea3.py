@@ -27,17 +27,20 @@ PDF_fill(p)
 
 PDF_setfont(p, font, 4.0)
 i = 0
-for y in range(height / 3):
+for y in range(height / 6):
     text = "".join([md5.md5(str(i+j*732849)).hexdigest() for j in range(9)])
-    for x in range(width / 3):
-        r,g,b = img.getpixel((x*3, height-1-y*3))
+    for x in range(width / 6):
+        r,g,b = img.getpixel((x*6, height-1-y*6))
         l = math.sqrt(r*r+g*g+b*b)
         if not r and not g and not b:
             continue
-        white = l / 444.0
-        PDF_setfont(p, font, 0.5+white*7)
-        PDF_setrgbcolor_fill(p, r/l, g/l, b/l)
-        PDF_set_text_pos(p, x*3, y*3);
+        white = (l / 444.0)*5
+        PDF_setfont(p, font, 0.5+int(white)*4)
+        r = 0.3 + 0.3 * int((r/l)*3)
+        g = 0.3 + 0.3 * int((g/l)*3)
+        b = 0.3 + 0.3 * int((b/l)*3)
+        PDF_setrgbcolor_fill(p, r, g, b)
+        PDF_set_text_pos(p, x*6, y*6);
         PDF_show(p, text[x])
     i = i + 1
 
