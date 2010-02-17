@@ -1053,6 +1053,230 @@ void glyf_delete(ttf_t* ttf)
     free(ttf->glyphs);ttf->glyphs=0;
 }
 
+static void grow_unicode(ttf_t*ttf, int index)
+{
+    int size = index+1;
+    if(!ttf->unicode) {
+	ttf->unicode = rfx_calloc(sizeof(ttf->unicode[0])*size);
+    } else if(ttf->unicode_size<size) {
+	ttf->unicode = rfx_realloc(ttf->unicode, sizeof(ttf->unicode[0])*size);
+	memset(ttf->unicode+ttf->unicode_size, 0, sizeof(ttf->unicode[0])*(size - ttf->unicode_size));
+    }
+    ttf->unicode_size = size;
+}
+
+void cmap_parse(memreader_t*r, ttf_t*ttf)
+{
+    readU16(r); // version (0)
+    int num_subtables = readU16(r);
+    int t;
+    if(r->pos+num_subtables*8 > r->size) {
+	msg("<warning> CMap overflow");
+	num_subtables = (r->size-r->pos)/8;
+    }
+    unicode_t*data = 0;
+    for(t=0;t<num_subtables;t++) {
+	U16 platform = readU16(r);
+	U16 encoding = readU16(r);
+	U32 offset = readU32(r);
+	if(offset>r->size) {
+	    msg("<warning> CMAP table %d %d is out of bounds (%d)", platform, encoding, offset);
+	    continue;
+	}
+
+	int is_unicode = platform==0 ||
+	                 platform==3 && encoding == 1 ||
+	                 platform==3 && encoding == 10;
+
+	if(!is_unicode) 
+	    continue;
+
+	INIT_READ(t, r->mem, r->size, offset);
+	U16 format = readU16(&t);
+	int length = readU16(&t);
+	U16 language = readU16(&t);
+
+	if(language)
+	    msg("<warning> Language code %02x in unicode mapping", language);
+
+	int num = 0;
+	if(format == 0) {
+	    num = length-6;
+	    if(t.pos+length > t.size) {
+		msg("<warning> overflow in format 0 cmap table");
+		num = t.size-t.pos;
+	    }
+	    data = malloc(num*sizeof(unicode_t));
+	    int s;
+	    grow_unicode(ttf, num);
+	    for(s=0;s<num;s++) {
+		ttf->unicode[s] = readU8(&t);
+	    }
+	} else if(format == 4) {
+	    U16 segment_count = readU16(&t); 
+	    if(segment_count&1) {
+		msg("<error> Bad segmentx2 count %d", segment_count);
+		continue;
+	    }
+	    segment_count>>=1;
+	    readU16(&t); //searchrange
+	    readU16(&t); //entry selector
+	    readU16(&t); //range shift
+	    INIT_READ(r_end, t.mem, t.size, t.pos);
+	    INIT_READ(r_start, t.mem, t.size, t.pos+2+segment_count*2);
+	    INIT_READ(r_delta, t.mem, t.size, t.pos+2+segment_count*4);
+	    INIT_READ(r_range, t.mem, t.size, t.pos+2+segment_count*6);
+	    int glyphmap_start = t.pos+2+segment_count*8;
+	    int s;
+	    for(s=0;s<segment_count;s++) {
+		U16 start = readU16(&r_start);
+		U16 end = readU16(&r_end);
+		U16 delta = readU16(&r_delta);
+		U16 range = readU16(&r_range);
+		if(start==0xffff && end==0xffff && delta==1) {
+		    /* this is a common occurence in fonts which explicitly map
+		       "unicode undefined" (0xffff) to "glyph undefined" (0).
+		       We don't want to blow our unicode table up to 65536 just
+		       because of this, so ignore this entry.
+		     */
+		    continue;
+		}
+		grow_unicode(ttf, end);
+		int u;
+		if(!range) {
+		    for(u=start;u<=end;u++) {
+			ttf->unicode[u] = (u + delta) & 0xffff;
+		    }
+		} else {
+		    INIT_READ(g, t.mem, t.size, r_range.pos-2+range);
+		    for(u=start;u<=end;u++) {
+			ttf->unicode[u] = readU16(&g);
+		    }
+		}
+	    }
+	}
+    }
+}
+
+static int segment_size(unicode_t*unicode, int pos, int size)
+{
+    int s;
+    int count=0;
+    for(s=pos;s<size;s++) {
+	if(!unicode[s])
+	    count++;
+	if(count>4) {
+	    /* a segment costs us 8 bytes, so for more than 4 consecutive 
+	       zero entries (16 bit each) in the glyph index array,
+	       it pays off to start a new segment */
+	    break;
+	}
+    }
+    s -= count; // go to the last filled in entry
+    if(s==size)
+	return size-1;
+    return s;
+}
+
+void cmap_write(ttf_t* ttf, ttf_table_t*w)
+{
+    writeU16(w, 0);  //version
+    writeU16(w, 2);  //two tables
+
+    writeU16(w, 0);  //platform (unicode)
+    writeU16(w, 3);  //encoding (unicode 2.0)
+    writeU32(w, 20); //offset
+
+    writeU16(w, 3);  //platform (windows)
+    writeU16(w, 1);  //encoding (unicode basic multilingual plane UCS-2)
+    writeU32(w, 20); //offset
+
+    writeU16(w, 4); // format=4
+    int length_pos = w->len;
+    writeU16(w, 0); // length: we don't know yet
+    writeU16(w, 0); // language (n/a for unicode)
+    int num_segments_pos = w->len;
+    writeU16(w, 0); //number of segments: we don't know yet either
+    writeU16(w, 0); //searchrange
+    writeU16(w, 0); //entry selector
+    writeU16(w, 0); //range shift
+
+    int pos=0;
+    int num_segments=0;
+    while(pos < ttf->unicode_size) {
+	if(!ttf->unicode[pos]) {
+	    pos++;
+	    continue;
+	}
+	int s = segment_size(ttf->unicode, pos, ttf->unicode_size);
+	pos = s+1;
+	num_segments++;
+    }
+    int t;
+    int end_pos = w->len;
+    for(t=0;t<num_segments;t++) {writeU16(w, 0);} //end array
+    writeU16(w, 0); //reserved byte
+    int start_pos = w->len;
+    for(t=0;t<num_segments;t++) {writeU16(w, 0);} //start array
+    int delta_pos = w->len;
+    for(t=0;t<num_segments;t++) {writeU16(w, 0);} //delta array
+    int range_pos = w->len;
+    for(t=0;t<num_segments;t++) {writeU16(w, 0);} //range array
+    
+    w->data[num_segments_pos]=num_segments>>8;
+    w->data[num_segments_pos+1]=num_segments;
+
+    pos=0;
+    num_segments = 0;
+    while(pos < ttf->unicode_size) {
+	if(!ttf->unicode[pos]) {
+	    pos++;
+	    continue;
+	}
+	U16 end = segment_size(ttf->unicode, pos, ttf->unicode_size);
+	w->data[end_pos++]=end>>8;
+	w->data[end_pos++]=end;
+	w->data[start_pos++]=pos>>8;
+	w->data[start_pos++]=pos;
+	int s;
+	U16 delta = ttf->unicode[pos]-pos;
+	char do_delta=1;
+	for(s=pos+1;s<=end;s++) {
+	    U16 delta2 = ttf->unicode[pos]-pos;
+	    if(delta2!=delta) {
+		do_delta=0;
+		break;
+	    }
+	}
+	U16 range;
+	if(do_delta) {
+	    range = 0;
+	} else {
+	    delta = 0;
+	    range = w->len - range_pos+num_segments*2;
+	    for(s=pos;s<=end;s++) {
+		writeU16(w, ttf->unicode[s]);
+	    }
+	}
+	w->data[delta_pos++]=delta>>8;
+	w->data[delta_pos++]=delta;
+	w->data[range_pos++]=range>>8;
+	w->data[range_pos++]=range;
+	num_segments++;
+	pos = end+1;
+    }
+    w->data[length_pos]=(w->len-20)>>8;
+    w->data[length_pos+1]=w->len-20;
+}
+void cmap_delete(ttf_t*ttf)
+{
+    if(ttf->unicode) {
+	free(ttf->unicode);
+	ttf->unicode=0;
+    }
+    ttf->unicode_size=0;
+}
+
 static int ttf_parse_tables(ttf_t*ttf)
 {
     ttf_table_t*table;
@@ -1131,6 +1355,14 @@ static int ttf_parse_tables(ttf_t*ttf)
 	}
 	free(loca);
     }
+    
+    table = ttf_find_table(ttf, TAG_CMAP);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	cmap_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
+
     return 1;
 }
 static void ttf_collapse_tables(ttf_t*ttf)
@@ -1156,9 +1388,13 @@ static void ttf_collapse_tables(ttf_t*ttf)
 	table = ttf_addtable(ttf, TAG_VHEA);
 	hea_write(ttf, table, num_advances);
     }
-
+	
     int loca_size=0;
     if(ttf->num_glyphs) {
+	table = ttf_addtable(ttf, TAG_CMAP);
+	cmap_write(ttf, table);
+	cmap_delete(ttf);
+
 	table = ttf_addtable(ttf, TAG_GLYF);
 	U32*locations = glyf_write(ttf, table);
 	glyf_delete(ttf);
@@ -1171,7 +1407,6 @@ static void ttf_collapse_tables(ttf_t*ttf)
     table = ttf_addtable(ttf, TAG_HEAD);
     head_write(ttf, table, loca_size);
     head_delete(ttf);
-
 }
 
 ttf_t* load_ttf(void*data, int length)
@@ -1389,7 +1624,7 @@ int main(int argn, const char*argv[])
     ttf_t*ttf = load_ttf(m->data, m->len);
     if(!ttf) return 1;
     memfile_close(m);
-    ttf_dump(ttf);
+    //ttf_dump(ttf);
     //printf("os2 version: %04x (%d), maxp size: %d\n", 
 //	    ttf->os2->version, ttf->os2->size, ttf->maxp->size);
     ttf_save(ttf, "comic2.ttf");

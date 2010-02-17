@@ -118,6 +118,9 @@ typedef struct _table_hea
 #define GLYPH_ON_CURVE 0x01
 #define GLYPH_CONTOUR_START 0x40
 #define GLYPH_CONTOUR_END 0x80
+
+typedef U32 unicode_t;
+
 typedef struct _ttfpoint {
     int x,y;
     U8 flags;
@@ -153,6 +156,9 @@ typedef struct _ttf {
     char is_vertical;
     int num_glyphs;
     ttfglyph_t*glyphs;
+    
+    int unicode_size;
+    unicode_t*unicode;
 
     U32 version;
 } ttf_t;
