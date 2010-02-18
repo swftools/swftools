@@ -1,6 +1,6 @@
 require 'gfx'
 
-pdf = GFX::PDF.new('file.pdf')
+pdf = GFX::PDF.new('segfault.pdf')
 
 class TestRender < GFX::Device
     def startpage(width,height)

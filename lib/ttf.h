@@ -54,7 +54,6 @@ typedef struct _table_os2 {
     S16 xAvgCharWidth;
     U16 usWeightClass;
     U16 usWidthClass;
-    U16 fsType;
     U16 ySubscriptXSize;
     U16 ySubscriptYSize;
     U16 ySubscriptXOffset;
@@ -77,7 +76,6 @@ typedef struct _table_os2 {
     U8 panose_Midline;
     U8 panose_XHeight;
     U32 ulCharRange[4];
-    U8 achVendID[4];
 
     U16 fsSelection;
     U16 fsFirstCharIndex;
@@ -103,9 +101,6 @@ typedef struct _table_os2 {
 
 typedef struct _table_hea
 {
-    S16 ascent;
-    S16 descent;
-    S16 lineGap;
     U16 advanceWidthMax;
     S16 minLeftSideBearing;
     S16 minRightSideBearing;
@@ -154,6 +149,11 @@ typedef struct _ttf {
 
     U16 flags;
     char is_vertical;
+
+    S16 ascent;
+    S16 descent;
+    S16 lineGap;
+
     int num_glyphs;
     ttfglyph_t*glyphs;
     
@@ -164,7 +164,11 @@ typedef struct _ttf {
 } ttf_t;
 
 
-ttf_t*load_ttf(void*data, int length);
+ttf_t*ttf_new();
+ttf_t*ttf_load(void*data, int length);
 ttf_table_t*ttf_addtable(ttf_t*ttf, U32 tag);
+void ttf_create_truetype_tables(ttf_t*ttf);
+void ttf_dump(ttf_t*ttf);
+void ttf_save(ttf_t*ttf, const char*filename);
 
 #endif

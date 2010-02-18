@@ -2121,6 +2121,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_dumpfonts = atoi(value);
     } else if(!strcmp(name, "animate")) {
 	i->config_animate = atoi(value);
+    } else if(!strcmp(name, "linknameurl")) {
+	i->config_linknameurl = atoi(value);
     } else if(!strcmp(name, "showimages")) {
 	i->config_showimages = atoi(value);
     } else if(!strcmp(name, "disablelinks")) {

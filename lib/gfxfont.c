@@ -25,6 +25,7 @@
 #include "gfxdevice.h"
 #include "gfxtools.h"
 #include "gfxfont.h"
+#include "ttf.h"
 
 static int loadfont_scale = 64;
 static int full_unicode = 1;
@@ -491,6 +492,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
 {
     fprintf(stderr, "No freetype support compiled in! Not able to load %s\n", filename);
+    return 0;
 }
 
 #endif
@@ -516,5 +518,106 @@ void gfxfont_free(gfxfont_t*font)
     }
 
     free(font);
+}
+
+ttf_t* gfxfont_to_ttf(gfxfont_t*font)
+{
+    ttf_t*ttf = ttf_new();
+    int num_glyphs = font->num_glyphs;
+    int offset = 0;
+    int t;
+    char has_nondef_glyph = 
+	font->num_glyphs && font->glyphs[0].unicode==-1 && 
+	(!font->glyphs[0].line || !font->glyphs[0].line->next);
+
+    if(!has_nondef_glyph) {
+	/* insert a new .nondef glyph at the start of the font */
+	offset++;
+	num_glyphs++;
+    }
+    ttf->num_glyphs = num_glyphs;
+    ttf->glyphs = rfx_calloc(num_glyphs*sizeof(ttfglyph_t));
+    double scale = 1.0;
+    int max_unicode = font->max_unicode;
+    for(t=0;t<font->num_glyphs;t++) {
+	gfxglyph_t*src = &font->glyphs[t];
+	ttfglyph_t*dest = &ttf->glyphs[t+offset];
+	gfxline_t*line = src->line;
+	int count = 0;
+	while(line) {
+	    count++;
+	    if(line->type == gfx_splineTo) 
+		count++;
+	    line=line->next;
+	}
+	dest->num_points = count;
+	dest->points = rfx_calloc(count*sizeof(ttfpoint_t));
+	count = 0;
+	while(line) {
+	    if(line->type == gfx_splineTo) {
+		dest->points[count].x = line->sx*scale;
+		dest->points[count].y = line->sy*scale;
+		count++;
+	    }
+	    dest->points[count].x = line->x*scale;
+	    dest->points[count].y = line->y*scale;
+	    dest->points[count].flags |= GLYPH_ON_CURVE;
+	    if(line->type == gfx_moveTo) {
+		dest->points[count].flags |= GLYPH_CONTOUR_START;
+		if(count)
+		    dest->points[count-1].flags |= GLYPH_CONTOUR_END;
+	    }
+	    count++;
+	    line=line->next;
+	}
+
+	/* compute bounding box */
+	int s;
+	if(count) {
+	    dest->xmin = dest->xmax = dest->points[0].x;
+	    dest->ymin = dest->ymax = dest->points[0].y;
+	    for(s=1;s<count;s++) {
+		if(dest->points[s].x < dest->xmin) 
+		    dest->xmin = dest->points[0].x;
+		if(dest->points[s].y < dest->xmin) 
+		    dest->xmin = dest->points[0].y;
+		if(dest->points[s].x > dest->xmin) 
+		    dest->xmax = dest->points[0].x;
+		if(dest->points[s].y > dest->xmin) 
+		    dest->ymax = dest->points[0].y;
+	    }
+	}
+
+	dest->advance = src->advance*scale;
+	if(src->unicode > max_unicode)
+	    max_unicode = src->unicode;
+    }
+    ttf->unicode_size = max_unicode+1;
+    ttf->unicode = rfx_calloc(sizeof(unicode_t)*ttf->unicode_size);
+    for(t=0;t<ttf->num_glyphs;t++) {
+	gfxglyph_t*src = &font->glyphs[t];
+	int u = font->glyphs[t].unicode;
+	if(u>=0)
+	    ttf->unicode[u] = t+offset;
+    }
+    int u;
+    for(u=0;u<font->max_unicode;u++) {
+	int g = font->unicode2glyph[t];
+	if(g>=0) {
+	    ttf->unicode[u] = g;
+	}
+    }
+    ttf->ascent = font->ascent;
+    ttf->descent = font->descent;
+    ttf->lineGap = font->ascent + font->descent;
+
+    ttf_create_truetype_tables(ttf);
+    return ttf;
+}
+
+void gfxfont_save(gfxfont_t*font, const char*filename)
+{
+    ttf_t*ttf = gfxfont_to_ttf(font);
+    ttf_save(ttf, filename);
 }
 

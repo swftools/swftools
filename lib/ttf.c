@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include "bitio.h"
 #include "log.h"
 #include "os.h"
 #include "mem.h"
@@ -126,13 +125,13 @@ static void expand(ttf_table_t*w, int newsize)
     w->memsize = v1>v2?v1:v2;
     w->data = rfx_realloc(w->data, w->memsize);
 }
-static void writeU8(ttf_table_t*w, unsigned char b)
+static inline void writeU8(ttf_table_t*w, unsigned char b)
 {
     if(w->memsize<w->len+1)
 	expand(w, w->len+1);
     w->data[w->len++] = b;
 }
-static void writeU16(ttf_table_t*w, unsigned short v)
+static inline void writeU16(ttf_table_t*w, unsigned short v)
 {
     if(w->memsize<w->len+2)
 	expand(w, w->len+2);
@@ -140,7 +139,7 @@ static void writeU16(ttf_table_t*w, unsigned short v)
     w->data[w->len++] = v;
 }
 #define writeS16 writeU16
-static void writeU32(ttf_table_t*w, unsigned long v)
+static inline void writeU32(ttf_table_t*w, unsigned long v)
 {
     if(w->memsize<w->len+4)
 	expand(w, w->len+4);
@@ -149,7 +148,7 @@ static void writeU32(ttf_table_t*w, unsigned long v)
     w->data[w->len++] = v>>8;
     w->data[w->len++] = v;
 }
-static void writeBlock(ttf_table_t*w, void*data, int len)
+static inline void writeBlock(ttf_table_t*w, void*data, int len)
 {
     if(w->memsize<w->len+len)
 	expand(w, w->len+len);
@@ -258,185 +257,28 @@ static void ttf_table_dump(ttf_table_t*t, const char*prefix)
     hexdump(t->data, t->len, prefix);
 }
 
-static table_os2_t*os2_parse(memreader_t*r)
+static table_head_t*head_new(ttf_t*ttf)
 {
-    table_os2_t*os2 = rfx_calloc(sizeof(table_os2_t));
-    U16 version = readU16(r);
-    if(version!=0 && version!=1 && version!=2)
-	msg("<warning> Unknown OS2 version: %04x", version);
-    os2->xAvgCharWidth = readS16(r);
-    os2->usWeightClass = readU16(r);
-    os2->usWidthClass = readU16(r);
-    os2->fsType = readU16(r);
-    os2->ySubscriptXSize = readU16(r);
-    os2->ySubscriptYSize = readU16(r);
-    os2->ySubscriptXOffset = readU16(r);
-    os2->ySubscriptYOffset = readU16(r);
-    os2->ySuperscriptXSize = readU16(r);
-    os2->ySuperscriptYSize = readU16(r);
-    os2->ySuperscriptXOffset = readU16(r);
-    os2->ySuperscriptYOffset = readU16(r);
-    os2->yStrikeoutSize = readU16(r);
-    os2->yStrikeoutPosition = readU16(r);
-    os2->sFamilyClass = readU16(r);
-    os2->panose_FamilyType = readU8(r);
-    os2->panose_SerifStyle = readU8(r);
-    os2->panose_Weight = readU8(r);
-    os2->panose_Proportion = readU8(r);
-    os2->panose_Contrast = readU8(r);
-    os2->panose_StrokeVariation = readU8(r);
-    os2->panose_ArmStyle = readU8(r);
-    os2->panose_Letterform = readU8(r);
-    os2->panose_Midline = readU8(r);
-    os2->panose_XHeight = readU8(r);
-    os2->ulCharRange[0] = readU32(r);
-    os2->ulCharRange[1] = readU32(r);
-    os2->ulCharRange[2] = readU32(r);
-    os2->ulCharRange[3] = readU32(r);
-    os2->achVendID[0] = readU8(r);
-    os2->achVendID[1] = readU8(r);
-    os2->achVendID[2] = readU8(r);
-    os2->achVendID[3] = readU8(r);
-    os2->fsSelection = readU16(r);
-    os2->fsFirstCharIndex = readU16(r);
-    os2->fsLastCharIndex = readU16(r);
-    os2->sTypoAscender = readS16(r);
-    os2->sTypoDescender = readS16(r);
-    os2->sTypoLineGap = readS16(r);
-    os2->usWinAscent = readU16(r);
-    os2->usWinDescent = readU16(r);
-    if(version<1) return os2;
-    os2->ulCodePageRange1 = readU32(r);
-    os2->ulCodePageRange2 = readU32(r);
-    if(version<2) return os2;
-    os2->sxHeight = readS16(r);
-    os2->sCapHeight = readS16(r);
-    os2->usDefaultChar = readU16(r);
-    os2->usBreakChar = readU16(r);
-    os2->usMaxContext = readU16(r);
-    return os2;
-}
-
-static os2_write(ttf_t*ttf, ttf_table_t*w)
-{
-    table_os2_t*os2 = ttf->os2;
-    U16 version=1;
-    if(os2->sxHeight|os2->sCapHeight|os2->usDefaultChar|os2->usBreakChar|os2->usMaxContext) {
-	version=2;
+    table_head_t*head = rfx_calloc(sizeof(table_head_t));
+    head->units_per_em = 1024;
+    int t;
+    if(ttf->num_glyphs) {
+	head->xmin = ttf->glyphs[0].xmin;
+	head->ymin = ttf->glyphs[0].ymin;
+	head->xmax = ttf->glyphs[0].xmax;
+	head->ymax = ttf->glyphs[0].ymax;
+	for(t=1;t<ttf->num_glyphs;t++) {
+	    if(ttf->glyphs[0].xmin < head->xmin) head->xmin = ttf->glyphs[0].xmin;
+	    if(ttf->glyphs[0].ymin < head->ymin) head->ymin = ttf->glyphs[0].ymin;
+	    if(ttf->glyphs[0].xmax > head->xmax) head->xmax = ttf->glyphs[0].xmax;
+	    if(ttf->glyphs[0].ymax > head->ymax) head->ymax = ttf->glyphs[0].ymax;
+	}
     }
-    writeU16(w, version);
-    writeS16(w, os2->xAvgCharWidth);
-    writeU16(w, os2->usWeightClass);
-    writeU16(w, os2->usWidthClass);
-    writeU16(w, os2->fsType);
-    writeU16(w, os2->ySubscriptXSize);
-    writeU16(w, os2->ySubscriptYSize);
-    writeU16(w, os2->ySubscriptXOffset);
-    writeU16(w, os2->ySubscriptYOffset);
-    writeU16(w, os2->ySuperscriptXSize);
-    writeU16(w, os2->ySuperscriptYSize);
-    writeU16(w, os2->ySuperscriptXOffset);
-    writeU16(w, os2->ySuperscriptYOffset);
-    writeU16(w, os2->yStrikeoutSize);
-    writeU16(w, os2->yStrikeoutPosition);
-    writeU16(w, os2->sFamilyClass);
-    writeU8(w, os2->panose_FamilyType);
-    writeU8(w, os2->panose_SerifStyle);
-    writeU8(w, os2->panose_Weight);
-    writeU8(w, os2->panose_Proportion);
-    writeU8(w, os2->panose_Contrast);
-    writeU8(w, os2->panose_StrokeVariation);
-    writeU8(w, os2->panose_ArmStyle);
-    writeU8(w, os2->panose_Letterform);
-    writeU8(w, os2->panose_Midline);
-    writeU8(w, os2->panose_XHeight);
-    writeU32(w, os2->ulCharRange[0]);
-    writeU32(w, os2->ulCharRange[1]);
-    writeU32(w, os2->ulCharRange[2]);
-    writeU32(w, os2->ulCharRange[3]);
-    writeU8(w, os2->achVendID[0]);
-    writeU8(w, os2->achVendID[1]);
-    writeU8(w, os2->achVendID[2]);
-    writeU8(w, os2->achVendID[3]);
-    writeU16(w, os2->fsSelection);
-    writeU16(w, os2->fsFirstCharIndex);
-    writeU16(w, os2->fsLastCharIndex);
-    writeS16(w, os2->sTypoAscender);
-    writeS16(w, os2->sTypoDescender);
-    writeS16(w, os2->sTypoLineGap);
-    writeU16(w, os2->usWinAscent);
-    writeU16(w, os2->usWinDescent);
-    if(version<1) return;
-    writeU32(w, os2->ulCodePageRange1);
-    writeU32(w, os2->ulCodePageRange2);
-    if(version<2) return;
-    writeS16(w, os2->sxHeight);
-    writeS16(w, os2->sCapHeight);
-    writeU16(w, os2->usDefaultChar);
-    writeU16(w, os2->usBreakChar);
-    writeU16(w, os2->usMaxContext);
+    head->macStyle = 0;
+    head->lowest_readable_size = 8; // not sure what font renderers actually do with this
+    head->dir_hint = 0;
+    return head;
 }
-static void os2_delete(ttf_t*ttf)
-{
-    if(ttf->os2)
-	free(ttf->os2);
-    ttf->os2=0;
-}
-
-static os2_dump(ttf_t*ttf)
-{
-    table_os2_t*os2 = ttf->os2;
-    if(!os2) return;
-    printf("os2->xAvgCharWidth: %d\n", os2->xAvgCharWidth);
-    printf("os2->usWeightClass: %d\n", os2->usWeightClass);
-    printf("os2->usWidthClass: %d\n", os2->usWidthClass);
-    printf("os2->fsType: %d\n", os2->fsType);
-    printf("os2->ySubscriptXSize: %d\n", os2->ySubscriptXSize);
-    printf("os2->ySubscriptYSize: %d\n", os2->ySubscriptYSize);
-    printf("os2->ySubscriptXOffset: %d\n", os2->ySubscriptXOffset);
-    printf("os2->ySubscriptYOffset: %d\n", os2->ySubscriptYOffset);
-    printf("os2->ySuperscriptXSize: %d\n", os2->ySuperscriptXSize);
-    printf("os2->ySuperscriptYSize: %d\n", os2->ySuperscriptYSize);
-    printf("os2->ySuperscriptXOffset: %d\n", os2->ySuperscriptXOffset);
-    printf("os2->ySuperscriptYOffset: %d\n", os2->ySuperscriptYOffset);
-    printf("os2->yStrikeoutSize: %d\n", os2->yStrikeoutSize);
-    printf("os2->yStrikeoutPosition: %d\n", os2->yStrikeoutPosition);
-    printf("os2->sFamilyClass: %d\n", os2->sFamilyClass);
-    printf("os2->panose_FamilyType: %d\n", os2->panose_FamilyType);
-    printf("os2->panose_SerifStyle: %d\n", os2->panose_SerifStyle);
-    printf("os2->panose_Weight: %d\n", os2->panose_Weight);
-    printf("os2->panose_Proportion: %d\n", os2->panose_Proportion);
-    printf("os2->panose_Contrast: %d\n", os2->panose_Contrast);
-    printf("os2->panose_StrokeVariation: %d\n", os2->panose_StrokeVariation);
-    printf("os2->panose_ArmStyle: %d\n", os2->panose_ArmStyle);
-    printf("os2->panose_Letterform: %d\n", os2->panose_Letterform);
-    printf("os2->panose_Midline: %d\n", os2->panose_Midline);
-    printf("os2->panose_XHeight: %d\n", os2->panose_XHeight);
-    printf("os2->ulCharRange[0]: %d\n", os2->ulCharRange[0]);
-    printf("os2->ulCharRange[1]: %d\n", os2->ulCharRange[1]);
-    printf("os2->ulCharRange[2]: %d\n", os2->ulCharRange[2]);
-    printf("os2->ulCharRange[3]: %d\n", os2->ulCharRange[3]);
-    printf("os2->achVendID[0]: %d\n", os2->achVendID[0]);
-    printf("os2->achVendID[1]: %d\n", os2->achVendID[1]);
-    printf("os2->achVendID[2]: %d\n", os2->achVendID[2]);
-    printf("os2->achVendID[3]: %d\n", os2->achVendID[3]);
-    printf("os2->fsSelection: %d\n", os2->fsSelection);
-    printf("os2->fsFirstCharIndex: %d\n", os2->fsFirstCharIndex);
-    printf("os2->fsLastCharIndex: %d\n", os2->fsLastCharIndex);
-    printf("os2->sTypoAscender: %d\n", os2->sTypoAscender);
-    printf("os2->sTypoDescender: %d\n", os2->sTypoDescender);
-    printf("os2->sTypoLineGap: %d\n", os2->sTypoLineGap);
-    printf("os2->usWinAscent: %d\n", os2->usWinAscent);
-    printf("os2->usWinDescent: %d\n", os2->usWinDescent);
-    printf("os2->ulCodePageRange1: %d\n", os2->ulCodePageRange1);
-    printf("os2->ulCodePageRange2: %d\n", os2->ulCodePageRange2);
-    printf("os2->sxHeight: %d\n", os2->sxHeight);
-    printf("os2->sCapHeight: %d\n", os2->sCapHeight);
-    printf("os2->usDefaultChar: %d\n", os2->usDefaultChar);
-    printf("os2->usBreakChar: %d\n", os2->usBreakChar);
-    printf("os2->usMaxContext: %d\n", os2->usMaxContext);
-}
-
 static int head_parse(ttf_t*ttf, memreader_t*r)
 {
     ttf->head = rfx_calloc(sizeof(table_head_t));
@@ -444,8 +286,6 @@ static int head_parse(ttf_t*ttf, memreader_t*r)
     if(version!=VERSION_1_0) 
 	msg("<warning> Font HEAD has unknown version %08x", version);
     U32 revision = readU32(r);
-    if(revision!=VERSION_1_0) 
-	msg("<warning> Font HEAD has unknown revision %08x", revision);
     U32 checksum2 = readU32(r);
     U32 magic = readU32(r);
     if(magic!=0x5f0f3cf5) 
@@ -467,9 +307,11 @@ static int head_parse(ttf_t*ttf, memreader_t*r)
     U16 glyph_data_format = readS16(r);
     if(glyph_data_format!=0)
 	msg("<warning> Font glyph data format unknown: %04x", glyph_data_format);
+    if(r->pos < r->size) {
+	msg("<warning> Leftover bytes (%d) in HEAD tag", r->size - r->pos);
+    }
     return loc_index;
 }
-
 static void head_write(ttf_t*ttf, ttf_table_t*w, int loca_size)
 {
     writeU32(w, 0x10000);
@@ -510,6 +352,273 @@ static void head_delete(ttf_t*ttf)
     }
 }
 
+static table_os2_t*os2_new(ttf_t*ttf)
+{
+    table_os2_t*os2 = rfx_calloc(sizeof(table_os2_t));
+    if(ttf->num_glyphs) {
+	int average_width=0;
+	int t;
+	for(t=0;t<ttf->num_glyphs;t++) {
+	    average_width += (ttf->glyphs[t].advance + ttf->glyphs[t].bearing);
+	}
+	os2->xAvgCharWidth = average_width / ttf->num_glyphs;
+    }
+
+    /* that's what everybody seems to fill in */
+    os2->usWeightClass = 400;
+    os2->usWidthClass = 5;
+   
+    if(ttf->head) {
+	int advance = (ttf->head->xmax - ttf->head->xmin)/2;
+	int height = (ttf->head->xmax - ttf->head->xmin);
+	int ymid = height/2;
+	/* I do believe a sane font rendering engine will actually use
+	   the font advance here- the subscript/superscript position will
+  	   not be the same for each glyph */
+	os2->ySuperscriptXSize = os2->ySubscriptXSize = (ttf->head->xmax - ttf->head->xmin)/2;
+	os2->ySuperscriptYSize = os2->ySubscriptYSize = (ttf->head->ymax - ttf->head->ymin)/2;
+	os2->ySubscriptXOffset = advance;
+	os2->ySubscriptYOffset = 0;
+	os2->ySuperscriptXOffset = advance;
+	os2->ySuperscriptYOffset = (ttf->head->ymax - ttf->head->ymin)/2;
+	os2->yStrikeoutSize = ttf->head->units_per_em / 10;
+	os2->yStrikeoutPosition = ymid;
+	os2->usWinAscent = ttf->head->ymax;
+	os2->usWinDescent = ttf->head->ymin<0?0:ttf->head->ymin;
+	os2->sxHeight = ymid;
+	os2->sCapHeight = height*2/3;
+    }
+    os2->panose_Weight = 4;
+
+    /* strictly speaking we'd have to set 92/64 bits in these tables, depending on
+       what parts of the unicode table is filled. (e.g. bit 90 = tibetan). */
+    os2->ulCharRange[0] = 1;
+    os2->ulCharRange[1] = 0;
+    os2->ulCharRange[2] = 0;
+    os2->ulCharRange[3] = 0;
+    os2->ulCodePageRange1 = 1;
+    os2->ulCodePageRange2 = 0;
+
+    if(ttf->unicode_size) {
+	int min,max;
+	for(min=0;min<ttf->unicode_size;min++)
+	    if(ttf->unicode[min]) break;
+	for(max=ttf->unicode_size-1;max>=0;max--)
+	    if(ttf->unicode[max]) break;
+	if(min<=max) {
+	    os2->fsFirstCharIndex = min;
+	    os2->fsLastCharIndex = max;
+	}
+    }
+    os2->sTypoAscender = ttf->ascent;
+    os2->sTypoDescender = ttf->descent;
+    os2->sTypoLineGap = ttf->lineGap;
+
+    os2->usDefaultChar = 0;
+    os2->usBreakChar = (ttf->unicode_size>0x20 && ttf->unicode[0x20])?0x20:0;
+    os2->usMaxContext = 0; // we don't use ligatures yet
+    return os2;
+}
+static table_os2_t*os2_parse(memreader_t*r)
+{
+    table_os2_t*os2 = rfx_calloc(sizeof(table_os2_t));
+    U16 version = readU16(r);
+    /* 0 = TrueType 1.5
+       1 = TrueType 1.66
+       2 = OpenType 1.2
+       3 = OpenType 1.4 */
+    if(version!=0 && version!=1 && version!=2 && version!=3)
+	msg("<warning> Unknown OS2 version: %04x", version);
+    os2->xAvgCharWidth = readS16(r);
+    os2->usWeightClass = readU16(r);
+    os2->usWidthClass = readU16(r);
+    readU16(r); //fstype
+    os2->ySubscriptXSize = readU16(r);
+    os2->ySubscriptYSize = readU16(r);
+    os2->ySubscriptXOffset = readU16(r);
+    os2->ySubscriptYOffset = readU16(r);
+    os2->ySuperscriptXSize = readU16(r);
+    os2->ySuperscriptYSize = readU16(r);
+    os2->ySuperscriptXOffset = readU16(r);
+    os2->ySuperscriptYOffset = readU16(r);
+    os2->yStrikeoutSize = readU16(r);
+    os2->yStrikeoutPosition = readU16(r);
+    os2->sFamilyClass = readU16(r);
+    os2->panose_FamilyType = readU8(r);
+    os2->panose_SerifStyle = readU8(r);
+    os2->panose_Weight = readU8(r);
+    os2->panose_Proportion = readU8(r);
+    os2->panose_Contrast = readU8(r);
+    os2->panose_StrokeVariation = readU8(r);
+    os2->panose_ArmStyle = readU8(r);
+    os2->panose_Letterform = readU8(r);
+    os2->panose_Midline = readU8(r);
+    os2->panose_XHeight = readU8(r);
+    os2->ulCharRange[0] = readU32(r);
+    os2->ulCharRange[1] = readU32(r);
+    os2->ulCharRange[2] = readU32(r);
+    os2->ulCharRange[3] = readU32(r);
+    readU32(r); //vendor
+    os2->fsSelection = readU16(r);
+    os2->fsFirstCharIndex = readU16(r);
+    os2->fsLastCharIndex = readU16(r);
+    os2->sTypoAscender = readS16(r);
+    os2->sTypoDescender = readS16(r);
+    os2->sTypoLineGap = readS16(r);
+    os2->usWinAscent = readU16(r);
+    os2->usWinDescent = readU16(r);
+    if(version<1) return os2;
+    os2->ulCodePageRange1 = readU32(r);
+    os2->ulCodePageRange2 = readU32(r);
+    if(version<2) return os2;
+    os2->sxHeight = readS16(r);
+    os2->sCapHeight = readS16(r);
+    os2->usDefaultChar = readU16(r);
+    os2->usBreakChar = readU16(r);
+    os2->usMaxContext = readU16(r);
+    
+    if(r->pos < r->size) {
+	msg("<warning> Leftover bytes (%d) in OS2 tag", r->size - r->pos);
+    }
+    return os2;
+}
+static void os2_write(ttf_t*ttf, ttf_table_t*w)
+{
+    table_os2_t*os2 = ttf->os2;
+    U16 version=1;
+    if(os2->sxHeight|os2->sCapHeight|os2->usDefaultChar|os2->usBreakChar|os2->usMaxContext) {
+	version=2;
+    }
+    writeU16(w, version);
+    writeS16(w, os2->xAvgCharWidth);
+    writeU16(w, os2->usWeightClass);
+    writeU16(w, os2->usWidthClass);
+    writeU16(w, 0); //fstype
+    writeU16(w, os2->ySubscriptXSize);
+    writeU16(w, os2->ySubscriptYSize);
+    writeU16(w, os2->ySubscriptXOffset);
+    writeU16(w, os2->ySubscriptYOffset);
+    writeU16(w, os2->ySuperscriptXSize);
+    writeU16(w, os2->ySuperscriptYSize);
+    writeU16(w, os2->ySuperscriptXOffset);
+    writeU16(w, os2->ySuperscriptYOffset);
+    writeU16(w, os2->yStrikeoutSize);
+    writeU16(w, os2->yStrikeoutPosition);
+    writeU16(w, os2->sFamilyClass);
+    writeU8(w, os2->panose_FamilyType);
+    writeU8(w, os2->panose_SerifStyle);
+    writeU8(w, os2->panose_Weight);
+    writeU8(w, os2->panose_Proportion);
+    writeU8(w, os2->panose_Contrast);
+    writeU8(w, os2->panose_StrokeVariation);
+    writeU8(w, os2->panose_ArmStyle);
+    writeU8(w, os2->panose_Letterform);
+    writeU8(w, os2->panose_Midline);
+    writeU8(w, os2->panose_XHeight);
+    writeU32(w, os2->ulCharRange[0]);
+    writeU32(w, os2->ulCharRange[1]);
+    writeU32(w, os2->ulCharRange[2]);
+    writeU32(w, os2->ulCharRange[3]);
+    writeU32(w, 0x53434244); //vendor
+    writeU16(w, os2->fsSelection);
+    writeU16(w, os2->fsFirstCharIndex);
+    writeU16(w, os2->fsLastCharIndex);
+    writeS16(w, os2->sTypoAscender);
+    writeS16(w, os2->sTypoDescender);
+    writeS16(w, os2->sTypoLineGap);
+    writeU16(w, os2->usWinAscent);
+    writeU16(w, os2->usWinDescent);
+    if(version<1) return;
+    writeU32(w, os2->ulCodePageRange1);
+    writeU32(w, os2->ulCodePageRange2);
+    if(version<2) return;
+    writeS16(w, os2->sxHeight);
+    writeS16(w, os2->sCapHeight);
+    writeU16(w, os2->usDefaultChar);
+    writeU16(w, os2->usBreakChar);
+    writeU16(w, os2->usMaxContext);
+}
+static void os2_dump(ttf_t*ttf)
+{
+    table_os2_t*os2 = ttf->os2;
+    if(!os2) return;
+    printf("os2->xAvgCharWidth: %d\n", os2->xAvgCharWidth);
+    printf("os2->usWeightClass: %d\n", os2->usWeightClass);
+    printf("os2->usWidthClass: %d\n", os2->usWidthClass);
+    printf("os2->ySubscriptXSize: %d\n", os2->ySubscriptXSize);
+    printf("os2->ySubscriptYSize: %d\n", os2->ySubscriptYSize);
+    printf("os2->ySubscriptXOffset: %d\n", os2->ySubscriptXOffset);
+    printf("os2->ySubscriptYOffset: %d\n", os2->ySubscriptYOffset);
+    printf("os2->ySuperscriptXSize: %d\n", os2->ySuperscriptXSize);
+    printf("os2->ySuperscriptYSize: %d\n", os2->ySuperscriptYSize);
+    printf("os2->ySuperscriptXOffset: %d\n", os2->ySuperscriptXOffset);
+    printf("os2->ySuperscriptYOffset: %d\n", os2->ySuperscriptYOffset);
+    printf("os2->yStrikeoutSize: %d\n", os2->yStrikeoutSize);
+    printf("os2->yStrikeoutPosition: %d\n", os2->yStrikeoutPosition);
+    printf("os2->sFamilyClass: %d\n", os2->sFamilyClass);
+    printf("os2->panose_FamilyType: %d\n", os2->panose_FamilyType);
+    printf("os2->panose_SerifStyle: %d\n", os2->panose_SerifStyle);
+    printf("os2->panose_Weight: %d\n", os2->panose_Weight);
+    printf("os2->panose_Proportion: %d\n", os2->panose_Proportion);
+    printf("os2->panose_Contrast: %d\n", os2->panose_Contrast);
+    printf("os2->panose_StrokeVariation: %d\n", os2->panose_StrokeVariation);
+    printf("os2->panose_ArmStyle: %d\n", os2->panose_ArmStyle);
+    printf("os2->panose_Letterform: %d\n", os2->panose_Letterform);
+    printf("os2->panose_Midline: %d\n", os2->panose_Midline);
+    printf("os2->panose_XHeight: %d\n", os2->panose_XHeight);
+    printf("os2->ulCharRange[0]: %d\n", os2->ulCharRange[0]);
+    printf("os2->ulCharRange[1]: %d\n", os2->ulCharRange[1]);
+    printf("os2->ulCharRange[2]: %d\n", os2->ulCharRange[2]);
+    printf("os2->ulCharRange[3]: %d\n", os2->ulCharRange[3]);
+    printf("os2->fsSelection: %d\n", os2->fsSelection);
+    printf("os2->fsFirstCharIndex: %d\n", os2->fsFirstCharIndex);
+    printf("os2->fsLastCharIndex: %d\n", os2->fsLastCharIndex);
+    printf("os2->sTypoAscender: %d\n", os2->sTypoAscender);
+    printf("os2->sTypoDescender: %d\n", os2->sTypoDescender);
+    printf("os2->sTypoLineGap: %d\n", os2->sTypoLineGap);
+    printf("os2->usWinAscent: %d\n", os2->usWinAscent);
+    printf("os2->usWinDescent: %d\n", os2->usWinDescent);
+    printf("os2->ulCodePageRange1: %d\n", os2->ulCodePageRange1);
+    printf("os2->ulCodePageRange2: %d\n", os2->ulCodePageRange2);
+    printf("os2->sxHeight: %d\n", os2->sxHeight);
+    printf("os2->sCapHeight: %d\n", os2->sCapHeight);
+    printf("os2->usDefaultChar: %d\n", os2->usDefaultChar);
+    printf("os2->usBreakChar: %d\n", os2->usBreakChar);
+    printf("os2->usMaxContext: %d\n", os2->usMaxContext);
+}
+static void os2_delete(ttf_t*ttf)
+{
+    if(ttf->os2)
+	free(ttf->os2);
+    ttf->os2=0;
+}
+
+static table_maxp_t*maxp_new(ttf_t*ttf)
+{
+    table_maxp_t*maxp = rfx_calloc(sizeof(table_maxp_t));
+    int t;
+    if(ttf->num_glyphs) {
+	int max = 0;
+	for(t=0;t<ttf->num_glyphs;t++) {
+	    if(ttf->glyphs[t].num_points>max)
+	        max = ttf->glyphs[t].num_points;
+	    int contours = 0;
+	    int s;
+	    for(s=0;s<ttf->glyphs[t].num_points;s++) {
+		if(ttf->glyphs[t].points[s].flags&GLYPH_CONTOUR_END)
+		    contours++;
+	    }
+	    if(maxp->maxContours < contours)
+		maxp->maxContours = contours;
+	}
+	maxp->maxPoints = max;
+
+	/* we don't generate composite glyphs yet */
+	maxp->maxComponentPoints = 0;
+	maxp->maxComponentContours = 0;
+    }
+    return maxp;
+}
 static table_maxp_t* maxp_parse(ttf_t*ttf, memreader_t*r)
 {
     U32 version = readU32(r);
@@ -517,7 +626,10 @@ static table_maxp_t* maxp_parse(ttf_t*ttf, memreader_t*r)
     /* according to freetype, older fonts (version<0x10000) 
        apparently only contain the number of glyphs. this is
        rather rare, though. */
-    if(version<0x10000) return 0;
+    if(version<0x10000 && r->size==6) return 0;
+
+    if(r->size<32)
+	msg("<warning> Truncated maxp table (version %d)", version);
 
     table_maxp_t*maxp = rfx_calloc(sizeof(table_maxp_t));
     maxp->maxPoints = readU16(r);
@@ -535,10 +647,15 @@ static table_maxp_t* maxp_parse(ttf_t*ttf, memreader_t*r)
     maxp->maxComponentDepth = readU16(r);
     return maxp;
 }
-
 static void maxp_write(ttf_t*ttf, ttf_table_t*w)
 {
     table_maxp_t*maxp = ttf->maxp;
+    if(!maxp) {
+	/* version 0.5 simplified maxp table */
+	writeU32(w, 0x00005000);
+	writeU16(w, ttf->num_glyphs);
+	return;
+    }
     writeU32(w, 0x10000); //version
     writeU16(w, ttf->num_glyphs);
     writeU16(w, maxp->maxPoints);
@@ -555,7 +672,6 @@ static void maxp_write(ttf_t*ttf, ttf_table_t*w)
     writeU16(w, maxp->maxComponentElements);
     writeU16(w, maxp->maxComponentDepth);
 }
-
 static void maxp_dump(ttf_t*ttf)
 {
     table_maxp_t*maxp = ttf->maxp;
@@ -574,7 +690,6 @@ static void maxp_dump(ttf_t*ttf)
     printf("maxp->maxComponentElements: %d\n", maxp->maxComponentElements);
     printf("maxp->maxComponentDepth: %d\n", maxp->maxComponentDepth);
 }
-
 static void maxp_delete(ttf_t*ttf)
 {
     if(ttf->maxp)
@@ -582,14 +697,33 @@ static void maxp_delete(ttf_t*ttf)
     ttf->maxp=0;
 }
 
-
+static table_hea_t*hea_new(ttf_t*ttf)
+{
+    table_hea_t*hea = rfx_calloc(sizeof(table_hea_t));
+    if(ttf->num_glyphs) {
+	int t;
+	for(t=0;t<ttf->num_glyphs;t++) {
+	    if(ttf->glyphs[t].advance > hea->advanceWidthMax)
+	        hea->advanceWidthMax = ttf->glyphs[t].advance;
+	    if(ttf->glyphs[t].xmin < ttf->hea->minLeftSideBearing)
+	        ttf->hea->minLeftSideBearing = ttf->glyphs[t].xmin;
+	    if(ttf->glyphs[t].xmax < ttf->hea->minRightSideBearing)
+	        ttf->hea->minRightSideBearing = ttf->glyphs[t].xmax;
+	    int width = ttf->glyphs[t].xmax - ttf->glyphs[t].xmin;
+	    if(width > hea->xMaxExtent)
+		hea->xMaxExtent = width;
+	}
+	/* TODO: caret */
+    }
+    return hea;
+}
 static int hea_parse(memreader_t*r, ttf_t*ttf)
 {
     table_hea_t*hea = ttf->hea = rfx_calloc(sizeof(table_hea_t));
     U32 version = readU32(r);
-    hea->ascent = readS16(r);
-    hea->descent = readS16(r);
-    hea->lineGap = readS16(r);
+    ttf->ascent = readS16(r);
+    ttf->descent = readS16(r);
+    ttf->lineGap = readS16(r);
     hea->advanceWidthMax = readU16(r);
     hea->minLeftSideBearing = readS16(r);
     hea->minRightSideBearing = readS16(r);
@@ -612,14 +746,13 @@ static int hea_parse(memreader_t*r, ttf_t*ttf)
     }
     return num_advances;
 }
-
 static table_hea_t*hea_write(ttf_t*ttf, ttf_table_t*w, int num_advances)
 {
     table_hea_t*hea = ttf->hea;
     writeU32(w, 0x00010000);
-    writeS16(w, hea->ascent);
-    writeS16(w, hea->descent);
-    writeS16(w, hea->lineGap);
+    writeS16(w, ttf->ascent);
+    writeS16(w, ttf->descent);
+    writeS16(w, ttf->lineGap);
     writeU16(w, hea->advanceWidthMax);
     writeS16(w, hea->minLeftSideBearing);
     writeS16(w, hea->minRightSideBearing);
@@ -638,10 +771,11 @@ static table_hea_t*hea_write(ttf_t*ttf, ttf_table_t*w, int num_advances)
 static void hea_dump(ttf_t*ttf)
 {
     table_hea_t*hea = ttf->hea;
+    if(!hea) return;
     const char*dir = ttf->is_vertical?"v":"h";
-    printf("%shea->ascent: %d\n", dir, hea->ascent);
-    printf("%shea->descent: %d\n", dir, hea->descent);
-    printf("%shea->lineGap: %d\n", dir, hea->lineGap);
+    printf("%shea->ascent: %d\n", dir, ttf->ascent);
+    printf("%shea->descent: %d\n", dir, ttf->descent);
+    printf("%shea->lineGap: %d\n", dir, ttf->lineGap);
     printf("%shea->advanceWidthMax: %d\n", dir, hea->advanceWidthMax);
     printf("%shea->minLeftSideBearing: %d\n", dir, hea->minLeftSideBearing);
     printf("%shea->minRightSideBearing: %d\n", dir, hea->minRightSideBearing);
@@ -658,7 +792,7 @@ static void hea_delete(ttf_t*ttf)
     }
 }
 
-static void hmtx_parse(memreader_t*r, ttf_t*ttf, int num_advances)
+static void mtx_parse(memreader_t*r, ttf_t*ttf, int num_advances)
 {
     U16 old_advance = 0;
     int t;
@@ -701,21 +835,30 @@ static int mtx_write(ttf_t*ttf, ttf_table_t*w)
     }
     return num_advances;
 }
+
 static U32*loca_parse(memreader_t*r, ttf_t*ttf, int size)
 {
     int t;
     int num = ttf->num_glyphs+1;
     U32*locations = rfx_calloc(num*sizeof(U32));
+    U32 lastloc = 0;
+    U32 loc = 0;
+    char warn_unsorted = 1;
     if(size) {
 	if(num*4 > r->size) {
-	    msg("<warning> Short 'loca' table (32 bit)");
+	    msg("<warning> Short 'loca' table (32 bit): %d/%d", r->size/4, num);
 	    num=r->size/4;
 	}
 	if(num*4 < r->size) {
 	    msg("<warning> Extraneous data (%d bytes) in 'loca' table (32 bit)", r->size-num*4);
 	}
 	for(t=0;t<num;t++) {
-	    locations[t] = readU32(r);
+	    locations[t] = loc = readU32(r);
+	    if(lastloc > loc && warn_unsorted) {
+		msg("<warning> Unsorted 'loca' table (32 bit)");
+		warn_unsorted=0;
+	    }
+	    lastloc = loc;
 	}
     } else {
 	if(num*2 > r->size) {
@@ -726,7 +869,12 @@ static U32*loca_parse(memreader_t*r, ttf_t*ttf, int size)
 	    msg("<warning> Extraneous data (%d bytes) in 'loca' table (16 bit)", r->size-num*2);
 	}
 	for(t=0;t<num;t++) {
-	    locations[t] = readU16(r)*2;
+	    locations[t] = loc = readU16(r)*2;
+	    if(lastloc > loc && warn_unsorted) {
+		msg("<warning> Unsorted 'loca' table");
+		warn_unsorted=0;
+	    }
+	    lastloc = loc;
 	}
     }
     return locations;
@@ -754,6 +902,7 @@ static int loca_write(ttf_t*ttf, ttf_table_t*w, U32*locations)
 	return 0;
     }
 }
+
 static int parse_simple_glyph(ttf_t*ttf, memreader_t*r, int num_contours, int glyphnr)
 {
     ttfglyph_t*glyph = &ttf->glyphs[glyphnr];
@@ -863,11 +1012,14 @@ static int parse_simple_glyph(ttf_t*ttf, memreader_t*r, int num_contours, int gl
 static void glyf_parse(memreader_t*rr, ttf_t*ttf, U32*loca)
 {
     int t;
-    char warn_about_compound_glyphs=1;
+    char warn_about_compound_glyphs=0;
     for(t=0;t<ttf->num_glyphs;t++) {
 	INIT_READ(r, rr->mem, rr->size, loca[t]);
+	if(loca[t]==loca[t+1] || loca[t]==r.size)
+	    continue; //empty glyph
 	if(r.pos+10>r.size) {
-	    msg("<warning> Unexpected end of glyph array (or bad loca entry %d/%d)", loca[t], r.size);
+	    msg("<warning> Truncated glyph entry %d/%d (or bad loca entry %d/%d, next loca: %d)", 
+		    t, ttf->num_glyphs, loca[t], r.size, loca[t+1]);
 	    break;
 	}
 	S16 num_contours = readS16(&r);
@@ -887,7 +1039,6 @@ static void glyf_parse(memreader_t*rr, ttf_t*ttf, U32*loca)
     }
 
 }
-
 void write_simple_glyph(ttf_table_t*w, ttfglyph_t*g)
 {
     /* endpoints array */
@@ -979,7 +1130,6 @@ void write_simple_glyph(ttf_table_t*w, ttfglyph_t*g)
 	else if(dy) writeS16(w, dy);
     }
 }
-    
 U32* glyf_write(ttf_t* ttf, ttf_table_t*w)
 {
     U32*locations = malloc(sizeof(U32)*(ttf->num_glyphs+1));
@@ -1016,6 +1166,7 @@ U32* glyf_write(ttf_t* ttf, ttf_table_t*w)
 }
 void glyf_dump(ttf_t* ttf)
 {
+    if(!ttf->glyphs) return;
     int t;
     for(t=0;t<ttf->num_glyphs;t++) {
 	ttfglyph_t*g = &ttf->glyphs[t];
@@ -1034,7 +1185,6 @@ void glyf_dump(ttf_t* ttf)
 	    hexdump(g->code, g->code_size, "  ");
     }
 }
-
 void glyf_delete(ttf_t* ttf)
 {
     if(!ttf->glyphs) 
@@ -1064,7 +1214,6 @@ static void grow_unicode(ttf_t*ttf, int index)
     }
     ttf->unicode_size = size;
 }
-
 void cmap_parse(memreader_t*r, ttf_t*ttf)
 {
     readU16(r); // version (0)
@@ -1134,8 +1283,9 @@ void cmap_parse(memreader_t*r, ttf_t*ttf)
 		U16 delta = readU16(&r_delta);
 		U16 range = readU16(&r_range);
 		if(start==0xffff && end==0xffff && delta==1) {
-		    /* this is a common occurence in fonts which explicitly map
-		       "unicode undefined" (0xffff) to "glyph undefined" (0).
+		    /* this is a common (maybe even required) occurence in fonts 
+		       which explicitly map "unicode undefined" (0xffff) to 
+		       "glyph undefined" (0).
 		       We don't want to blow our unicode table up to 65536 just
 		       because of this, so ignore this entry.
 		     */
@@ -1157,7 +1307,6 @@ void cmap_parse(memreader_t*r, ttf_t*ttf)
 	}
     }
 }
-
 static int segment_size(unicode_t*unicode, int pos, int size)
 {
     int s;
@@ -1177,7 +1326,6 @@ static int segment_size(unicode_t*unicode, int pos, int size)
 	return size-1;
     return s;
 }
-
 void cmap_write(ttf_t* ttf, ttf_table_t*w)
 {
     writeU16(w, 0);  //version
@@ -1212,6 +1360,9 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
 	pos = s+1;
 	num_segments++;
     }
+
+    num_segments++; // account for 0xffff mapping
+
     int t;
     int end_pos = w->len;
     for(t=0;t<num_segments;t++) {writeU16(w, 0);} //end array
@@ -1223,8 +1374,8 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
     int range_pos = w->len;
     for(t=0;t<num_segments;t++) {writeU16(w, 0);} //range array
     
-    w->data[num_segments_pos]=num_segments>>8;
-    w->data[num_segments_pos+1]=num_segments;
+    w->data[num_segments_pos]=(num_segments*2)>>8;
+    w->data[num_segments_pos+1]=(num_segments*2);
 
     pos=0;
     num_segments = 0;
@@ -1265,6 +1416,18 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
 	num_segments++;
 	pos = end+1;
     }
+
+    /* write out a mapping from 0xffff to 0- seems to be required
+       by some libraries (e.g. fonttools) */
+    w->data[end_pos++]=0xff;
+    w->data[end_pos++]=0xff;
+    w->data[start_pos++]=0xff;
+    w->data[start_pos++]=0xff;
+    w->data[delta_pos++]=0;
+    w->data[delta_pos++]=1;
+    w->data[range_pos++]=0;
+    w->data[range_pos++]=0;
+
     w->data[length_pos]=(w->len-20)>>8;
     w->data[length_pos+1]=w->len-20;
 }
@@ -1321,7 +1484,7 @@ static int ttf_parse_tables(ttf_t*ttf)
 	table = ttf_find_table(ttf, TAG_HMTX);
 	if(table) {
 	    INIT_READ(m, table->data, table->len, 0);
-	    hmtx_parse(&m, ttf, num_advances);
+	    mtx_parse(&m, ttf, num_advances);
             ttf_table_delete(ttf, table);
 	}
     } else {
@@ -1335,7 +1498,7 @@ static int ttf_parse_tables(ttf_t*ttf)
 	    table = ttf_find_table(ttf, TAG_VMTX);
 	    if(table) {
 		INIT_READ(m, table->data, table->len, 0);
-		hmtx_parse(&m, ttf, num_advances);
+		mtx_parse(&m, ttf, num_advances);
 		ttf_table_delete(ttf, table);
 	    }
 	} else {
@@ -1368,7 +1531,7 @@ static int ttf_parse_tables(ttf_t*ttf)
 static void ttf_collapse_tables(ttf_t*ttf)
 {
     ttf_table_t*table;
-    
+   
     table = ttf_addtable(ttf, TAG_MAXP);
     maxp_write(ttf, table);
     maxp_delete(ttf);
@@ -1409,7 +1572,13 @@ static void ttf_collapse_tables(ttf_t*ttf)
     head_delete(ttf);
 }
 
-ttf_t* load_ttf(void*data, int length)
+ttf_t*ttf_new()
+{
+    ttf_t*ttf = rfx_calloc(sizeof(ttf_t));
+    ttf->version = VERSION_1_0;
+    return ttf;
+}
+ttf_t* ttf_load(void*data, int length)
 {
     INIT_READ(r,data,length, 0);
 
@@ -1475,7 +1644,7 @@ ttf_t* load_ttf(void*data, int length)
 	    ttf_table_t*table = ttf_addtable(ttf, tag);
 	    table->data = mem;
 	    table->len = table->memsize = len;
-	    
+#if 0
 	    U32 checksum2 = ttf_table_checksum(table);
 	    if(checksum2!=checksum) {
 		msg("<warning> Checksum mismatch in tag %02x%02x%02x%02x %c%c%c%c (%d bytes) %08x!=%08x", 
@@ -1483,7 +1652,7 @@ ttf_t* load_ttf(void*data, int length)
 			(tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff,
 			len, checksum2, checksum);
 	    }
-	    
+#endif
 	}
     }
     free(table_data);
@@ -1493,7 +1662,17 @@ ttf_t* load_ttf(void*data, int length)
 
     return ttf;
 }
-
+void ttf_create_truetype_tables(ttf_t*ttf)
+{
+    if(!ttf->head) 
+	ttf->head = head_new(ttf);
+    if(!ttf->maxp) 
+	ttf->maxp = maxp_new(ttf);
+    if(!ttf->hea)
+	ttf->hea = hea_new(ttf);
+    if(!ttf->os2)
+	ttf->os2 = os2_new(ttf);
+}
 ttf_table_t* ttf_write(ttf_t*ttf)
 {
     ttf_collapse_tables(ttf);
@@ -1562,7 +1741,6 @@ ttf_table_t* ttf_write(ttf_t*ttf)
     checksum2[3] = checksum>>0;
     return file;
 }
-
 void ttf_save(ttf_t*ttf, const char*filename)
 {
     ttf_table_t* t = ttf_write(ttf);
@@ -1575,7 +1753,6 @@ void ttf_save(ttf_t*ttf, const char*filename)
     fclose(fi);
     ttf_table_delete(0, t);
 }
-
 void ttf_dump(ttf_t*ttf)
 {
     msg("<notice> Truetype file version %08x%s", ttf->version, ttf->version == OPENTYPE?" (opentype)":"");
@@ -1621,13 +1798,13 @@ int main(int argn, const char*argv[])
 	filename = argv[1];
     //msg("<notice> Loading %s", filename);
     memfile_t*m = memfile_open(filename);
-    ttf_t*ttf = load_ttf(m->data, m->len);
+    ttf_t*ttf = ttf_load(m->data, m->len);
     if(!ttf) return 1;
     memfile_close(m);
     //ttf_dump(ttf);
     //printf("os2 version: %04x (%d), maxp size: %d\n", 
 //	    ttf->os2->version, ttf->os2->size, ttf->maxp->size);
-    ttf_save(ttf, "comic2.ttf");
+    ttf_save(ttf, "output.ttf");
     ttf_destroy(ttf);
     return 0;
 
