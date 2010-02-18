@@ -50,9 +50,14 @@ static void reader_nullread_dealloc(reader_t*r)
 {
     memset(r, 0, sizeof(reader_t));
 }
+static int reader_nullseek(reader_t*r, int pos)
+{
+    return pos;
+}
 void reader_init_nullreader(reader_t*r)
 {
     r->read = reader_nullread;
+    r->seek = reader_nullseek;
     r->dealloc = reader_nullread_dealloc;
     r->internal = 0;
     r->type = READER_TYPE_NULL;
@@ -76,9 +81,14 @@ static void reader_fileread_dealloc(reader_t*r)
     }
     memset(r, 0, sizeof(reader_t));
 }
+static int reader_fileread_seek(reader_t*r, int pos)
+{
+    return lseek((ptroff_t)r->internal, pos, SEEK_SET);
+}
 void reader_init_filereader(reader_t*r, int handle)
 {
     r->read = reader_fileread;
+    r->seek = reader_fileread_seek;
     r->dealloc = reader_fileread_dealloc;
     r->internal = (void*)handle;
     r->type = READER_TYPE_FILE;
@@ -112,9 +122,20 @@ static int reader_memread(reader_t*reader, void* data, int len)
     if(mr->length - reader->pos < len) {
 	len = mr->length - reader->pos;
     }
+    if(!len) return 0;
     memcpy(data, &mr->data[reader->pos], len);
     reader->pos += len;
     return len;
+}
+static int reader_memseek(reader_t*reader, int pos)
+{
+    memread_t*mr = (memread_t*)reader->internal;
+    if(pos>=0 && pos<=mr->length) {
+	reader->pos = pos;
+	return pos;
+    } else {
+	return -1;
+    }
 }
 static void reader_memread_dealloc(reader_t*reader)
 {
@@ -128,6 +149,7 @@ void reader_init_memreader(reader_t*r, void*newdata, int newlength)
     mr->data = (unsigned char*)newdata;
     mr->length = newlength;
     r->read = reader_memread;
+    r->seek = reader_memseek;
     r->dealloc = reader_memread_dealloc;
     r->internal = (void*)mr;
     r->type = READER_TYPE_MEM;
@@ -146,9 +168,14 @@ static void reader_zzip_dealloc(reader_t*reader)
 {
     memset(reader, 0, sizeof(reader_t));
 }
+static int reader_zzip_seek(reader_t*reader, int pos)
+{
+    return zzip_seek((ZZIP_FILE*)reader->internal, pos, SEEK_SET);
+}
 void reader_init_zzipreader(reader_t*r,ZZIP_FILE*z)
 {
     r->read = reader_zzip_read;
+    r->seek = reader_zzip_seek;
     r->dealloc = reader_zzip_dealloc;
     r->internal = z;
     r->type = READER_TYPE_ZZIP;
@@ -431,6 +458,11 @@ static int reader_zlibinflate(reader_t*reader, void* data, int len)
     exit(1);
 #endif
 }
+static int reader_zlibseek(reader_t*reader, int pos)
+{
+    fprintf(stderr, "Erro: seeking not supported for zlib streams");
+    return -1;
+}
 static void reader_zlibinflate_dealloc(reader_t*reader)
 {
 #ifdef HAVE_ZLIB
@@ -452,6 +484,7 @@ void reader_init_zlibinflate(reader_t*r, reader_t*input)
     memset(r, 0, sizeof(reader_t));
     r->internal = z;
     r->read = reader_zlibinflate;
+    r->seek = reader_zlibseek;
     r->dealloc = reader_zlibinflate_dealloc;
     r->type = READER_TYPE_ZLIB;
     r->pos = 0;
@@ -717,6 +750,7 @@ U32 reader_readU32(reader_t*r)
 	fprintf(stderr, "bitio.c:reader_readU32: Read over end of memory region\n");
     return b1|b2<<8|b3<<16|b4<<24;
 }
+
 float reader_readFloat(reader_t*r)
 {
     float f;

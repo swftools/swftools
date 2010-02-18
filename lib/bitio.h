@@ -50,6 +50,7 @@
 typedef struct _reader
 {
     int (*read)(struct _reader*, void*data, int len);
+    int (*seek)(struct _reader*, int pos);
     void (*dealloc)(struct _reader*);
 
     void *internal;
