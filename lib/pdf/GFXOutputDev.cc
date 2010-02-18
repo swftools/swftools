@@ -448,16 +448,18 @@ char* fontconfig_searchForFont(char*name)
 	    int t;
 	    int p;
 	    for(p=0;p<2;p++) {
-		for(t=0;t<set->nfont;t++) {
-		    char*fcfamily=0,*fcstyle=0,*filename=0;
-		    FcBool scalable=FcFalse, outline=FcFalse;
-		    FcPatternGetString(set->fonts[t], "family", 0, (FcChar8**)&fcfamily);
-		    FcPatternGetString(set->fonts[t], "style", 0, (FcChar8**)&fcstyle);
-		    FcPatternGetString(set->fonts[t], "file", 0, (FcChar8**)&filename);
-		    FcPatternGetBool(set->fonts[t], "outline", 0, &outline);
-		    FcPatternGetBool(set->fonts[t], "scalable", 0, &scalable);
-		    if(scalable && outline) {
-			msg("<trace> %s (%s) -> %s", fcfamily, fcstyle, filename);
+		if(set) {
+		    for(t=0;t<set->nfont;t++) {
+			char*fcfamily=0,*fcstyle=0,*filename=0;
+			FcBool scalable=FcFalse, outline=FcFalse;
+			FcPatternGetString(set->fonts[t], "family", 0, (FcChar8**)&fcfamily);
+			FcPatternGetString(set->fonts[t], "style", 0, (FcChar8**)&fcstyle);
+			FcPatternGetString(set->fonts[t], "file", 0, (FcChar8**)&filename);
+			FcPatternGetBool(set->fonts[t], "outline", 0, &outline);
+			FcPatternGetBool(set->fonts[t], "scalable", 0, &scalable);
+			if(scalable && outline) {
+			    msg("<trace> %s (%s) -> %s", fcfamily, fcstyle, filename);
+			}
 		    }
 		}
 		set =  FcConfigGetFonts(config, FcSetApplication);
@@ -2415,8 +2417,8 @@ void GFXOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 	  } else {
 	      msg("<verbose> resampling %dx%d to mask size (%dx%d)", width, height, maskWidth, maskHeight);
 	      gfxcolor_t*newpic=new gfxcolor_t[maskWidth*maskHeight];
-	      double dx = width / maskWidth;
-	      double dy = height / maskHeight;
+	      double dx = width / (double)maskWidth;
+	      double dy = height / (double)maskHeight;
 	      double yy = 0;
 	      for(y = 0; y < maskHeight; y++) {
 		  double xx = 0;
