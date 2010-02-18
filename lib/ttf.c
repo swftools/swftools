@@ -268,10 +268,10 @@ static table_head_t*head_new(ttf_t*ttf)
 	head->xmax = ttf->glyphs[0].xmax;
 	head->ymax = ttf->glyphs[0].ymax;
 	for(t=1;t<ttf->num_glyphs;t++) {
-	    if(ttf->glyphs[0].xmin < head->xmin) head->xmin = ttf->glyphs[0].xmin;
-	    if(ttf->glyphs[0].ymin < head->ymin) head->ymin = ttf->glyphs[0].ymin;
-	    if(ttf->glyphs[0].xmax > head->xmax) head->xmax = ttf->glyphs[0].xmax;
-	    if(ttf->glyphs[0].ymax > head->ymax) head->ymax = ttf->glyphs[0].ymax;
+	    if(ttf->glyphs[t].xmin < head->xmin) head->xmin = ttf->glyphs[t].xmin;
+	    if(ttf->glyphs[t].ymin < head->ymin) head->ymin = ttf->glyphs[t].ymin;
+	    if(ttf->glyphs[t].xmax > head->xmax) head->xmax = ttf->glyphs[t].xmax;
+	    if(ttf->glyphs[t].ymax > head->ymax) head->ymax = ttf->glyphs[t].ymax;
 	}
     }
     head->macStyle = 0;
@@ -705,10 +705,10 @@ static table_hea_t*hea_new(ttf_t*ttf)
 	for(t=0;t<ttf->num_glyphs;t++) {
 	    if(ttf->glyphs[t].advance > hea->advanceWidthMax)
 	        hea->advanceWidthMax = ttf->glyphs[t].advance;
-	    if(ttf->glyphs[t].xmin < ttf->hea->minLeftSideBearing)
-	        ttf->hea->minLeftSideBearing = ttf->glyphs[t].xmin;
-	    if(ttf->glyphs[t].xmax < ttf->hea->minRightSideBearing)
-	        ttf->hea->minRightSideBearing = ttf->glyphs[t].xmax;
+	    if(ttf->glyphs[t].xmin < hea->minLeftSideBearing)
+	        hea->minLeftSideBearing = ttf->glyphs[t].xmin;
+	    if(ttf->glyphs[t].xmax < hea->minRightSideBearing)
+	        hea->minRightSideBearing = ttf->glyphs[t].xmax;
 	    int width = ttf->glyphs[t].xmax - ttf->glyphs[t].xmin;
 	    if(width > hea->xMaxExtent)
 		hea->xMaxExtent = width;

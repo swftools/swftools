@@ -59,7 +59,7 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 ../lib/libgfxpdf$(A): ../lib/pdf/GFXOutputDev.cc
 	cd ../lib;$(MAKE) libgfxpdf$(A);cd -
 
-../lib/libgfx$(A): ../lib/devices/*.c
+../lib/libgfx$(A): ../lib/devices/*.c ../lib/gfxdevice.h ../lib/gfxtools.c ../lib/gfxfont.c
 	cd ../lib;$(MAKE) libgfx$(A);cd -
 
 ../lib/libgfxswf$(A): ../lib/devices/swf.c

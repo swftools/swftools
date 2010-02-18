@@ -553,6 +553,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	dest->num_points = count;
 	dest->points = rfx_calloc(count*sizeof(ttfpoint_t));
 	count = 0;
+	line = src->line;
 	while(line) {
 	    if(line->type == gfx_splineTo) {
 		dest->points[count].x = line->sx*scale;
@@ -570,6 +571,8 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    count++;
 	    line=line->next;
 	}
+	if(count)
+	    dest->points[count-1].flags |= GLYPH_CONTOUR_END;
 
 	/* compute bounding box */
 	int s;
@@ -578,13 +581,13 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    dest->ymin = dest->ymax = dest->points[0].y;
 	    for(s=1;s<count;s++) {
 		if(dest->points[s].x < dest->xmin) 
-		    dest->xmin = dest->points[0].x;
-		if(dest->points[s].y < dest->xmin) 
-		    dest->xmin = dest->points[0].y;
-		if(dest->points[s].x > dest->xmin) 
-		    dest->xmax = dest->points[0].x;
-		if(dest->points[s].y > dest->xmin) 
-		    dest->ymax = dest->points[0].y;
+		    dest->xmin = dest->points[s].x;
+		if(dest->points[s].y < dest->ymin) 
+		    dest->ymin = dest->points[s].y;
+		if(dest->points[s].x > dest->xmax) 
+		    dest->xmax = dest->points[s].x;
+		if(dest->points[s].y > dest->ymax) 
+		    dest->ymax = dest->points[s].y;
 	    }
 	}
 
@@ -594,7 +597,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     }
     ttf->unicode_size = max_unicode+1;
     ttf->unicode = rfx_calloc(sizeof(unicode_t)*ttf->unicode_size);
-    for(t=0;t<ttf->num_glyphs;t++) {
+    for(t=0;t<font->num_glyphs;t++) {
 	gfxglyph_t*src = &font->glyphs[t];
 	int u = font->glyphs[t].unicode;
 	if(u>=0)
@@ -602,9 +605,9 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     }
     int u;
     for(u=0;u<font->max_unicode;u++) {
-	int g = font->unicode2glyph[t];
+	int g = font->unicode2glyph[u];
 	if(g>=0) {
-	    ttf->unicode[u] = g;
+	    ttf->unicode[u] = g+offset;
 	}
     }
     ttf->ascent = font->ascent;
