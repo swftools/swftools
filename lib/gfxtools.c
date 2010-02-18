@@ -1038,7 +1038,7 @@ gfxline_t* gfxline_restitch(gfxline_t*line)
     gfxline_t*prev=0;
     while(line) {
 	gfxline_t*next = line->next;
-	if(line->type == gfx_moveTo) {
+	if(line->type == gfx_moveTo && (line->next && line->next->type != gfx_moveTo)) {
 	    gfxpoint_t xy = {line->x, line->y};
 	    dict_put(ff, &xy, line);
 	    prev = line;
