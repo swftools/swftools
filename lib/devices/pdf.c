@@ -76,7 +76,7 @@ static void set_matrix(internal_t*i, double m00, double m01, double m10, double 
     i->m11 = m11;
 
     PDF_save(i->p);
-    PDF_setmatrix(i->p, m00, -m01, m10, -m11, 0, i->height);
+    PDF_setmatrix(i->p, m00, -m01, m10, -m11, 0, i->height+2*i->config_ypad);
     i->has_matrix = 1;
 }
 static void reset_matrix(internal_t*i)
@@ -228,9 +228,7 @@ void pdf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*co
 void pdf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
-    PDF_setrgbcolor_stroke(i->p, 0.1,0.2,0.3);
     reset_matrix(i);
-    PDF_setrgbcolor_stroke(i->p, 0.2,0.3,0.4);
     PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
     /*
        pdf-x (pdf 1.3) doesn't support opacityfill
