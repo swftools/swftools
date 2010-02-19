@@ -59,19 +59,25 @@ typedef struct _internal {
     double m00, m01, m10, m11;
 } internal_t;
 
-static void set_matrix(internal_t*i, double m00, double m01, double m10, double m11)
+static void restore_matrix(internal_t*i)
 {
     if(i->has_matrix) {
 	PDF_restore(i->p);
+	i->has_matrix=0;
     }
+}
+static void set_matrix(internal_t*i, double m00, double m01, double m10, double m11)
+{
+    restore_matrix(i);
+
     i->m00 = m00;
     i->m01 = m01;
     i->m10 = m10;
     i->m11 = m11;
 
-    i->has_matrix = 1;
     PDF_save(i->p);
     PDF_setmatrix(i->p, m00, -m01, m10, -m11, 0, i->height);
+    i->has_matrix = 1;
 }
 static void reset_matrix(internal_t*i)
 {
@@ -184,17 +190,21 @@ static int mkline(gfxline_t*line, PDF*p, double mx, double my, double scale, cha
 void pdf_startclip(gfxdevice_t*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
-    reset_matrix(i);
+    
+    restore_matrix(i);
     PDF_save(i->p);
+    
     if(mkline(line, i->p, i->config_xpad, i->config_ypad, 1.0, 1))
 	PDF_clip(i->p);
     else   
 	; // TODO: strictly speaking, an empty clip clears everything
-
+    
+    reset_matrix(i);
 }
 void pdf_endclip(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
+    restore_matrix(i);
     PDF_restore(i->p);
 }
 void pdf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit)
@@ -218,7 +228,9 @@ void pdf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*co
 void pdf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 {
     internal_t*i = (internal_t*)dev->internal;
+    PDF_setrgbcolor_stroke(i->p, 0.1,0.2,0.3);
     reset_matrix(i);
+    PDF_setrgbcolor_stroke(i->p, 0.2,0.3,0.4);
     PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
     /*
        pdf-x (pdf 1.3) doesn't support opacityfill
@@ -457,9 +469,7 @@ void pdf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
 void pdf_endpage(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    if(i->has_matrix) {
-	PDF_restore(i->p); i->has_matrix = 0;
-    }
+    restore_matrix(i);
     PDF_end_page(i->p);
 }
 
