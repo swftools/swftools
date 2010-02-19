@@ -1439,6 +1439,52 @@ void cmap_delete(ttf_t*ttf)
     }
     ttf->unicode_size=0;
 }
+void name_parse(memreader_t*r, ttf_t*ttf)
+{
+    U16 format = readU16(r);
+    U16 count = readU16(r);
+    U16 offset = readU16(r);
+   
+    int t;
+    for(t=0;t<count;t++) {
+	U16 platform = readU16(r);
+	U16 encoding = readU16(r);
+	U16 language = readU16(r);
+	U16 name_id = readU16(r);
+	U16 len = readU16(r);
+	U16 offset_2 = readU16(r);
+	/*printf("%d %d %d %d at %d, %d bytes:", platform, encoding, language, name_id, offset+offset_2, len);
+	int s;
+	for(s=0;s<len;s++) {
+	    printf("%c", r->mem[offset+offset_2+s]);
+	}
+	printf("\n");*/
+    }
+}
+void name_write(ttf_t*ttf, ttf_table_t*table)
+{
+    writeU16(table, 0); //format
+    writeU16(table, 1); //count
+    int offset = 18;
+    writeU16(table, offset); //offset
+
+    writeU16(table, 1); //platform id
+    writeU16(table, 0); //encoding id
+    writeU16(table, 0); //language
+    writeU16(table, 4); //4: full name
+    int len = strlen(ttf->name);
+    writeU16(table, len);
+    writeU16(table, table->len+2 - offset);
+    int t;
+    for(t=0;t<len;t++) {
+	writeU8(table, ttf->name[t]);
+    }
+}
+void name_delete(ttf_t*ttf)
+{
+    if(ttf->name)
+	free(ttf->name);
+}
 
 static int ttf_parse_tables(ttf_t*ttf)
 {
@@ -1525,6 +1571,13 @@ static int ttf_parse_tables(ttf_t*ttf)
 	cmap_parse(&m, ttf);
 	ttf_table_delete(ttf, table);
     }
+    
+    table = ttf_find_table(ttf, TAG_NAME);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	name_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
 
     return 1;
 }
@@ -1565,6 +1618,12 @@ static void ttf_collapse_tables(ttf_t*ttf)
 	table = ttf_addtable(ttf, TAG_LOCA);
 	loca_size = loca_write(ttf, table, locations);
 	free(locations);
+    }
+
+    if(ttf->name) {
+	table = ttf_addtable(ttf, TAG_NAME);
+	name_write(ttf, table);
+	name_delete(ttf);
     }
     
     table = ttf_addtable(ttf, TAG_HEAD);
@@ -1799,6 +1858,7 @@ int main(int argn, const char*argv[])
     //msg("<notice> Loading %s", filename);
     memfile_t*m = memfile_open(filename);
     ttf_t*ttf = ttf_load(m->data, m->len);
+    ttf->name = strdup("testfont");
     if(!ttf) return 1;
     memfile_close(m);
     //ttf_dump(ttf);

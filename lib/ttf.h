@@ -140,6 +140,8 @@ typedef struct _table_head {
 } table_head_t;
 
 typedef struct _ttf {
+    char*name;
+
     ttf_table_t*tables;
 
     table_head_t*head;

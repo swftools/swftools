@@ -597,22 +597,30 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     }
     ttf->unicode_size = max_unicode+1;
     ttf->unicode = rfx_calloc(sizeof(unicode_t)*ttf->unicode_size);
+    int remap_pos=0;
     for(t=0;t<font->num_glyphs;t++) {
 	gfxglyph_t*src = &font->glyphs[t];
 	int u = font->glyphs[t].unicode;
+	if(u<32 || (u>=0xe000 && u<0xf900)) {
+	    u = 0xe000 + remap_pos++;
+	}
 	if(u>=0)
 	    ttf->unicode[u] = t+offset;
     }
     int u;
     for(u=0;u<font->max_unicode;u++) {
 	int g = font->unicode2glyph[u];
-	if(g>=0) {
+	if(u<32 || (u>=0xe000 && u<0xf900))
+	    continue;
+	if(g>=0 && !ttf->unicode[u]) {
 	    ttf->unicode[u] = g+offset;
 	}
     }
     ttf->ascent = font->ascent;
     ttf->descent = font->descent;
     ttf->lineGap = font->ascent + font->descent;
+
+    ttf->name = strdup(font->id);
 
     ttf_create_truetype_tables(ttf);
     return ttf;
