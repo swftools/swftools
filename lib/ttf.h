@@ -139,6 +139,12 @@ typedef struct _table_head {
     S16 dir_hint;
 } table_head_t;
 
+typedef struct _table_post {
+    U16 italic_angle;
+    U16 underline_position;
+    U16 underline_thickness;
+} table_post_t;
+
 typedef struct _ttf {
     char*name;
 
@@ -148,6 +154,7 @@ typedef struct _ttf {
     table_maxp_t*maxp;
     table_os2_t*os2;
     table_hea_t*hea;
+    table_post_t*post;
 
     U16 flags;
     char is_vertical;
@@ -167,6 +174,7 @@ typedef struct _ttf {
 
 
 ttf_t*ttf_new();
+void ttf_reduce(ttf_t*ttf);
 ttf_t*ttf_load(void*data, int length);
 ttf_table_t*ttf_addtable(ttf_t*ttf, U32 tag);
 void ttf_create_truetype_tables(ttf_t*ttf);

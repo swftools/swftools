@@ -539,6 +539,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     ttf->glyphs = rfx_calloc(num_glyphs*sizeof(ttfglyph_t));
     double scale = 1.0;
     int max_unicode = font->max_unicode;
+    int remap_pos=0;
     for(t=0;t<font->num_glyphs;t++) {
 	gfxglyph_t*src = &font->glyphs[t];
 	ttfglyph_t*dest = &ttf->glyphs[t+offset];
@@ -592,19 +593,24 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	}
 
 	dest->advance = src->advance*scale;
-	if(src->unicode > max_unicode)
-	    max_unicode = src->unicode;
+
+	int u = font->glyphs[t].unicode;
+	if(u<32 || (u>=0xe000 && u<0xf900)) {
+	    u = 0xe000 + remap_pos++;
+	}
+	if(u > max_unicode)
+	    max_unicode = u;
     }
     ttf->unicode_size = max_unicode+1;
     ttf->unicode = rfx_calloc(sizeof(unicode_t)*ttf->unicode_size);
-    int remap_pos=0;
+    remap_pos=0;
     for(t=0;t<font->num_glyphs;t++) {
 	gfxglyph_t*src = &font->glyphs[t];
 	int u = font->glyphs[t].unicode;
 	if(u<32 || (u>=0xe000 && u<0xf900)) {
 	    u = 0xe000 + remap_pos++;
 	}
-	if(u>=0)
+	if(u>=0 && u<ttf->unicode_size)
 	    ttf->unicode[u] = t+offset;
     }
     int u;

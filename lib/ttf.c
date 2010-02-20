@@ -24,6 +24,7 @@
 #include <memory.h>
 #include "log.h"
 #include "os.h"
+#include "q.h"
 #include "mem.h"
 #include "ttf.h"
 
@@ -1453,12 +1454,11 @@ void name_parse(memreader_t*r, ttf_t*ttf)
 	U16 name_id = readU16(r);
 	U16 len = readU16(r);
 	U16 offset_2 = readU16(r);
-	/*printf("%d %d %d %d at %d, %d bytes:", platform, encoding, language, name_id, offset+offset_2, len);
-	int s;
-	for(s=0;s<len;s++) {
-	    printf("%c", r->mem[offset+offset_2+s]);
+	if(name_id==4) {
+	    if(ttf->name)
+		free(ttf->name);
+	    ttf->name = strdup_n(&r->mem[offset+offset_2], len);
 	}
-	printf("\n");*/
     }
 }
 void name_write(ttf_t*ttf, ttf_table_t*table)
@@ -1484,6 +1484,43 @@ void name_delete(ttf_t*ttf)
 {
     if(ttf->name)
 	free(ttf->name);
+}
+
+static table_post_t*post_new(ttf_t*ttf)
+{
+    table_post_t*post = rfx_calloc(sizeof(table_post_t));
+    return post;
+}
+void post_parse(memreader_t*r, ttf_t*ttf)
+{
+    table_post_t*post = ttf->post = rfx_calloc(sizeof(table_post_t));
+    U16 format = readU16(r);
+    post->italic_angle = readU16(r);
+    post->underline_position = readU16(r);
+    post->underline_thickness = readU16(r);
+    U16 is_monospaced = readU16(r);
+    readU16(r); // min mem 42
+    readU16(r);
+    readU16(r); // min mem 1
+    readU16(r);
+}
+void post_write(ttf_t*ttf, ttf_table_t*table)
+{
+    table_post_t*post = ttf->post;
+    writeU32(table, 0x00030000);
+    writeU32(table, post->italic_angle);
+    writeU16(table, post->underline_position);
+    writeU16(table, post->underline_thickness);
+    writeU32(table, 0); //is monospaced TODO
+    writeU32(table, 0); //min mem 42
+    writeU32(table, 0);
+    writeU32(table, 0); //min mem 1
+    writeU32(table, 0);
+}
+void post_delete(ttf_t*ttf)
+{
+    if(ttf->post)
+	free(ttf->post);
 }
 
 static int ttf_parse_tables(ttf_t*ttf)
@@ -1579,6 +1616,13 @@ static int ttf_parse_tables(ttf_t*ttf)
 	ttf_table_delete(ttf, table);
     }
 
+    table = ttf_find_table(ttf, TAG_POST);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	post_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
+
     return 1;
 }
 static void ttf_collapse_tables(ttf_t*ttf)
@@ -1624,6 +1668,11 @@ static void ttf_collapse_tables(ttf_t*ttf)
 	table = ttf_addtable(ttf, TAG_NAME);
 	name_write(ttf, table);
 	name_delete(ttf);
+    }
+    if(ttf->post) {
+	table = ttf_addtable(ttf, TAG_POST);
+	post_write(ttf, table);
+	post_delete(ttf);
     }
     
     table = ttf_addtable(ttf, TAG_HEAD);
@@ -1731,6 +1780,8 @@ void ttf_create_truetype_tables(ttf_t*ttf)
 	ttf->hea = hea_new(ttf);
     if(!ttf->os2)
 	ttf->os2 = os2_new(ttf);
+    if(!ttf->post)
+	ttf->post = post_new(ttf);
 }
 ttf_table_t* ttf_write(ttf_t*ttf)
 {
@@ -1831,7 +1882,7 @@ void ttf_dump(ttf_t*ttf)
     maxp_dump(ttf);
     glyf_dump(ttf);
 }
-void ttf_destroy(ttf_t*ttf)
+void ttf_destroy_tables(ttf_t*ttf)
 {
     ttf_table_t*table = ttf->tables;
     while(table) {
@@ -1840,11 +1891,21 @@ void ttf_destroy(ttf_t*ttf)
 	free(table);
 	table = next;
     }
+    ttf->tables = 0;
+}
+void ttf_reduce(ttf_t*ttf)
+{
+    ttf_destroy_tables(ttf);
+}
+void ttf_destroy(ttf_t*ttf)
+{
+    ttf_destroy_tables(ttf);
     maxp_delete(ttf);
     os2_delete(ttf);
     head_delete(ttf);
     hea_delete(ttf);
     glyf_delete(ttf);
+    post_delete(ttf);
     free(ttf);
 }
 
@@ -1858,13 +1919,14 @@ int main(int argn, const char*argv[])
     //msg("<notice> Loading %s", filename);
     memfile_t*m = memfile_open(filename);
     ttf_t*ttf = ttf_load(m->data, m->len);
+    ttf_reduce(ttf);
     ttf->name = strdup("testfont");
     if(!ttf) return 1;
     memfile_close(m);
     //ttf_dump(ttf);
     //printf("os2 version: %04x (%d), maxp size: %d\n", 
 //	    ttf->os2->version, ttf->os2->size, ttf->maxp->size);
-    ttf_save(ttf, "output.ttf");
+    ttf_save(ttf, "testfont.ttf");
     ttf_destroy(ttf);
     return 0;
 
