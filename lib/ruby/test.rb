@@ -1,7 +1,5 @@
 require 'gfx'
 
-pdf = GFX::PDF.new('segfault.pdf')
-
 class TestRender < GFX::Device
     def startpage(width,height)
         puts "startpage(#{width},#{height})"
@@ -40,6 +38,8 @@ class TestRender < GFX::Device
         puts "drawchar(#{line.inspect}, #{action})"
     end
 end
+
+pdf = GFX::PDF.new('abcdef.pdf')
 
 r = TestRender.new
 pdf.each_page do |page|

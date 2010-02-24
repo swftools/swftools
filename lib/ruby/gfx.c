@@ -9,6 +9,7 @@
 #include "../pdf/pdf.h"
 #include "../mem.h"
 #include "../types.h"
+#include "../log.h"
 
 #define RUBY_GFX_VERSION  "0.9.0"
 
@@ -87,7 +88,7 @@ static VALUE doc_get_page(VALUE cls, VALUE _nr)
     page->doc = doc;
     if(!page->page) {
 	rb_raise(rb_eArgError, "No page %d in document", nr);
-	return;
+	return Qnil;
     }
     return v;
 }
@@ -495,6 +496,10 @@ static VALUE convert_font(gfxfont_t*font)
 	g->nr = t;
     }
     return v2;
+}
+static VALUE convert_gradient(gfxgradient_t*gradient)
+{
+    return Qnil; //TODO
 }
 #define HEAD \
     device_internal_t*i = (device_internal_t*)dev->internal; \
