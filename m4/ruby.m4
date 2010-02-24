@@ -66,8 +66,8 @@ int Init_foobar()
 }
 int main() {return 0;}
 EOF
-    ac_link='$CC $SHARED $CPPFLAGS $RUBY_CPPFLAGS $CFLAGS conftest.c $LDFLAGS $RUBY_LDFLAGS $LIBS $RUBY_LIBS -o conftest${ac_exeext}'
-    if { (eval echo ruby.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+    ac_link='$CC $SHARED $CPPFLAGS $RUBY_CPPFLAGS $CFLAGS conftest.c $LDFLAGS $RUBY_LDFLAGS $LIBS $RUBY_LIBS -o conftest${SLEXT}'
+    if { (eval echo ruby.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${SLEXT}; then
 	RUBY_OK=yes
     else
         echo "configure: failed program was:" >&5
