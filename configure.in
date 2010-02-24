@@ -90,6 +90,7 @@ dnl Checks for programs.
 
 AC_CANONICAL_HOST
 
+SLEXT="so"
 SHARED="-shared"
 MACOSX=
 case $host_os in
@@ -98,6 +99,7 @@ case $host_os in
 	CFLAGS="$CFLAGS"
 	CXXFLAGS="$CXXFLAGS -fno-rtti"
 	SHARED="-bundle"
+	SLEXT="bundle"
 	if test -d /opt/local/include && test -d /opt/local/lib; then
 	    CPPFLAGS="${CPPFLAGS} -I/opt/local/include"
 	    LDFLAGS="${LDFLAGS} -L/opt/local/lib"
@@ -168,7 +170,6 @@ AC_SUBST(AREXT)
 
 RFX_CHECK_MING
 
-SLEXT="so"
 if test "x${MINGW}" != "xyes"; then
     # no mingW
     AC_DEFINE([O_BINARY], [0], [Not defined on mingw])

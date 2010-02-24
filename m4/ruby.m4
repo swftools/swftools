@@ -22,14 +22,15 @@ if test "x$RUBY" '!=' "x";then
 	
 	AC_MSG_CHECKING([for ruby's ld flags])
 	rubyld=`$RUBY -e 'require "rbconfig";puts Config::expand(Config::CONFIG.send("\x5b\x5d", "LIBRUBYARG_SHARED"))' 2>/dev/null`
-	AC_MSG_RESULT($rubyld)
+	rubyld2=`$RUBY -e 'require "rbconfig";v=Config::expand(Config::CONFIG.send("\x5b\x5d", "LIBRUBY_LDSHARED"));puts v.gsub(/^g?cc/,"")' 2>/dev/null`
+	AC_MSG_RESULT("$rubyld $rubyld2")
 	
 	AC_MSG_CHECKING([for ruby library name])
 	rubylib=`$RUBY -e 'require "rbconfig";puts Config::expand(Config::CONFIG.send("\x5b\x5d", "RUBY_SO_NAME"))' 2>/dev/null`
 	AC_MSG_RESULT($rubylib)
 	
 	RUBY_CPPFLAGS="$rubycpp -I$rubyinc $RUBY_CPPFLAGS"
-	RUBY_LDFLAGS="$rubyld $RUBY_LDFLAGS"
+	RUBY_LDFLAGS="$rubyld $rubyld2 $RUBY_LDFLAGS"
 	RUBY_INSTALLDIR="$rubyinc"
     else
 	AC_MSG_RESULT('unknown')
