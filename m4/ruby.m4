@@ -27,9 +27,10 @@ if test "x$RUBY" '!=' "x";then
 	AC_MSG_CHECKING([for ruby library name])
 	rubylib=`$RUBY -e 'require "rbconfig";puts Config::expand(Config::CONFIG.send("\x5b\x5d", "RUBY_SO_NAME"))' 2>/dev/null`
 	AC_MSG_RESULT($rubylib)
-
+	
 	RUBY_CPPFLAGS="$rubycpp -I$rubyinc $RUBY_CPPFLAGS"
 	RUBY_LDFLAGS="$rubyld $RUBY_LDFLAGS"
+	RUBY_INSTALLDIR="$rubyinc"
     else
 	AC_MSG_RESULT('unknown')
     fi
@@ -80,10 +81,12 @@ if test "x${RUBY_OK}" '=' "xyes"; then
     AC_SUBST(RUBY_LIBS)
     AC_SUBST(RUBY_CPPFLAGS)
     AC_SUBST(RUBY_LDFLAGS)
+    AC_SUBST(RUBY_INSTALLDIR)
 else
     AC_MSG_RESULT([no])
     RUBY_CPPFLAGS=""
     RUBY_LDFLAGS=""
     RUBY_LIBS=""
+    RUBY_INSTALLDIR=""
 fi
 ])

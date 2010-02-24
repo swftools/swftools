@@ -15,6 +15,12 @@ gfx.$(SLEXT): gfx.$(O) $(GFX_DEPS) Makefile
 clean:
 	rm -f *.o *.$(O) *.$(SLEXT) *.so
 
+INSTALL_LIB = echo installing $$file to $(RUBY_INSTALLDIR);$(INSTALL_PROGRAM) $$file $(RUBY_INSTALLDIR)
+UNINSTALL_LIB = rm -f $(RUBY_INSTALLDIR)/$$file
 install:
+	@file=gfx.$(SLEXT); if test -f $$file;then $(INSTALL_LIB);fi
+
+uninstall:
+	@file=gfx.$(SLEXT); $(UNINSTALL_LIB)
 
 .PHONY: all
