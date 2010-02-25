@@ -598,8 +598,9 @@ static table_maxp_t*maxp_new(ttf_t*ttf)
 {
     table_maxp_t*maxp = rfx_calloc(sizeof(table_maxp_t));
     int t;
+    maxp->maxContours=1;
     if(ttf->num_glyphs) {
-	int max = 0;
+	int max = 1;
 	for(t=0;t<ttf->num_glyphs;t++) {
 	    if(ttf->glyphs[t].num_points>max)
 	        max = ttf->glyphs[t].num_points;

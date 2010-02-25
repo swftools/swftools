@@ -392,6 +392,17 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    font->unicode2glyph = 0;
 	    gfxfont_save(font, filename);
 	    font->id=old_id;
+	  
+#ifdef RUN_TTX
+	    /* for testing the generated fonts: run everything through ttx (fonttools) */
+	    char cmd[256];
+	    sprintf(cmd, "mv %s.ttf test.ttf", fontname);system(cmd);
+	    system("rm -f test.ttx");
+	    if(system("ttx test.ttf")&0xff00) exit(1);
+	    sprintf(cmd, "mv test.ttf %s.old.ttf", fontname, fontname);system(cmd);
+	    sprintf(cmd, "ttx test.ttx;mv test.ttf %s.ttf", fontname);system(cmd);
+	    sprintf(cmd, "rm -f test.ttx");system(cmd);
+#endif
 	   
 	    int l = strlen(font->id);
 	    for(t=0;t<l+1;t++) {
