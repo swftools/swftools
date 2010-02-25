@@ -3,6 +3,7 @@
 #include "../gfxsource.h"
 #include "../gfxtools.h"
 #include "../gfximage.h"
+#include "../gfxfont.h"
 #include "../devices/pdf.h"
 #include "../readers/swf.h"
 #include "../readers/image.h"
@@ -361,6 +362,15 @@ static VALUE font_glyphs(VALUE cls)
 {
     Get_Font(font,cls);
     return font->glyph_array;
+}
+
+static VALUE font_save_ttf(VALUE cls, VALUE _filename)
+{
+    Get_Font(font,cls);
+    Check_Type(_filename, T_STRING);
+    const char*filename = StringValuePtr(_filename);
+    gfxfont_save(font->font, filename);
+    return Qnil;
 }
 
 static VALUE font_kerning(VALUE cls)
@@ -736,6 +746,7 @@ void Init_gfx()
     rb_define_method(Font, "glyphs", font_glyphs, 0);
     rb_define_method(Font, "kerning", font_kerning, 0);
     rb_define_method(Font, "get_kerning_table", font_kerning, 0);
+    rb_define_method(Font, "save_ttf", font_save_ttf, 1);
     
     Device = rb_define_class_under(GFX, "Device", rb_cObject);
     rb_define_method(Device, "startpage", noop, -1);
