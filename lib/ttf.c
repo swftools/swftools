@@ -1220,6 +1220,7 @@ void cmap_parse(memreader_t*r, ttf_t*ttf)
     readU16(r); // version (0)
     int num_subtables = readU16(r);
     int t;
+    char warn=1;
     if(r->pos+num_subtables*8 > r->size) {
 	msg("<warning> CMap overflow");
 	num_subtables = (r->size-r->pos)/8;
@@ -1277,6 +1278,7 @@ void cmap_parse(memreader_t*r, ttf_t*ttf)
 	    INIT_READ(r_delta, t.mem, t.size, t.pos+2+segment_count*4);
 	    INIT_READ(r_range, t.mem, t.size, t.pos+2+segment_count*6);
 	    int glyphmap_start = t.pos+2+segment_count*8;
+	    int glyphmap_size = t.size - glyphmap_start;
 	    int s;
 	    for(s=0;s<segment_count;s++) {
 		U16 start = readU16(&r_start);
@@ -1299,7 +1301,12 @@ void cmap_parse(memreader_t*r, ttf_t*ttf)
 			ttf->unicode[u] = (u + delta) & 0xffff;
 		    }
 		} else {
-		    INIT_READ(g, t.mem, t.size, r_range.pos-2+range);
+		    int pos = r_range.pos-2+range;
+		    if(warn && pos+end-start+1 > t.size) {
+			msg("<warning> glyphmap index out of bounds (%d-%d/%d)", pos, pos+end-start, t.size);
+			warn=0;
+		    }
+		    INIT_READ(g, t.mem, t.size, pos);
 		    for(u=start;u<=end;u++) {
 			ttf->unicode[u] = readU16(&g);
 		    }
@@ -1364,6 +1371,8 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
 
     num_segments++; // account for 0xffff mapping
 
+    int glyphmap_start = w->len+2+num_segments*8;
+    
     int t;
     int end_pos = w->len;
     for(t=0;t<num_segments;t++) {writeU16(w, 0);} //end array
@@ -1374,10 +1383,10 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
     for(t=0;t<num_segments;t++) {writeU16(w, 0);} //delta array
     int range_pos = w->len;
     for(t=0;t<num_segments;t++) {writeU16(w, 0);} //range array
-    
+	    
     w->data[num_segments_pos]=(num_segments*2)>>8;
     w->data[num_segments_pos+1]=(num_segments*2);
-
+    
     pos=0;
     num_segments = 0;
     while(pos < ttf->unicode_size) {
@@ -1394,7 +1403,7 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
 	U16 delta = ttf->unicode[pos]-pos;
 	char do_delta=1;
 	for(s=pos+1;s<=end;s++) {
-	    U16 delta2 = ttf->unicode[pos]-pos;
+	    U16 delta2 = ttf->unicode[s]-s;
 	    if(delta2!=delta) {
 		do_delta=0;
 		break;
@@ -1405,7 +1414,7 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
 	    range = 0;
 	} else {
 	    delta = 0;
-	    range = w->len - range_pos+num_segments*2;
+	    range = w->len - range_pos;
 	    for(s=pos;s<=end;s++) {
 		writeU16(w, ttf->unicode[s]);
 	    }
@@ -1482,8 +1491,10 @@ void name_write(ttf_t*ttf, ttf_table_t*table)
 }
 void name_delete(ttf_t*ttf)
 {
-    if(ttf->name)
+    if(ttf->name) {
 	free(ttf->name);
+	ttf->name=0;
+    }
 }
 
 static table_post_t*post_new(ttf_t*ttf)
@@ -1519,8 +1530,10 @@ void post_write(ttf_t*ttf, ttf_table_t*table)
 }
 void post_delete(ttf_t*ttf)
 {
-    if(ttf->post)
+    if(ttf->post) {
 	free(ttf->post);
+	ttf->post = 0;
+    }
 }
 
 static int ttf_parse_tables(ttf_t*ttf)
@@ -1906,6 +1919,7 @@ void ttf_destroy(ttf_t*ttf)
     hea_delete(ttf);
     glyf_delete(ttf);
     post_delete(ttf);
+    name_delete(ttf);
     free(ttf);
 }
 
@@ -1919,6 +1933,10 @@ int main(int argn, const char*argv[])
     //msg("<notice> Loading %s", filename);
     memfile_t*m = memfile_open(filename);
     ttf_t*ttf = ttf_load(m->data, m->len);
+    if(!ttf) {
+	msg("<error> Couldn't load %s", filename);
+	return 1;
+    }
     ttf_reduce(ttf);
     ttf->name = strdup("testfont");
     if(!ttf) return 1;

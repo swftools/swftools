@@ -614,12 +614,14 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    ttf->unicode[u] = t+offset;
     }
     int u;
-    for(u=0;u<font->max_unicode;u++) {
-	int g = font->unicode2glyph[u];
-	if(u<32 || (u>=0xe000 && u<0xf900))
-	    continue;
-	if(g>=0 && !ttf->unicode[u]) {
-	    ttf->unicode[u] = g+offset;
+    if(font->unicode2glyph) {
+	for(u=0;u<ttf->unicode_size;u++) {
+	    int g = font->unicode2glyph[u];
+	    if(u<32 || (u>=0xe000 && u<0xf900))
+		continue;
+	    if(g>=0 && !ttf->unicode[u]) {
+		ttf->unicode[u] = g+offset;
+	    }
 	}
     }
     ttf->ascent = font->ascent;

@@ -335,13 +335,14 @@ void pdf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, g
     internal_t*i = (internal_t*)dev->internal;
 }
 
-static const char type3 = 1;
-static const char ttf = 0;
+static const char type3 = 0;
+static const char ttf = 1;
 
 void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
 
+    int num = font->num_glyphs<256-32?font->num_glyphs:256-32;
     if(type3) {
 	int fontid = 0;
 	if(!gfxfontlist_hasfont(i->fontlist, font)) {
@@ -358,7 +359,6 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    }
 
 	    PDF_begin_font(i->p, fontname2, l*2, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, "");
-	    int num = font->num_glyphs<256-32?font->num_glyphs:256-32;
 	    for(t=0;t<num;t++) {
 		gfxglyph_t*g = &font->glyphs[t];
 		gfxbbox_t bbox = gfxline_getbbox(g->line);
@@ -385,18 +385,21 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    fontnr++;
 	    const char*old_id = font->id;
 	    font->id = fontname;
+	    int t;
+	    for(t=0;t<num;t++) {
+		font->glyphs[t].unicode = 32+t;
+	    }
+	    font->unicode2glyph = 0;
 	    gfxfont_save(font, filename);
 	    font->id=old_id;
 	   
 	    int l = strlen(font->id);
-	    int t;
 	    for(t=0;t<l+1;t++) {
 		fontname2[t*2+0] = fontname[t];
 		fontname2[t*2+1] = 0;
 	    }
-	    fontid = PDF_load_font(i->p, fontname2, l*2, "host", "");
+	    fontid = PDF_load_font(i->p, fontname2, l*2, "host", "embedding=true");
 	    i->fontlist = gfxfontlist_addfont2(i->fontlist, font, (void*)(ptroff_t)fontid);
-	    unlink(fontname);
 	}
     }
 }
@@ -427,10 +430,15 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
 	int fontid = (int)(ptroff_t)gfxfontlist_getuserdata(i->fontlist, font->id);
 
 	gfxmatrix_t m = *matrix;
+
 	m.m00*=64;
 	m.m01*=64;
 	m.m10*=64;
 	m.m11*=64;
+	if(ttf) {
+	    m.m10 = -m.m10;
+	    m.m11 = -m.m11;
+	}
 
 	if(!(fabs(m.m00 - i->m00) < 1e-6 &&
 	     fabs(m.m01 - i->m01) < 1e-6 &&
@@ -441,8 +449,7 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
 	double tx, ty;
 	transform_back(i, m.tx+i->config_xpad, m.ty+i->config_ypad, &tx, &ty);
 	
-	//PDF_setfont(i->p, fontid, 1.0/64.0); // downscaling is done in glyph itself
-	PDF_setfont(i->p, fontid, 1.0);
+	PDF_setfont(i->p, fontid, ttf?16.0:1.0);
 	PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
 
 	char name[32];
@@ -570,4 +577,3 @@ void gfxdevice_pdf_init(gfxdevice_t*dev)
     i->has_matrix = 0;
     i->p = PDF_new();
 }
-
