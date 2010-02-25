@@ -17,6 +17,7 @@
 #include "../log.h"
 #include "../types.h"
 #include "../q.h"
+#include "../gfxfont.h"
 #include <math.h>
 #include <assert.h>
 
@@ -219,14 +220,8 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	    font->num_glyphs++;
 	}
     }
-    font->unicode2glyph = (int*)malloc(sizeof(int)*font->max_unicode);
-    memset(font->unicode2glyph, -1, sizeof(int)*font->max_unicode);
-    for(t=0;t<font->num_glyphs;t++) {
-	if(font->glyphs[t].unicode>0 && font->glyphs[t].unicode<font->max_unicode) {
-	    font->unicode2glyph[font->glyphs[t].unicode] = t;
-	}
 
-    }
+    gfxfont_fix_unicode(font);
 
     int kerning_size = 0;
     for(t=0;t<src->num_glyphs;t++) {

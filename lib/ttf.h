@@ -179,6 +179,7 @@ ttf_t*ttf_load(void*data, int length);
 ttf_table_t*ttf_addtable(ttf_t*ttf, U32 tag);
 void ttf_create_truetype_tables(ttf_t*ttf);
 void ttf_dump(ttf_t*ttf);
+void ttf_destroy(ttf_t*ttf);
 void ttf_save(ttf_t*ttf, const char*filename);
 
 #endif

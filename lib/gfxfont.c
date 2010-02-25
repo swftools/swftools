@@ -21,11 +21,13 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
+#include <assert.h>
 #include "../config.h"
 #include "gfxdevice.h"
 #include "gfxtools.h"
 #include "gfxfont.h"
 #include "ttf.h"
+#include "mem.h"
 
 static int loadfont_scale = 64;
 static int full_unicode = 1;
@@ -520,6 +522,75 @@ void gfxfont_free(gfxfont_t*font)
     free(font);
 }
 
+static inline int invalid_unicode(int u)
+{
+    return (u<32 || (u>=0xe000 && u<0xf900));
+}
+void gfxfont_fix_unicode(gfxfont_t*font)
+{
+    int t;
+
+    /* find the current maximum unicode2glyph */
+    int max = 0;
+    for(t=0;t<font->num_glyphs;t++) {
+	int u = font->glyphs[t].unicode;
+	if(u > max)
+	    max = u;
+    }
+    char*used = rfx_calloc(max+1);
+
+    /* now, remap all duplicates (and invalid characters) and
+       calculate the new maximum */
+    int remap_pos=0;
+    max = 0;
+    for(t=0;t<font->num_glyphs;t++) {
+	int u = font->glyphs[t].unicode;
+	if(u>=0) {
+	    if(used[u] || invalid_unicode(u)) {
+		u = font->glyphs[t].unicode = 0xe000 + remap_pos++;
+	    } else {
+		used[u] = 1;
+	    }
+	}
+	if(u > max)
+	    max = u;
+    }
+    free(used);
+    
+    if(!font->unicode2glyph) {
+	/* (re)generate unicode2glyph-to-glyph mapping table by reverse mapping
+	   the glyph unicode2glyph's indexes into the mapping table. For collisions,
+   	   we prefer the smaller unicode2glyph value.*/
+	font->max_unicode = max+1;
+	font->unicode2glyph = malloc(sizeof(font->unicode2glyph[0])*(font->max_unicode));
+	memset(font->unicode2glyph, -1, sizeof(font->unicode2glyph[0])*(font->max_unicode));
+	
+	for(t=0;t<font->num_glyphs;t++) {
+	    int u = font->glyphs[t].unicode;
+	    if(u>=0) {
+		assert(font->unicode2glyph[u]<0); // we took care of duplicates, right?
+		font->unicode2glyph[u] = t;
+	    }
+	}
+    } else {
+	/* add the new glyph indexes (most probably, that's only the remapped values
+	   at 0xe000) to the unicode2glyph table. Notice: Unlike glyph2unicode, we don't
+	   care about collisions in the unicode2glyph table */
+	int new_max_unicode = max+1;
+	if(font->max_unicode < new_max_unicode) {
+	    font->unicode2glyph = rfx_realloc(font->unicode2glyph, sizeof(font->unicode2glyph[0])*(font->max_unicode));
+	    memset(font->unicode2glyph+font->max_unicode, -1, sizeof(font->unicode2glyph[0])*(new_max_unicode - font->max_unicode));
+	}
+	for(t=0;t<font->num_glyphs;t++) {
+	    int u = font->glyphs[t].unicode;
+	    if(u>=0 && font->unicode2glyph[u]<0) {
+		font->unicode2glyph[u] = t;
+	    }
+	}
+	font->max_unicode = new_max_unicode;
+    }
+}
+
 ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 {
     ttf_t*ttf = ttf_new();
@@ -595,7 +666,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	dest->advance = src->advance*scale;
 
 	int u = font->glyphs[t].unicode;
-	if(u<32 || (u>=0xe000 && u<0xf900)) {
+	if(invalid_unicode(u)) {
 	    u = 0xe000 + remap_pos++;
 	}
 	if(u > max_unicode)
@@ -607,7 +678,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     for(t=0;t<font->num_glyphs;t++) {
 	gfxglyph_t*src = &font->glyphs[t];
 	int u = font->glyphs[t].unicode;
-	if(u<32 || (u>=0xe000 && u<0xf900)) {
+	if(invalid_unicode(u)) {
 	    u = 0xe000 + remap_pos++;
 	}
 	if(u>=0 && u<ttf->unicode_size)
@@ -617,7 +688,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     if(font->unicode2glyph) {
 	for(u=0;u<ttf->unicode_size;u++) {
 	    int g = font->unicode2glyph[u];
-	    if(u<32 || (u>=0xe000 && u<0xf900))
+	    if(invalid_unicode(u))
 		continue;
 	    if(g>=0 && !ttf->unicode[u]) {
 		ttf->unicode[u] = g+offset;
@@ -638,5 +709,6 @@ void gfxfont_save(gfxfont_t*font, const char*filename)
 {
     ttf_t*ttf = gfxfont_to_ttf(font);
     ttf_save(ttf, filename);
+    ttf_destroy(ttf);
 }
 
