@@ -99,6 +99,8 @@ gfxline_t*gfxline_makerectangle(double x1, double y1, double x2, double y2);
 gfxline_t*gfxline_makecircle(double x,double y,double rx, double ry);
 void gfxline_show(gfxline_t*line, FILE*fi);
 
+void gfxgradient_destroy(gfxgradient_t*gradient);
+
 typedef struct _gfxparam {
     const char*key;
     const char*value;

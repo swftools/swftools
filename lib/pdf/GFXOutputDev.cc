@@ -996,7 +996,8 @@ GBool GFXOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
 	    colToByte(color2.c[0]), colToByte(color2.c[1]), colToByte(color2.c[2]));
     infofeature("radial shaded fills");
 
-    gfxgradient_t*g = (gfxgradient_t*)malloc(sizeof(gfxgradient_t)*3);
+    gfxgradient_t gr[3];
+    gfxgradient_t*g = &gr[0];
     g[0].next = &g[1];
     g[1].next = &g[2];
     g[2].next = 0;

@@ -1137,6 +1137,15 @@ gfxline_t* gfxline_reverse(gfxline_t*line)
     return b;
 }
 
+void gfxgradient_destroy(gfxgradient_t*gradient)
+{
+    while(gradient) {
+	gfxgradient_t*next = gradient->next;
+	free(gradient);
+	gradient = next;
+    }
+}
+
 gfxparams_t* gfxparams_new()
 {
     return (gfxparams_t*)rfx_calloc(sizeof(gfxparams_t));
