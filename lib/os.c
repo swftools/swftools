@@ -274,3 +274,33 @@ void memfile_close(memfile_t*file)
     free(file);
 }
 
+void move_file(const char*from, const char*to)
+{
+    int result = rename(from, to);
+
+    if(result==0) return; //done!
+
+    /* if we can't rename, for some reason, copy the file
+       manually */
+    FILE*fi = fopen(from, "rb");
+    if(!fi) {
+	perror(from);
+	return;
+    }
+    FILE*fo = fopen(to, "wb");
+    if(!fo) {
+	perror(to);
+	return;
+    }
+    char buffer[16384];
+    while(1) {
+	int bytes = fread(buffer, 16384, 1, fi);
+	if(bytes<=0)
+	    return;
+	fwrite(buffer, bytes, 1, to);
+    }
+
+    fclose(fo);
+    fclose(fi);
+}
+

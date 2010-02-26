@@ -19,7 +19,7 @@ gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfx
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c modules/swfalignzones.c
 
 base_objects=q.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) MD5.$(O) xml.$(O) ttf.$(O)
-gfx_objects=gfximage.$(O) gfxtools.$(O) gfxfont.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
+gfx_objects=gfximage.$(O) gfxtools.$(O) gfxfont.$(O) gfxfilter.$(O) devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
 
 rfxswf_objects=modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O) modules/swfalignzones.$(O)
 ocr_objects=gocr/box.$(O) gocr/database.$(O) gocr/detect.$(O) gocr/job.$(O) gocr/lines.$(O) gocr/list.$(O) gocr/ocr0.$(O) gocr/ocr0n.$(O) gocr/ocr1.$(O) gocr/otsu.$(O) gocr/output.$(O) gocr/pgm2asc.$(O) gocr/pixel.$(O) gocr/progress.$(O) gocr/remove.$(O) gocr/unicode.$(O)
@@ -95,6 +95,8 @@ gfxtools.$(O): gfxtools.c gfxtools.h $(top_builddir)/config.h
 	$(C) gfxtools.c -o $@
 gfxfont.$(O): gfxfont.c gfxfont.h ttf.h $(top_builddir)/config.h
 	$(C) gfxfont.c -o $@
+gfxfilter.$(O): gfxfilter.c gfxfilter.h ttf.h $(top_builddir)/config.h
+	$(C) gfxfilter.c -o $@
 gfxwindow.$(O): gfxwindow_win32.c gfxwindow_unix.c gfxwindow.c gfxwindow.h
 	$(C) gfxwindow.c -o $@
 

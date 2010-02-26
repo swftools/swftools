@@ -2663,7 +2663,7 @@ void GFXOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
     dbg("this->device now %p (old: %p)", this->device, states[statepos].olddevice);
 
-    gfxdevice_record_init(this->device);
+    gfxdevice_record_init(this->device, 0);
     
     /*if(!forSoftMask) { ////???
 	state->setFillOpacity(0.0);
@@ -2760,7 +2760,7 @@ void GFXOutputDev::setSoftMask(GfxState *state, double *bbox, GBool alpha, Funct
     }
     states[statepos].olddevice = this->device;
     this->device = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
-    gfxdevice_record_init(this->device);
+    gfxdevice_record_init(this->device, 0);
 
     dbg("softmaskrecording is %p (dev=%p) at statepos %d\n", states[statepos].softmaskrecording, this->device, statepos);
     

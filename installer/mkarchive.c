@@ -56,6 +56,10 @@ writer_t*writer_init_filewriter(char*filename)
 {
     writer_t*w = malloc(sizeof(writer_t));
     FILE*fi = fopen(filename, "wb");
+    if(!fi) {
+	perror(filename);
+	return 0;
+    }
     filewrite_t *mr = (filewrite_t *)malloc(sizeof(filewrite_t));
     mr->fi = fi;
     memset(w, 0, sizeof(writer_t));

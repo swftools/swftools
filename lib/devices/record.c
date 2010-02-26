@@ -35,15 +35,20 @@
 #include "../types.h"
 #include "../bitio.h"
 #include "../log.h"
+#include "../os.h"
 #include "record.h"
 
 typedef struct _internal {
     gfxfontlist_t* fontlist;
     writer_t w;
     int cliplevel;
+    char use_tempfile;
+    char*filename;
 } internal_t;
 
 typedef struct _internal_result {
+    char use_tempfile;
+    char*filename;
     void*data;
     int length;
 } internal_result_t;
@@ -418,20 +423,20 @@ static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*ac
     writer_writeString(&i->w, action);
 }
 
-static void replay(struct _gfxdevice*dev, gfxdevice_t*out, void*data, int length)
+static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 {
     internal_t*i = 0;
     if(dev) {
 	i = (internal_t*)dev->internal;
     }
 
-    reader_t r2;
-    reader_t*r = &r2;
-    reader_init_memreader(r, data, length);
     gfxfontlist_t* fontlist = gfxfontlist_create();
 
-    while(r->pos < length) {
-	unsigned char op = reader_readU8(r);
+    while(1) {
+	unsigned char op;
+	if(r->read(r, &op, 1)!=1)
+	    break;
+
 	switch(op) {
 	    case OP_END:
 		goto finish;
@@ -577,24 +582,38 @@ finish:
 void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 {
     internal_result_t*i = (internal_result_t*)result->internal;
-    replay(0, device, i->data, i->length);
+    
+    reader_t r;
+    if(i->filename) {
+	reader_init_filereader2(&r, i->filename);
+    } else {
+	reader_init_memreader(&r, i->data, i->length);
+    }
+
+    replay(0, device, &r);
 }
 
 static void record_result_write(gfxresult_t*r, int filedesc)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
-    write(filedesc, i->data, i->length);
+    if(i->data) {
+	write(filedesc, i->data, i->length);
+    }
 }
 static int record_result_save(gfxresult_t*r, const char*filename)
 {
     internal_result_t*i = (internal_result_t*)r->internal;
-    FILE*fi = fopen(filename, "wb");
-    if(!fi) {
-	fprintf(stderr, "Couldn't open file %s for writing\n", filename);
-	return -1;
+    if(i->use_tempfile) {
+	move_file(i->filename, filename);
+    } else {
+	FILE*fi = fopen(filename, "wb");
+	if(!fi) {
+	    fprintf(stderr, "Couldn't open file %s for writing\n", filename);
+	    return -1;
+	}
+	fwrite(i->data, i->length, 1, fi);
+	fclose(fi);
     }
-    fwrite(i->data, i->length, 1, fi);
-    fclose(fi);
     return 0;
 }
 static void*record_result_get(gfxresult_t*r, const char*name)
@@ -612,6 +631,9 @@ static void record_result_destroy(gfxresult_t*r)
     internal_result_t*i = (internal_result_t*)r->internal;
     if(i->data) {
 	free(i->data);i->data = 0;
+    }
+    if(i->filename) {
+	free(i->filename);
     }
     free(r->internal);r->internal = 0;
     free(r);
@@ -646,11 +668,17 @@ void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(out) {
-	int len=0;
-	void*data = writer_growmemwrite_memptr(&i->w, &len);
-	replay(dev, out, data, len);
+	if(i->use_tempfile) {
+	    int len=0;
+	    void*data = writer_growmemwrite_memptr(&i->w, &len);
+	    reader_t r;
+	    reader_init_memreader(&r, data, len);
+	    replay(dev, out, &r);
+	    writer_growmemwrite_reset(&i->w);
+	} else {
+	    msg("<error> Flushing not supported for file based record device");
+	}
     }
-    writer_growmemwrite_reset(&i->w);
 }
 
 static gfxresult_t* record_finish(struct _gfxdevice*dev)
@@ -667,8 +695,14 @@ static gfxresult_t* record_finish(struct _gfxdevice*dev)
     gfxfontlist_free(i->fontlist, 0);
    
     internal_result_t*ir = (internal_result_t*)rfx_calloc(sizeof(gfxresult_t));
-    ir->data = writer_growmemwrite_getmem(&i->w);
-    ir->length = i->w.pos;
+   
+    ir->use_tempfile = i->use_tempfile;
+    if(i->use_tempfile) {
+	ir->data = writer_growmemwrite_getmem(&i->w);
+	ir->length = i->w.pos;
+    } else {
+	ir->filename = i->filename;
+    }
     i->w.finish(&i->w);
 
     gfxresult_t*result= (gfxresult_t*)rfx_calloc(sizeof(gfxresult_t));
@@ -681,7 +715,8 @@ static gfxresult_t* record_finish(struct _gfxdevice*dev)
     
     return result;
 }
-void gfxdevice_record_init(gfxdevice_t*dev)
+
+void gfxdevice_record_init(gfxdevice_t*dev, char use_tempfile)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     memset(dev, 0, sizeof(gfxdevice_t));
@@ -689,8 +724,15 @@ void gfxdevice_record_init(gfxdevice_t*dev)
     dev->name = "record";
 
     dev->internal = i;
-    
-    writer_init_growingmemwriter(&i->w, 1048576);
+  
+    i->use_tempfile = use_tempfile;
+    if(!use_tempfile) {
+	writer_init_growingmemwriter(&i->w, 1048576);
+    } else {
+	char buffer[128];
+	i->filename = strdup(mktempname(buffer));
+	writer_init_filewriter2(&i->w, i->filename);
+    }
     i->fontlist = gfxfontlist_create();
     i->cliplevel = 0;
 

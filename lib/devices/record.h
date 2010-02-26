@@ -29,7 +29,9 @@
 extern "C" {
 #endif
 
-void gfxdevice_record_init(gfxdevice_t*);
+void gfxdevice_record_init(gfxdevice_t*, char use_tempfile);
+
+gfxdevice_t* gfxdevice_record_new(char*filename);
 
 void gfxdevice_record_flush(gfxdevice_t*, gfxdevice_t*);
 

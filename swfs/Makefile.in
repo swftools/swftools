@@ -41,9 +41,9 @@ install:
 	$(INSTALL_DATA) ./PreLoaderTemplate.swf $(pkgdatadir)/swfs/PreLoaderTemplate.swf
 	$(INSTALL_DATA) ./tessel_loader.swf $(pkgdatadir)/swfs/tessel_loader.swf
 	$(INSTALL_DATA) ./swft_loader.swf $(pkgdatadir)/swfs/swft_loader.swf
-	test -f $(pkgdatadir)/swfs/default_viewer.swf || \
+	test -f $(pkgdatadir)/swfs/default_viewer.swf -o -L $(pkgdatadir)/swfs/default_viewer.swf || \
 	    $(LN_S) $(pkgdatadir)/swfs/simple_viewer.swf $(pkgdatadir)/swfs/default_viewer.swf;
-	test -f $(pkgdatadir)/swfs/default_loader.swf || \
+	test -f $(pkgdatadir)/swfs/default_loader.swf -o -L $(pkgdatadir)/swfs/default_loader.swf || \
 	    $(LN_S) $(pkgdatadir)/swfs/tessel_loader.swf $(pkgdatadir)/swfs/default_loader.swf;
 		
 uninstall:

@@ -49,6 +49,8 @@ char* stripFilename(const char*filename, const char*newext);
 
 char* mktempname(char*buffer);
 
+void move_file(const char*from, const char*to);
+
 #ifdef __cplusplus
 }
 #endif

@@ -75,7 +75,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->clip1dev->startDoc(this->xref);
 
     this->gfxoutput = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
-    gfxdevice_record_init(this->gfxoutput);
+    gfxdevice_record_init(this->gfxoutput, 0);
 
     this->gfxdev->setDevice(this->gfxoutput);
     
