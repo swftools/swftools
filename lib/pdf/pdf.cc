@@ -442,7 +442,6 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
       delete userPW;
     }
     if (!i->doc->isOk()) {
-        printf("xpdf reports document as broken.\n");
         return 0;
     }
 

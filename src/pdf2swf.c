@@ -43,6 +43,7 @@
 #include "../lib/devices/polyops.h"
 #include "../lib/devices/record.h"
 #include "../lib/devices/rescale.h"
+#include "../lib/gfxfilter.h"
 #include "../lib/pdf/pdf.h"
 #include "../lib/log.h"
 

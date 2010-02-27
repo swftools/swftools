@@ -19,6 +19,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include "mem.h"
@@ -28,9 +29,9 @@
 typedef struct _internal {
     gfxfilter_t*filter;
     gfxdevice_t*out;
-    gfxdevice_t*final_out;
 
     /* for two pass filters: */
+    gfxdevice_t*final_out;
     int pass;
     int num_passes;
     gfxdevice_t record;
@@ -100,7 +101,17 @@ static void filter_endpage(gfxdevice_t*dev)
 static gfxresult_t* filter_finish(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-    gfxresult_t*r = i->filter->finish(i->filter, i->out);
+    gfxresult_t*r;
+    if(i->filter->finish) {
+	r = i->filter->finish(i->filter, i->out);
+    } else {
+	r = i->out->finish(i->out);
+    }
+    if(i->filter->internal) {
+	free(i->filter->internal);
+	i->filter->internal = 0;
+    }
+    free(i->filter);i->filter=0;
     free(dev->internal);dev->internal=0;free(dev);
     return r;
 }
@@ -166,13 +177,6 @@ static void passthrough_endpage(gfxdevice_t*dev)
     internal_t*i = (internal_t*)dev->internal;
     i->out->endpage(i->out);
 }
-gfxresult_t* passthrough_finish(gfxdevice_t*dev)
-{
-    internal_t*i = (internal_t*)dev->internal;
-    gfxdevice_t*out = i->out;
-    free(dev->internal);dev->internal=0;free(dev);
-    return out->finish(out);
-}
 
 int discard_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
@@ -216,10 +220,12 @@ static gfxresult_t* discard_finish(gfxdevice_t*dev)
     return 0;
 }
 
-gfxdevice_t*gfxfilter_apply(gfxfilter_t*filter, gfxdevice_t*out)
+gfxdevice_t*gfxfilter_apply(gfxfilter_t*_filter, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     gfxdevice_t*dev = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
+    gfxfilter_t*filter = (gfxfilter_t*)rfx_alloc(sizeof(gfxfilter_t));
+    memcpy(filter, _filter, sizeof(gfxfilter_t));
     
     i->out = out;
     i->filter = filter;
@@ -239,18 +245,31 @@ gfxdevice_t*gfxfilter_apply(gfxfilter_t*filter, gfxdevice_t*out)
     dev->drawchar = filter->drawchar?filter_drawchar:passthrough_drawchar;
     dev->drawlink = filter->drawlink?filter_drawlink:passthrough_drawlink;
     dev->endpage = filter->endpage?filter_endpage:passthrough_endpage;
-    dev->finish = filter->finish?filter_finish:passthrough_finish;
+    dev->finish = filter_finish;
     return dev;
 }
 
-static void setup_twopass(gfxdevice_t*, gfxfilter_t*filter, char passthrough);
+static void setup_twopass(gfxdevice_t*dev, gfxfilter_t*filter)
+{
+    dev->name = filter->name?filter->name:"filter";
+    dev->setparameter = filter->setparameter?filter_setparameter:passthrough_setparameter;
+    dev->startpage = filter->startpage?filter_startpage:passthrough_startpage;
+    dev->startclip = filter->startclip?filter_startclip:passthrough_startclip;
+    dev->endclip = filter->endclip?filter_endclip:passthrough_endclip;
+    dev->stroke = filter->stroke?filter_stroke:passthrough_stroke;
+    dev->fill = filter->fill?filter_fill:passthrough_fill;
+    dev->fillbitmap = filter->fillbitmap?filter_fillbitmap:passthrough_fillbitmap;
+    dev->fillgradient = filter->fillgradient?filter_fillgradient:passthrough_fillgradient;
+    dev->addfont = filter->addfont?filter_addfont:passthrough_addfont;
+    dev->drawchar = filter->drawchar?filter_drawchar:passthrough_drawchar;
+    dev->drawlink = filter->drawlink?filter_drawlink:passthrough_drawlink;
+    dev->endpage = filter->endpage?filter_endpage:passthrough_endpage;
+}
 
 static gfxresult_t* twopass_finish(gfxdevice_t*dev)
 {
     internal_t*i = (internal_t*)dev->internal;
-  
-    assert(!strcmp(i->out->name, "record"));
-   
+
     gfxresult_t*r;
     if(i->filter->finish) {
 	r = i->filter->finish(i->filter, i->out);
@@ -259,20 +278,26 @@ static gfxresult_t* twopass_finish(gfxdevice_t*dev)
     }
 
     if(i->pass == i->num_passes) {
-	/* this output device was not a record device, so we don't have
-	   to do anything here (like cleanup) */
+	free(i->twopass);
+	i->twopass = 0;
+	i->filter = 0;
+	free(i);
+	dev->internal=0;
+	free(dev);
 	return r;
     }
 
     /* switch to next pass filter */
     i->filter = &i->twopass->pass2;
+    setup_twopass(dev, i->filter);
+    dev->finish = twopass_finish;
 
     if(i->pass == i->num_passes-1) {
 	/* we don't record in the final pass- we just stream out to the 
 	   next output device */
 	i->out = i->final_out;
     } else {
-        // this only happens for 3 passes or more
+        // switch to a new tempfile- this only happens for 3 passes or more
 	assert(i->num_passes>2);
 	gfxdevice_record_init(&i->record, /*use tempfile*/1);
 	i->out = &i->record;
@@ -280,42 +305,33 @@ static gfxresult_t* twopass_finish(gfxdevice_t*dev)
 
     i->pass++;
     gfxresult_record_replay(r, i->out);
-    r = i->out->finish(i->out);
+    r->destroy(r);
 
-    return r;
+    return twopass_finish(dev);
 }
 
-gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*twopass, gfxdevice_t*out)
+gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*_twopass, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     gfxdevice_t*dev = (gfxdevice_t*)rfx_calloc(sizeof(gfxdevice_t));
+
+    gfxtwopassfilter_t*twopass = (gfxtwopassfilter_t*)rfx_alloc(sizeof(gfxtwopassfilter_t));
+    memcpy(twopass, _twopass, sizeof(gfxtwopassfilter_t));
    
     gfxdevice_record_init(&i->record, /*use tempfile*/1);
 
     i->out = &i->record;
     i->final_out = out;
-    i->filter = &twopass->pass1;
     i->twopass = twopass;
     i->pass = 1;
     i->num_passes = 2;
-	
-    dev->setparameter = i->filter->setparameter?filter_setparameter:passthrough_setparameter;
-    dev->startpage = i->filter->startpage?filter_startpage:passthrough_startpage;
-    dev->startclip = i->filter->startclip?filter_startclip:passthrough_startclip;
-    dev->endclip = i->filter->endclip?filter_endclip:passthrough_endclip;
-    dev->stroke = i->filter->stroke?filter_stroke:passthrough_stroke;
-    dev->fill = i->filter->fill?filter_fill:passthrough_fill;
-    dev->fillbitmap = i->filter->fillbitmap?filter_fillbitmap:passthrough_fillbitmap;
-    dev->fillgradient = i->filter->fillgradient?filter_fillgradient:passthrough_fillgradient;
-    dev->addfont = i->filter->addfont?filter_addfont:passthrough_addfont;
-    dev->drawchar = i->filter->drawchar?filter_drawchar:passthrough_drawchar;
-    dev->drawlink = i->filter->drawlink?filter_drawlink:passthrough_drawlink;
-    dev->endpage = i->filter->endpage?filter_endpage:passthrough_endpage;
+    
+    dev->internal = i;
+   
+    i->filter = &twopass->pass1;
+    setup_twopass(dev, i->filter);
     dev->finish = twopass_finish;
 
-    dev->internal = i;
-    dev->name = i->filter->name?i->filter->name:"filter";
-    dev->finish = twopass_finish;
     return dev;
 }
 

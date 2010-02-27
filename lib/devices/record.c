@@ -584,7 +584,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
     internal_result_t*i = (internal_result_t*)result->internal;
     
     reader_t r;
-    if(i->filename) {
+    if(i->use_tempfile) {
 	reader_init_filereader2(&r, i->filename);
     } else {
 	reader_init_memreader(&r, i->data, i->length);
@@ -633,6 +633,7 @@ static void record_result_destroy(gfxresult_t*r)
 	free(i->data);i->data = 0;
     }
     if(i->filename) {
+	unlink(i->filename);
 	free(i->filename);
     }
     free(r->internal);r->internal = 0;
@@ -676,7 +677,8 @@ void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 	    replay(dev, out, &r);
 	    writer_growmemwrite_reset(&i->w);
 	} else {
-	    msg("<error> Flushing not supported for file based record device");
+	    msg("<fatal> Flushing not supported for file based record device");
+	    exit(1);
 	}
     }
 }
@@ -698,10 +700,10 @@ static gfxresult_t* record_finish(struct _gfxdevice*dev)
    
     ir->use_tempfile = i->use_tempfile;
     if(i->use_tempfile) {
+	ir->filename = i->filename;
+    } else {
 	ir->data = writer_growmemwrite_getmem(&i->w);
 	ir->length = i->w.pos;
-    } else {
-	ir->filename = i->filename;
     }
     i->w.finish(&i->w);
 

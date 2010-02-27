@@ -22,6 +22,7 @@
 #define __gfxfilter_h__
 
 #include "gfxdevice.h"
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +47,9 @@ typedef struct _gfxfilter
     void (*drawlink)(struct _gfxfilter*in, gfxline_t*line, const char*action, struct _gfxdevice*out);
     void (*endpage)(struct _gfxfilter*in, struct _gfxdevice*out);
     gfxresult_t* (*finish)(struct _gfxfilter*in, struct _gfxdevice*out);
+
+    void (*dealloc)(struct _gfxfilter*f);
+
     void* internal;
 } gfxfilter_t;
 
@@ -57,6 +61,24 @@ typedef struct _gfxtwopassfilter
 
 gfxdevice_t*gfxfilter_apply(gfxfilter_t*filter, gfxdevice_t*dev);
 gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*filter, gfxdevice_t*dev);
+
+#define wrap_filter(dev, name, args...) \
+    {gfxfilter_t f_##name; \
+     gfxfilter_##name##_init(&f_##name, ## args); \
+     dev = gfxfilter_apply(&f_##name, dev); \
+    }
+
+#define wrap_filter2(dev, name, args...) \
+    {gfxtwopassfilter_t f_##name; \
+     gfxtwopassfilter_##name##_init(&f_##name, ## args); \
+     dev = gfxtwopassfilter_apply(&f_##name, dev); \
+    }
+
+/* known filters */
+void gfxfilter_maketransparent_init(gfxfilter_t*f, U8 alpha);
+void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f);
+
+void check_filter();
 
 #ifdef __cplusplus
 }

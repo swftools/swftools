@@ -40,15 +40,15 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     out->drawchar(out, font, glyphnr, color, matrix);
 }
 
-void gfxfilter_normalizefonts(gfxtwopassfilter_t*f)
+void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     memset(f, 0, sizeof(gfxtwopassfilter_t));
-    f->pass1.name = "remove font transform pass 1";
+    f->pass1.name = "remove font transforms pass 1";
     f->pass1.drawchar = pass1_drawchar;
     f->pass1.internal = i;
 
-    f->pass2.name = "remove font transform pass 2";
+    f->pass2.name = "remove font transforms pass 2";
     f->pass2.drawchar = pass2_drawchar;
     f->pass2.internal = i;
 }

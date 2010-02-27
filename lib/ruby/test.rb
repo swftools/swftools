@@ -40,10 +40,6 @@ class TestRender < GFX::Device
 end
 
 pdf = GFX::PDF.new('abcdef.pdf')
-
 r = TestRender.new
-pdf.each_page do |page|
-    puts "#{page.nr} #{page.width}x#{page.height}"
-    page.render(r)
-end
+pdf.render(r, "1-5", [:remove_font_transforms])
 

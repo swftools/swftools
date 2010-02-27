@@ -99,7 +99,7 @@ static void maketransparent_fillgradient(gfxfilter_t*f, gfxline_t*line, gfxgradi
     gfxgradient_destroy(g);
 }
 
-void gfxfilter_maketransparent(gfxfilter_t*f, U8 alpha)
+void gfxfilter_maketransparent_init(gfxfilter_t*f, U8 alpha)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     i->alpha = alpha;

@@ -4,6 +4,7 @@
 #include "../gfxtools.h"
 #include "../gfximage.h"
 #include "../gfxfont.h"
+#include "../gfxfilter.h"
 #include "../devices/pdf.h"
 #include "../readers/swf.h"
 #include "../readers/image.h"
@@ -11,6 +12,7 @@
 #include "../mem.h"
 #include "../types.h"
 #include "../log.h"
+#include "../args.h"
 
 #define RUBY_GFX_VERSION  "0.9.0"
 
@@ -121,7 +123,10 @@ static void doc_mark(doc_internal_t*doc)
 static void doc_free(doc_internal_t*doc)
 {
     gfxfontlist_free(doc->fontlist, 0);
-    doc->doc->destroy(doc->doc);
+    if(doc->doc) {
+	doc->doc->destroy(doc->doc);
+    }
+    doc->doc = 0;
     free(doc);
 }
 
@@ -421,6 +426,8 @@ static ID id_line = 0;
 static ID id_spline = 0;
 static ID id_radial = 0;
 static ID id_linear = 0;
+static ID id_remove_font_transforms = 0;
+static ID id_maketransparent = 0;
 
 static VALUE noop(int argc, VALUE *argv, VALUE obj) {return obj;}
 
@@ -616,39 +623,46 @@ void rb_endpage(gfxdevice_t*dev)
     HEAD
     forward(v, id_endpage, 0);
 }
+void gfxresult_rb_destroy(gfxresult_t*r)
+{
+    free(r);
+}
 gfxresult_t* rb_finish(gfxdevice_t*dev)
 {
     HEAD
-    VALUE ret = forward(v, id_endpage, 0);
+    VALUE ret = forward(v, id_finish, 0);
     gfxresult_t*r = (gfxresult_t*)rfx_calloc(sizeof(gfxresult_t));
+    r->destroy = gfxresult_rb_destroy;
     r->internal = (void*)(ptroff_t)ret;
     return r;
 }
+
+#define make_device(dev, idoc, device) \
+    gfxdevice_t dev; \
+    device_internal_t i; \
+    i.v = device; \
+    i.doc = idoc; \
+    dev.internal = &i; \
+    dev.setparameter = rb_setparameter; \
+    dev.startpage = rb_startpage; \
+    dev.startclip = rb_startclip; \
+    dev.endclip = rb_endclip; \
+    dev.stroke = rb_stroke; \
+    dev.fill = rb_fill; \
+    dev.fillbitmap = rb_fillbitmap; \
+    dev.fillgradient = rb_fillgradient; \
+    dev.addfont = rb_addfont; \
+    dev.drawchar = rb_drawchar; \
+    dev.drawlink = rb_drawlink; \
+    dev.endpage = rb_endpage; \
+    dev.finish = rb_finish;
 
 static VALUE page_render(VALUE cls, VALUE device)
 {
     Check_Type(device, T_OBJECT);
     Get_Page(page,cls)
 
-    gfxdevice_t dev;
-    device_internal_t i;
-    i.v = device;
-    i.doc = page->doc;
-
-    dev.internal = &i;
-    dev.setparameter = rb_setparameter;
-    dev.startpage = rb_startpage;
-    dev.startclip = rb_startclip;
-    dev.endclip = rb_endclip;
-    dev.stroke = rb_stroke;
-    dev.fill = rb_fill;
-    dev.fillbitmap = rb_fillbitmap;
-    dev.fillgradient = rb_fillgradient;
-    dev.addfont = rb_addfont;
-    dev.drawchar = rb_drawchar;
-    dev.drawlink = rb_drawlink;
-    dev.endpage = rb_endpage;
-    dev.finish = rb_finish;
+    make_device(dev, page->doc, device);
 
     dev.startpage(&dev, page->page->width, page->page->height);
     page->page->render(page->page, &dev);
@@ -657,30 +671,63 @@ static VALUE page_render(VALUE cls, VALUE device)
     return cls;
 }
 
+static VALUE doc_render(VALUE cls, VALUE device, VALUE _range, VALUE filters)
+{
+    const char*range = 0;
+    if(!NIL_P(_range)) {
+	Check_Type(_range, T_STRING);
+	range = StringValuePtr(_range);
+    }
+    Get_Doc(doc,cls);
+
+    make_device(_dev, doc, device);
+    gfxdevice_t*dev = &_dev;
+
+    if(!NIL_P(filters)) {
+	if(TYPE(filters) != T_ARRAY)
+	    rb_raise(rb_eArgError, "third argument of doc->render must be an array of symbols");
+
+	int len = RARRAY(filters)->len;
+	int t=0;
+	while(t<len) {
+	    VALUE filter = RARRAY(filters)->ptr[t++];
+	    Check_Type(filter, T_SYMBOL);
+	    ID id = SYM2ID(filter);
+#           define PARAM(x) VALUE x;if(t==len) rb_raise(rb_eArgError, "End of array while parsing arguments for filter %s", rb_id2name(id)); \
+	                    else x = RARRAY(filters)->ptr[t++];
+	    if(id == id_remove_font_transforms) {
+		wrap_filter2(dev, remove_font_transforms);
+	    } else if(id == id_maketransparent) {
+		PARAM(alpha);
+		wrap_filter(dev, maketransparent, FIX2INT(alpha));
+	    } else {
+		rb_raise(rb_eArgError, "unknown filter %s", rb_id2name(id));
+	    }
+	}
+    }
+
+    int pagenr;
+    for(pagenr=1;pagenr<=doc->doc->num_pages;pagenr++) {
+	if(is_in_range(pagenr, (char*)range)) {
+	    gfxpage_t*page = doc->doc->getpage(doc->doc, pagenr);
+	    dev->startpage(dev, page->width, page->height);
+	    page->render(page, dev);
+	    dev->endpage(dev);
+	    page->destroy(page);
+	}
+    }
+   
+
+    gfxresult_t*r = dev->finish(dev);
+    r->destroy(r);
+
+    return Qnil;
+}
+
 static VALUE doc_prepare(VALUE cls, VALUE device)
 {
     Get_Doc(doc,cls);
-
-    gfxdevice_t dev;
-    device_internal_t i;
-    i.v = device;
-    i.doc = doc;
-
-    dev.internal = &i;
-    dev.setparameter = rb_setparameter;
-    dev.startpage = rb_startpage;
-    dev.startclip = rb_startclip;
-    dev.endclip = rb_endclip;
-    dev.stroke = rb_stroke;
-    dev.fill = rb_fill;
-    dev.fillbitmap = rb_fillbitmap;
-    dev.fillgradient = rb_fillgradient;
-    dev.addfont = rb_addfont;
-    dev.drawchar = rb_drawchar;
-    dev.drawlink = rb_drawlink;
-    dev.endpage = rb_endpage;
-    dev.finish = rb_finish;
-
+    make_device(dev, doc, device);
     doc->doc->prepare(doc->doc, &dev);
     return cls;
 }
@@ -724,6 +771,7 @@ void Init_gfx()
     rb_define_method(Document, "page", doc_get_page, 1);
     rb_define_method(Document, "each_page", doc_each_page, 0);
     rb_define_method(Document, "prepare", doc_prepare, 1);
+    rb_define_method(Document, "render", doc_render, 3);
     
     Bitmap = rb_define_class_under(GFX, "Bitmap", rb_cObject);
     rb_define_method(Bitmap, "save_jpeg", image_save_jpeg, 2);
@@ -760,7 +808,6 @@ void Init_gfx()
     rb_define_method(Device, "addfont", noop, -1);
     rb_define_method(Device, "drawchar", noop, -1);
     rb_define_method(Device, "drawlink", noop, -1);
-    rb_define_method(Device, "endpage", noop, -1);
 
     PDFClass = rb_define_class_under(GFX, "PDF", Document);
     rb_define_alloc_func(PDFClass, pdf_allocate);
@@ -770,7 +817,7 @@ void Init_gfx()
     
     ImageClass = rb_define_class_under(GFX, "ImageRead", Document);
     rb_define_alloc_func(ImageClass, imgdrv_allocate);
-
+    
     id_setparameter = rb_intern("setparameter");
     id_startpage = rb_intern("startpage") ;
     id_startclip = rb_intern("startclip") ;
@@ -795,5 +842,7 @@ void Init_gfx()
     id_spline = rb_intern("spline");
     id_radial = rb_intern("radial");
     id_linear = rb_intern("linear");
+    id_remove_font_transforms = rb_intern("remove_font_transforms");
+    id_maketransparent = rb_intern("maketransparent");
 }
 
