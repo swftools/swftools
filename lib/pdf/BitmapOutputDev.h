@@ -187,14 +187,14 @@ public:
     
 private:
     void clearClips();
-    void clearBoolPolyDev(int x1, int y1, int x2, int y2);
-    void clearBoolTextDev(int x1, int y1, int x2, int y2);
+    void clearBoolPolyDev();
+    void clearBoolTextDev();
     void flushText();
     void flushBitmap();
     GBool checkNewText(int x1, int y1, int x2, int y2);
     GBool checkNewBitmap(int x1, int y1, int x2, int y2);
     GBool clip0and1differ(int x1,int y1,int x2,int y2);
-    GBool intersection(int x1,int y1,int x2,int y2);
+    GBool intersection(SplashBitmap*boolpoly, SplashBitmap*booltext, int x1, int y1, int x2, int y2);
     
     virtual gfxbbox_t getImageBBox(GfxState*state);
     virtual gfxbbox_t getBBox(GfxState*state);
@@ -218,7 +218,9 @@ private:
     SplashBitmap*clip0bitmap;
     SplashBitmap*clip1bitmap;
     SplashBitmap*boolpolybitmap;
+    SplashBitmap*stalepolybitmap;
     SplashBitmap*booltextbitmap;
+    SplashBitmap*staletextbitmap;
 
     gfxdevice_t* gfxoutput;
     GFXOutputDev*gfxdev;
