@@ -275,16 +275,16 @@ static void fill_line_solid(RGBA*line, U32*z, int y, int x1, int x2, RGBA col)
 
     if(col.a!=255) {
         int ainv = 255-col.a;
-        col.r = (col.r*col.a)>>8;
-        col.g = (col.g*col.a)>>8;
-        col.b = (col.b*col.a)>>8;
+        col.r = (col.r*col.a)/255;
+        col.g = (col.g*col.a)/255;
+        col.b = (col.b*col.a)/255;
         do {
 	    if(z[bitpos]&bit) {
-		line[x].r = ((line[x].r*ainv)>>8)+col.r;
-		line[x].g = ((line[x].g*ainv)>>8)+col.g;
-		line[x].b = ((line[x].b*ainv)>>8)+col.b;
+		line[x].r = ((line[x].r*ainv)/255)+col.r;
+		line[x].g = ((line[x].g*ainv)/255)+col.g;
+		line[x].b = ((line[x].b*ainv)/255)+col.b;
 		//line[x].a = 255;
-		line[x].a = ((line[x].a*ainv)>>8)+col.a;
+		line[x].a = ((line[x].a*ainv)/255)+col.a;
 	    }
 	    bit <<= 1;
 	    if(!bit) {
@@ -354,9 +354,9 @@ static void fill_line_bitmap(RGBA*line, U32*z, int y, int x1, int x2, fillinfo_t
 	    ainv = 255-col.a;
 
 	    /* needs bitmap with premultiplied alpha */
-	    line[x].r = ((line[x].r*ainv)>>8)+col.r;
-	    line[x].g = ((line[x].g*ainv)>>8)+col.g;
-	    line[x].b = ((line[x].b*ainv)>>8)+col.b;
+	    line[x].r = ((line[x].r*ainv)/255)+col.r;
+	    line[x].g = ((line[x].g*ainv)/255)+col.g;
+	    line[x].b = ((line[x].b*ainv)/255)+col.b;
 	    line[x].a = 255;
 	}
 	bit <<= 1;
