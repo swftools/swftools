@@ -184,6 +184,8 @@ gfx_objects2 = $(gfx_objects) ../devices/lrf.$(O) ../libocr$(A)
 
 pdf2swf$(E): $(XPDFOK) ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
 	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
+pdf2pdf$(E): $(XPDFOK) ../../src/pdf2pdf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
+	$(LL) $(CPPFLAGS) -g ../../src/pdf2pdf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2pdf$(E) $(LIBS)
 gfx2gfx$(E): $(XPDFOK) ../../src/gfx2gfx.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2)
 	$(LL) $(CPPFLAGS) -g ../../src/gfx2gfx.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects2) -o gfx2gfx$(E) $(LIBS)
 

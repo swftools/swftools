@@ -389,6 +389,7 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    for(t=0;t<num;t++) {
 		font->glyphs[t].unicode = 32+t;
 	    }
+	    font->max_unicode = 0;
 	    font->unicode2glyph = 0;
 	    gfxfont_save(font, filename);
 	    font->id=old_id;
