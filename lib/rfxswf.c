@@ -1179,7 +1179,7 @@ TAG * swf_ReadTag(reader_t*reader, TAG * prev)
   int id;
 
   if (reader->read(reader, &raw, 2) !=2 ) return NULL;
-  raw = SWAP16(raw);
+  raw = LE_16_TO_NATIVE(raw);
 
   len = raw&0x3f;
   id  = raw>>6;
@@ -1243,7 +1243,7 @@ int swf_WriteTag2(writer_t*writer, TAG * t)
 #endif
     
     if (short_tag)
-    { raw[0] = SWAP16(len|((t->id&0x3ff)<<6));
+    { raw[0] = LE_16_TO_NATIVE(len|((t->id&0x3ff)<<6));
       if (writer->write(writer,raw,2)!=2)
       {
         #ifdef DEBUG_RFXSWF
@@ -1254,7 +1254,7 @@ int swf_WriteTag2(writer_t*writer, TAG * t)
     }
     else
     {
-      raw[0] = SWAP16((t->id<<6)|0x3f);
+      raw[0] = LE_16_TO_NATIVE((t->id<<6)|0x3f);
       if (writer->write(writer,raw,2)!=2)
       {
 #ifdef DEBUG_RFXSWF
@@ -1559,9 +1559,9 @@ int swf_ReadSWF2(reader_t*reader, SWF * swf)   // Reads SWF to memory (malloc'ed
 
     reader_GetRect(reader, &swf->movieSize);
     reader->read(reader, &swf->frameRate, 2);
-    swf->frameRate = SWAP16(swf->frameRate);
+    swf->frameRate = LE_16_TO_NATIVE(swf->frameRate);
     reader->read(reader, &swf->frameCount, 2);
-    swf->frameCount = SWAP16(swf->frameCount);
+    swf->frameCount = LE_16_TO_NATIVE(swf->frameCount);
 
     /* read tags and connect to list */
     t1.next = 0;

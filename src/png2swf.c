@@ -119,7 +119,7 @@ int png_read_chunk(char (*head)[4], int*destlen, U8**destdata, FILE*fi)
 	return 0;
     if(!fread(head, 4, 1, fi))
 	return 0;
-    len = REVERSESWAP32(len);
+    len = BE_32_TO_NATIVE(len);
     if(destlen) *destlen = len;
     if(destdata) {
 	if(len)
@@ -143,7 +143,7 @@ unsigned int png_get_dword(FILE*fi)
 {
     unsigned int a;
     fread(&a,4,1,fi);
-    return REVERSESWAP32(a);
+    return BE_32_TO_NATIVE(a);
 }
 
 struct png_header
@@ -173,8 +173,8 @@ int png_read_header(FILE*fi, struct png_header*header)
 	if(!strncasecmp(id, "IHDR", 4)) {
 	    char a,b,c,f,i;
 	    if(len < 8) exit(1);
-	    header->width = REVERSESWAP32(*(U32*)&data[0]);
-	    header->height = REVERSESWAP32(*(U32*)&data[4]);
+	    header->width = BE_32_TO_NATIVE(*(U32*)&data[0]);
+	    header->height = BE_32_TO_NATIVE(*(U32*)&data[4]);
 	    a = data[8];      // should be 8
 	    b = data[9];      // should be 3(indexed), 2(rgb), 0(grayscale) or 6(truecolor+alpha)
 

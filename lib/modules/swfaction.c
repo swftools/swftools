@@ -834,7 +834,7 @@ void action_fixjump(ActionMarker m1, ActionMarker m2)
 
     if (a1->op == ACTION_IF || a1->op == ACTION_JUMP) 
     {
-	*(U16*)(a1->data) = SWAP16(len);
+	*(U16*)(a1->data) = LE_16_TO_NATIVE(len);
     }
     else if(a1->op == ACTION_WAITFORFRAME)
     {
@@ -924,20 +924,20 @@ ActionTAG* action_End(ActionTAG*atag) {return swf_AddActionTAG(atag, ACTION_END,
 ActionTAG* action_GotoFrame(ActionTAG*atag, U16 frame) 
 {
     atag = swf_AddActionTAG(atag, ACTION_GOTOFRAME, 0, 2);
-    *(U16*)atag->tmp = SWAP16(frame);
+    *(U16*)atag->tmp = LE_16_TO_NATIVE(frame);
     return atag;
 }
 
 ActionTAG* action_Jump(ActionTAG*atag, U16 branch) 
 {
     atag = swf_AddActionTAG(atag, ACTION_JUMP, 0, 2);
-    *(U16*)atag->tmp = SWAP16(branch);
+    *(U16*)atag->tmp = LE_16_TO_NATIVE(branch);
     return atag;
 }
 ActionTAG* action_If(ActionTAG*atag, U16 branch) 
 {
     atag = swf_AddActionTAG(atag, ACTION_IF, 0, 2);
-    *(U16*)atag->tmp = SWAP16(branch);
+    *(U16*)atag->tmp = LE_16_TO_NATIVE(branch);
     return atag;
 }
 ActionTAG* action_StoreRegister(ActionTAG*atag, U8 reg) 
@@ -967,7 +967,7 @@ ActionTAG* action_WaitForFrame2(ActionTAG*atag, U8 skip)
 ActionTAG* action_WaitForFrame(ActionTAG*atag, U16 frame, U8 skip) 
 {
     atag = swf_AddActionTAG(atag, ACTION_WAITFORFRAME, 0, 3);
-    *(U16*)atag->tmp = SWAP16(frame);
+    *(U16*)atag->tmp = LE_16_TO_NATIVE(frame);
     *(U8*)&atag->tmp[2] = skip;
     return atag;
 }

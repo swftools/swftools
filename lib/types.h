@@ -19,15 +19,15 @@
 #define GET32(ptr) (((U16)(((U8*)(ptr))[0]))+(((U16)(((U8*)(ptr))[1]))<<8)+(((U16)(((U8*)(ptr))[2]))<<16)+(((U16)(((U8*)(ptr))[3]))<<24))
 
 #ifdef WORDS_BIGENDIAN
-#define SWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
-#define SWAP32(s) (SWAP16(((s)>>16)&0x0000ffff)|((SWAP16(s)<<16)&0xffff0000))
-#define REVERSESWAP16(x) (x)
-#define REVERSESWAP32(x) (x)
+#define LE_16_TO_NATIVE(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
+#define LE_32_TO_NATIVE(s) (LE_16_TO_NATIVE(((s)>>16)&0x0000ffff)|((LE_16_TO_NATIVE(s)<<16)&0xffff0000))
+#define BE_16_TO_NATIVE(x) (x)
+#define BE_32_TO_NATIVE(x) (x)
 #else
-#define SWAP16(x) (x)
-#define SWAP32(x) (x)
-#define REVERSESWAP16(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
-#define REVERSESWAP32(s) (REVERSESWAP16(((s)>>16)&0x0000ffff)|((REVERSESWAP16(s)<<16)&0xffff0000))
+#define LE_16_TO_NATIVE(x) (x)
+#define LE_32_TO_NATIVE(x) (x)
+#define BE_16_TO_NATIVE(s) ((((s)>>8)&0x00ff)|(((s)<<8)&0xff00))
+#define BE_32_TO_NATIVE(s) (BE_16_TO_NATIVE(((s)>>16)&0x0000ffff)|((BE_16_TO_NATIVE(s)<<16)&0xffff0000))
 #endif
 
 // SWF Types

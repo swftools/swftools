@@ -771,7 +771,7 @@ static inline void png_write_byte(FILE*fi, U8 byte)
 static void png_start_chunk(FILE*fi, char*type, int len)
 {
     U8 mytype[4]={0,0,0,0};
-    U32 mylen = REVERSESWAP32(len);
+    U32 mylen = BE_32_TO_NATIVE(len);
     memcpy(mytype,type,strlen(type));
     fwrite(&mylen, 4, 1, fi);
     mycrc32=0xffffffff;
@@ -795,7 +795,7 @@ static void png_write_dword(FILE*fi, U32 dword)
 }
 static void png_end_chunk(FILE*fi)
 {
-    U32 tmp = REVERSESWAP32((mycrc32^0xffffffff));
+    U32 tmp = BE_32_TO_NATIVE((mycrc32^0xffffffff));
     fwrite(&tmp,4,1,fi);
 }
 
