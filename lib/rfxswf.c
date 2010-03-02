@@ -1186,8 +1186,7 @@ TAG * swf_ReadTag(reader_t*reader, TAG * prev)
 
   if (len==0x3f)
   {
-      if (reader->read(reader, &len, 4) != 4) return NULL;
-      len = SWAP32(len);
+      len = reader_readU32(reader);
   }
 
   if (id==ST_DEFINESPRITE) len = 2*sizeof(U16);
@@ -1264,14 +1263,7 @@ int swf_WriteTag2(writer_t*writer, TAG * t)
 	  return -1;
       }
       
-      len = SWAP32(len);
-      if (writer->write(writer,&len,4)!=4)
-      {
-        #ifdef DEBUG_RFXSWF
-          fprintf(stderr,"WriteTag() failed: Long Header (2).\n");
-        #endif
-        return -1;
-      }
+      writer_writeU32(writer, len);
     }
     
     if (t->data)
