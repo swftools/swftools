@@ -393,7 +393,7 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    font->unicode2glyph = 0;
 	    gfxfont_save(font, filename);
 	    font->id=old_id;
-	  
+	    
 #ifdef RUN_TTX
 	    /* for testing the generated fonts: run everything through ttx (fonttools) */
 	    char cmd[256];
@@ -405,13 +405,15 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    sprintf(cmd, "rm -f test.ttx");system(cmd);
 #endif
 	   
-	    int l = strlen(font->id);
+	    int l = strlen(fontname);
 	    for(t=0;t<l+1;t++) {
 		fontname2[t*2+0] = fontname[t];
 		fontname2[t*2+1] = 0;
 	    }
+	    
 	    fontid = PDF_load_font(i->p, fontname2, l*2, "host", "embedding=true");
 	    i->fontlist = gfxfontlist_addfont2(i->fontlist, font, (void*)(ptroff_t)fontid);
+	    unlink(filename);
 	}
     }
 }
