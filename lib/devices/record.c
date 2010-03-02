@@ -669,7 +669,7 @@ void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(out) {
-	if(i->use_tempfile) {
+	if(!i->use_tempfile) {
 	    int len=0;
 	    void*data = writer_growmemwrite_memptr(&i->w, &len);
 	    reader_t r;
