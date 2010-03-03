@@ -378,6 +378,15 @@ static VALUE font_save_ttf(VALUE cls, VALUE _filename)
     return Qnil;
 }
 
+static VALUE font_save_eot(VALUE cls, VALUE _filename)
+{
+    Get_Font(font,cls);
+    Check_Type(_filename, T_STRING);
+    const char*filename = StringValuePtr(_filename);
+    gfxfont_save_eot(font->font, filename);
+    return Qnil;
+}
+
 static VALUE font_kerning(VALUE cls)
 {
     Get_Font(font,cls);
@@ -795,6 +804,7 @@ void Init_gfx()
     rb_define_method(Font, "kerning", font_kerning, 0);
     rb_define_method(Font, "get_kerning_table", font_kerning, 0);
     rb_define_method(Font, "save_ttf", font_save_ttf, 1);
+    rb_define_method(Font, "save_eot", font_save_eot, 1);
     
     Device = rb_define_class_under(GFX, "Device", rb_cObject);
     rb_define_method(Device, "startpage", noop, -1);
