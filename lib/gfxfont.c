@@ -699,7 +699,10 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     ttf->descent = font->descent;
     ttf->lineGap = font->ascent + font->descent;
 
-    ttf->name = strdup(font->id);
+    ttf->full_name = strdup(font->id);
+    ttf->family_name = strdup(font->id);
+    ttf->subfamily_name = strdup(font->id);
+    ttf->version_string = strdup("Version 1.0");
 
     ttf_create_truetype_tables(ttf);
     return ttf;
@@ -709,6 +712,13 @@ void gfxfont_save(gfxfont_t*font, const char*filename)
 {
     ttf_t*ttf = gfxfont_to_ttf(font);
     ttf_save(ttf, filename);
+    ttf_destroy(ttf);
+}
+
+void gfxfont_save_eot(gfxfont_t*font, const char*filename)
+{
+    ttf_t*ttf = gfxfont_to_ttf(font);
+    ttf_save_eot(ttf, filename);
     ttf_destroy(ttf);
 }
 

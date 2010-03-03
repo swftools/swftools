@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <assert.h>
 #include "log.h"
 #include "os.h"
 #include "q.h"
@@ -117,6 +118,10 @@ static void readBlock(memreader_t*r, void*dest, int len)
 	r->pos += len;
     }
 }
+static void reader_reset(memreader_t*r) 
+{
+    r->pos;
+}
 #define INIT_READ(r,data,length,pos) memreader_t r = {(data),(pos),(length)};
 
 static void expand(ttf_table_t*w, int newsize)
@@ -139,6 +144,13 @@ static inline void writeU16(ttf_table_t*w, unsigned short v)
     w->data[w->len++] = v>>8;
     w->data[w->len++] = v;
 }
+static inline void writeU16_LE(ttf_table_t*w, unsigned short v)
+{
+    if(w->memsize<w->len+2)
+	expand(w, w->len+2);
+    w->data[w->len++] = v;
+    w->data[w->len++] = v>>8;
+}
 #define writeS16 writeU16
 static inline void writeU32(ttf_table_t*w, unsigned long v)
 {
@@ -148,6 +160,15 @@ static inline void writeU32(ttf_table_t*w, unsigned long v)
     w->data[w->len++] = v>>16;
     w->data[w->len++] = v>>8;
     w->data[w->len++] = v;
+}
+static inline void writeU32_LE(ttf_table_t*w, unsigned long v)
+{
+    if(w->memsize<w->len+4)
+	expand(w, w->len+4);
+    w->data[w->len++] = v;
+    w->data[w->len++] = v>>8;
+    w->data[w->len++] = v>>16;
+    w->data[w->len++] = v>>24;
 }
 static inline void writeBlock(ttf_table_t*w, void*data, int len)
 {
@@ -1450,6 +1471,13 @@ void cmap_delete(ttf_t*ttf)
     }
     ttf->unicode_size=0;
 }
+static char*readString(memreader_t*r, int len)
+{
+    char*s = malloc(len+1);
+    readBlock(r, s, len);
+    s[len] = 0;
+    return s;
+}
 void name_parse(memreader_t*r, ttf_t*ttf)
 {
     U16 format = readU16(r);
@@ -1464,37 +1492,90 @@ void name_parse(memreader_t*r, ttf_t*ttf)
 	U16 name_id = readU16(r);
 	U16 len = readU16(r);
 	U16 offset_2 = readU16(r);
+	
+	INIT_READ(ss, r->mem, r->size, offset+offset_2);
+	if(!(platform==0 || (platform==1 && encoding==0)))
+		continue;
+
+	INIT_READ(s, r->mem, r->size, offset+offset_2);
+
+	if(name_id==1) {
+	    if(ttf->family_name) free(ttf->family_name);
+	    ttf->family_name = readString(&s, len);
+	}
+	if(name_id==2) {
+	    if(ttf->subfamily_name) free(ttf->subfamily_name);
+	    ttf->subfamily_name = readString(&s, len);
+	}
+	if(name_id==3) {
+	    if(ttf->version_string) free(ttf->version_string);
+	    ttf->version_string = readString(&s, len);
+	}
 	if(name_id==4) {
-	    if(ttf->name)
-		free(ttf->name);
-	    ttf->name = strdup_n(&r->mem[offset+offset_2], len);
+	    if(ttf->full_name) free(ttf->full_name);
+	    ttf->full_name = readString(&s, len);
 	}
     }
 }
 void name_write(ttf_t*ttf, ttf_table_t*table)
 {
-    writeU16(table, 0); //format
-    writeU16(table, 1); //count
-    int offset = 18;
-    writeU16(table, offset); //offset
+    char*strings[4] = {ttf->full_name, ttf->family_name, ttf->subfamily_name, ttf->version_string};
+    int codes[4] = {4,1,2,3};
 
-    writeU16(table, 1); //platform id
-    writeU16(table, 0); //encoding id
-    writeU16(table, 0); //language
-    writeU16(table, 4); //4: full name
-    int len = strlen(ttf->name);
-    writeU16(table, len);
-    writeU16(table, table->len+2 - offset);
+    writeU16(table, 0); //format
+    int count = 0;
     int t;
-    for(t=0;t<len;t++) {
-	writeU8(table, ttf->name[t]);
+    int nr = sizeof(strings)/sizeof(strings[0]);
+    
+    for(t=0;t<nr;t++) {
+	if(strings[t])
+	    count++;
+    }
+    writeU16(table, count); //count
+
+    int offset_pos = table->len;
+    writeU16(table, 0); //offset (will be filled in later)
+
+    int offset = 0;
+    for(t=0;t<nr;t++) { 
+	if(strings[t]) {
+	    writeU16(table, 1); //platform id
+	    writeU16(table, 0); //encoding id
+	    writeU16(table, 0); //language
+	    writeU16(table, codes[t]); //4: full name
+	    int len = strlen(strings[t]);
+	    writeU16(table, len);
+	    writeU16(table, offset);
+	    offset += len;
+	}
+    }
+    table->data[offset_pos] = table->len>>8;
+    table->data[offset_pos+1] = table->len;
+
+    for(t=0;t<nr;t++) { 
+	if(strings[t]) {
+	    int len = strlen(strings[t]);
+	    writeBlock(table, strings[t], len);
+	}
     }
 }
 void name_delete(ttf_t*ttf)
 {
-    if(ttf->name) {
-	free(ttf->name);
-	ttf->name=0;
+    if(ttf->full_name) {
+	free(ttf->full_name);
+	ttf->full_name=0;
+    }
+    if(ttf->family_name) {
+	free(ttf->family_name);
+	ttf->family_name=0;
+    }
+    if(ttf->subfamily_name) {
+	free(ttf->subfamily_name);
+	ttf->subfamily_name=0;
+    }
+    if(ttf->version_string) {
+	free(ttf->version_string);
+	ttf->version_string=0;
     }
 }
 
@@ -1642,43 +1723,58 @@ static int ttf_parse_tables(ttf_t*ttf)
 static void ttf_collapse_tables(ttf_t*ttf)
 {
     ttf_table_t*table;
-   
-    table = ttf_addtable(ttf, TAG_MAXP);
-    maxp_write(ttf, table);
-    maxp_delete(ttf);
+    
+    ttf_table_t*head = ttf_find_table(ttf, TAG_HEAD);
+    if(head) 
+	return; //already collapsed
+  
+    if(ttf->maxp) {
+	table = ttf_addtable(ttf, TAG_MAXP);
+	maxp_write(ttf, table);
+	maxp_delete(ttf);
+    }
 
-    table = ttf_addtable(ttf, TAG_OS2);
-    os2_write(ttf, table);
-    os2_delete(ttf);
+    if(ttf->os2) {
+	table = ttf_addtable(ttf, TAG_OS2);
+	os2_write(ttf, table);
+	os2_delete(ttf);
+    }
 
-    if(!ttf->is_vertical) {
-	table = ttf_addtable(ttf, TAG_HMTX);
-	int num_advances = mtx_write(ttf, table);
-	table = ttf_addtable(ttf, TAG_HHEA);
-	hea_write(ttf, table, num_advances);
-    } else {
-	table = ttf_addtable(ttf, TAG_VMTX);
-	int num_advances = mtx_write(ttf, table);
-	table = ttf_addtable(ttf, TAG_VHEA);
-	hea_write(ttf, table, num_advances);
+    if(ttf->hea) {
+	if(!ttf->is_vertical) {
+	    table = ttf_addtable(ttf, TAG_HMTX);
+	    int num_advances = mtx_write(ttf, table);
+	    table = ttf_addtable(ttf, TAG_HHEA);
+	    hea_write(ttf, table, num_advances);
+	    hea_delete(ttf);
+	} else {
+	    table = ttf_addtable(ttf, TAG_VMTX);
+	    int num_advances = mtx_write(ttf, table);
+	    table = ttf_addtable(ttf, TAG_VHEA);
+	    hea_write(ttf, table, num_advances);
+	    hea_delete(ttf);
+	}
     }
 	
     int loca_size=0;
     if(ttf->num_glyphs) {
-	table = ttf_addtable(ttf, TAG_CMAP);
-	cmap_write(ttf, table);
-	cmap_delete(ttf);
+	if(ttf->unicode) {
+	    table = ttf_addtable(ttf, TAG_CMAP);
+	    cmap_write(ttf, table);
+	    cmap_delete(ttf);
+	}
 
-	table = ttf_addtable(ttf, TAG_GLYF);
-	U32*locations = glyf_write(ttf, table);
-	glyf_delete(ttf);
-	
-	table = ttf_addtable(ttf, TAG_LOCA);
-	loca_size = loca_write(ttf, table, locations);
-	free(locations);
+	if(ttf->glyphs) {
+	    table = ttf_addtable(ttf, TAG_GLYF);
+	    U32*locations = glyf_write(ttf, table);
+	    table = ttf_addtable(ttf, TAG_LOCA);
+	    loca_size = loca_write(ttf, table, locations);
+	    free(locations);
+	    glyf_delete(ttf);
+	}
     }
 
-    if(ttf->name) {
+    if(ttf->full_name || ttf->family_name || ttf->subfamily_name) {
 	table = ttf_addtable(ttf, TAG_NAME);
 	name_write(ttf, table);
 	name_delete(ttf);
@@ -1711,6 +1807,62 @@ ttf_t* ttf_load(void*data, int length)
 
     ttf_t*ttf = rfx_calloc(sizeof(ttf_t));
     ttf->version = readU32(&r);
+    if(ttf->version == SWAP32(length)) {
+	U32 fontDataSize = readU32(&r);
+	U32 version = readU32(&r);
+	U32 flags  = readU32(&r);
+	U8 panose[10]; 
+	readBlock(&r, panose, 10);
+	readU8(&r); //charset
+	readU8(&r); //italoc
+	readU32(&r); //weight
+	readU16(&r); //fstype
+	U16 magic = readU16(&r); //magicNumber
+	/* we're being paranoid: it's entirely possible for the font
+	   size to be exactly 0x10000. Only treat this font as eot if
+	   it has the right magic number */
+	if(magic == 0x4c50) {
+	    readU32(&r); //unicoderange[0]
+	    readU32(&r); //unicoderange[1]
+	    readU32(&r); //unicoderange[2]
+	    readU32(&r); //unicoderange[3]
+	    readU32(&r); //codepagerange[0]
+	    readU32(&r); //codepagerange[1]
+	    readU32(&r); //checksumadjustment
+	    readU32(&r); //reserved[0]
+	    readU32(&r); //reserved[1]
+	    readU32(&r); //reserved[2]
+	    readU32(&r); //reserved[3]
+	    readU16(&r); //padding
+
+	    int nr=0;
+	    for(nr=0;nr<4;nr++) {
+		int t, len;
+		/* All of ttf is big-endian. All of ttf? No. One small eot table
+		   of indomitable little-endian... */
+		len = readU8(&r);
+		len |= readU8(&r)<<8;
+		len /= 2;
+		for(t=0;t<len;t++) {
+		    U8 c = readU16(&r)>>8;
+		}
+		readU16(&r); // zero terminator
+	    }
+	    readU16(&r); // more padding
+
+	    /* adjust the offset to the start of the actual truetype
+	       data- the positions in the table header will be relative
+	       to the ttf data after the header, not to the file */
+	    r.mem += r.pos;
+	    r.size -= r.pos;
+	    r.pos = 0;
+	    ttf->version = readU32(&r);
+	} else {
+	    reader_reset(&r);
+	    ttf->version = readU32(&r);
+	}
+    }
+
     if(ttf->version == TTCFTAG) {
 	/* a ttc collection is a number of truetype fonts
 	   packaged together */
@@ -1736,7 +1888,7 @@ ttf_t* ttf_load(void*data, int length)
     readU16(&r); //range shift
 
     if(num_tables*16 > length) {
-	msg("<error> Truncated TTC file (table entries: %d)", num_tables);
+	msg("<error> Truncated TTF file (table entries: %d)", num_tables);
 	if(ttf->version != OPENTYPE && 
 	   ttf->version != TRUETYPE_MACOS && 
 	   ttf->version != VERSION_1_0) {
@@ -1797,7 +1949,8 @@ void ttf_create_truetype_tables(ttf_t*ttf)
     if(!ttf->post)
 	ttf->post = post_new(ttf);
 }
-ttf_table_t* ttf_write(ttf_t*ttf)
+
+ttf_table_t* ttf_write(ttf_t*ttf, U32*checksum_adjust)
 {
     ttf_collapse_tables(ttf);
    
@@ -1858,6 +2011,8 @@ ttf_table_t* ttf_write(ttf_t*ttf)
 	writeBlock(file, zero, (-t->len)&3); //pad
     }
     U32 checksum = 0xb1b0afba - ttf_table_checksum(file);
+    if(checksum_adjust)
+	*checksum_adjust = checksum;
     U8*checksum2 = file->data + head_pos + 8;
     checksum2[0] = checksum>>24;
     checksum2[1] = checksum>>16;
@@ -1865,9 +2020,125 @@ ttf_table_t* ttf_write(ttf_t*ttf)
     checksum2[3] = checksum>>0;
     return file;
 }
+
+ttf_table_t* ttf_eot_head(ttf_t*ttf)
+{
+    ttf_table_t*file = ttf_table_new(0);
+    writeU32(file, 0); //file size (filled in later)
+    writeU32(file, 0); //fontdatasize (filled in later)
+    writeU32(file, 0x01000200);
+    writeU32(file, 0); //flags
+    writeU8(file, ttf->os2->panose_FamilyType);
+    writeU8(file, ttf->os2->panose_SerifStyle);
+    writeU8(file, ttf->os2->panose_Weight);
+    writeU8(file, ttf->os2->panose_Proportion);
+    writeU8(file, ttf->os2->panose_Contrast);
+    writeU8(file, ttf->os2->panose_StrokeVariation);
+    writeU8(file, ttf->os2->panose_ArmStyle);
+    writeU8(file, ttf->os2->panose_Letterform);
+    writeU8(file, ttf->os2->panose_Midline);
+    writeU8(file, ttf->os2->panose_XHeight);
+    writeU8(file, 1); //charset (default)
+    writeU8(file, ttf->os2->fsSelection&1); //italic
+    writeU32_LE(file, ttf->os2->usWeightClass);
+    writeU16(file, 0); //fstype
+    writeU16(file, 0x4c50); //magic
+    writeU32_LE(file, ttf->os2->ulCharRange[0]);
+    writeU32_LE(file, ttf->os2->ulCharRange[1]);
+    writeU32_LE(file, ttf->os2->ulCharRange[2]);
+    writeU32_LE(file, ttf->os2->ulCharRange[3]);
+    writeU32_LE(file, ttf->os2->ulCodePageRange1);
+    writeU32_LE(file, ttf->os2->ulCodePageRange2);
+    writeU32(file, 0); //checksum adjust (filled in later)
+    writeU32(file, 0); //reserved[0]
+    writeU32(file, 0); //reserved[1]
+    writeU32(file, 0); //reserved[2]
+    writeU32(file, 0); //reserved[3]
+    writeU16(file, 0); //padding(1)
+
+    int t,len;
+
+    //family name
+    len = strlen(ttf->family_name);
+    writeU16_LE(file, len*2);
+    for(t=0;t<len;t++) {
+	writeU8(file, 0);
+	writeU8(file, ttf->family_name[t]);
+    }
+    writeU16(file, 0); //zero byte pad
+
+    //subfamily name
+    len = strlen(ttf->subfamily_name);
+    writeU16_LE(file, len*2);
+    for(t=0;t<len;t++) {
+	writeU8(file, 0);
+	writeU8(file, ttf->subfamily_name[t]);
+    }
+    writeU16(file, 0); //zero byte pad
+
+    //version string
+    len = strlen(ttf->version_string);
+    writeU16_LE(file, len*2); //len
+    for(t=0;t<len;t++) {
+	writeU8(file, 0);
+	writeU8(file, ttf->version_string[t]);
+    }
+    writeU16(file, 0); //zero byte pad
+
+    //full name
+    len = strlen(ttf->full_name);
+    writeU16_LE(file, len*2); //len
+    for(t=0;t<len;t++) {
+	writeU8(file, 0);
+	writeU8(file, ttf->full_name[t]);
+    }
+    writeU16(file, 0); //zero byte pad
+
+    writeU16(file, 0); //padding(2)
+    return file;
+}
+
+void ttf_save_eot(ttf_t*ttf, const char*filename)
+{
+    ttf_table_t* eot = ttf_eot_head(ttf);
+    U32 checksum_adjust = 0;
+    ttf_table_t* t = ttf_write(ttf, &checksum_adjust);
+
+    U8*len_data = eot->data;
+    U32 full_len = eot->len + t->len;
+    len_data[0] = full_len>>0;
+    len_data[1] = full_len>>8;
+    len_data[2] = full_len>>16;
+    len_data[3] = full_len>>24;
+    
+    U8*len_data2 = eot->data+4;
+    len_data2[0] = t->len>>0;
+    len_data2[1] = t->len>>8;
+    len_data2[2] = t->len>>16;
+    len_data2[3] = t->len>>24;
+
+    U8*checksum_data = eot->data + 60;
+    checksum_data[0] = checksum_adjust>>0;
+    checksum_data[1] = checksum_adjust>>8;
+    checksum_data[2] = checksum_adjust>>16;
+    checksum_data[3] = checksum_adjust>>24;
+
+    FILE*fi = fopen(filename, "wb");
+    if(!fi) {
+	perror(filename);
+	return;
+    }
+
+    fwrite(eot->data, eot->len, 1, fi);
+    fwrite(t->data, t->len, 1, fi);
+    fclose(fi);
+    ttf_table_delete(0, t);
+    ttf_table_delete(0, eot);
+}
+
 void ttf_save(ttf_t*ttf, const char*filename)
 {
-    ttf_table_t* t = ttf_write(ttf);
+    ttf_table_t* t = ttf_write(ttf, 0);
     FILE*fi = fopen(filename, "wb");
     if(!fi) {
 	perror(filename);
@@ -1877,6 +2148,7 @@ void ttf_save(ttf_t*ttf, const char*filename)
     fclose(fi);
     ttf_table_delete(0, t);
 }
+
 void ttf_dump(ttf_t*ttf)
 {
     msg("<notice> Truetype file version %08x%s", ttf->version, ttf->version == OPENTYPE?" (opentype)":"");
@@ -1939,12 +2211,18 @@ int main(int argn, const char*argv[])
 	return 1;
     }
     ttf_reduce(ttf);
-    ttf->name = strdup("testfont");
+    
+    ttf->full_name = strdup("Test-Normal");
+    ttf->family_name = strdup("Test");
+    ttf->subfamily_name = strdup("Normal");
+    ttf->version_string = strdup("Version 1.0");
+
     if(!ttf) return 1;
     memfile_close(m);
     //ttf_dump(ttf);
     //printf("os2 version: %04x (%d), maxp size: %d\n", 
 //	    ttf->os2->version, ttf->os2->size, ttf->maxp->size);
+    ttf_save_eot(ttf, "testfont.eot");
     ttf_save(ttf, "testfont.ttf");
     ttf_destroy(ttf);
     return 0;

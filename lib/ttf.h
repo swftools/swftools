@@ -146,7 +146,10 @@ typedef struct _table_post {
 } table_post_t;
 
 typedef struct _ttf {
-    char*name;
+    char*full_name;
+    char*family_name;
+    char*subfamily_name;
+    char*version_string;
 
     ttf_table_t*tables;
 
@@ -181,5 +184,6 @@ void ttf_create_truetype_tables(ttf_t*ttf);
 void ttf_dump(ttf_t*ttf);
 void ttf_destroy(ttf_t*ttf);
 void ttf_save(ttf_t*ttf, const char*filename);
+void ttf_save_eot(ttf_t*ttf, const char*filename);
 
 #endif
