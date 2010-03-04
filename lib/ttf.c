@@ -1529,7 +1529,7 @@ void name_write(ttf_t*ttf, ttf_table_t*table)
     
     for(t=0;t<nr;t++) {
 	if(strings[t])
-	    count++;
+	    count+=2;
     }
     writeU16(table, count); //count
 
@@ -1539,14 +1539,23 @@ void name_write(ttf_t*ttf, ttf_table_t*table)
     int offset = 0;
     for(t=0;t<nr;t++) { 
 	if(strings[t]) {
-	    writeU16(table, 1); //platform id
-	    writeU16(table, 0); //encoding id
-	    writeU16(table, 0); //language
-	    writeU16(table, codes[t]); //4: full name
+	    writeU16(table, 1); //platform id (mac)
+	    writeU16(table, 0); //encoding id (latin-1)
+	    writeU16(table, 0); //language (english)
+	    writeU16(table, codes[t]);
 	    int len = strlen(strings[t]);
 	    writeU16(table, len);
 	    writeU16(table, offset);
 	    offset += len;
+
+	    writeU16(table, 3); //platform id (windows)
+	    writeU16(table, 1); //encoding id (ucs-2)
+	    writeU16(table, 0x409); //language (US)
+	    writeU16(table, codes[t]);
+	    int len2 = len * 2;
+	    writeU16(table, len2);
+	    writeU16(table, offset);
+	    offset += len2;
 	}
     }
     table->data[offset_pos] = table->len>>8;
@@ -1556,6 +1565,11 @@ void name_write(ttf_t*ttf, ttf_table_t*table)
 	if(strings[t]) {
 	    int len = strlen(strings[t]);
 	    writeBlock(table, strings[t], len);
+	    int s;
+	    for(s=0;s<len;s++) {
+		writeU8(table, 0);
+		writeU8(table, strings[t][s]);
+	    }
 	}
     }
 }
