@@ -1465,6 +1465,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    if(xx>=x2) x2=(int)xx+1;
 	    if(yy>=y2) y2=(int)yy+1;
 	}
+	delete(path);path=0;
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
