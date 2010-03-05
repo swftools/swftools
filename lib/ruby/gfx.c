@@ -625,7 +625,8 @@ void rb_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
     HEAD
     volatile VALUE v_line = convert_line(line);
     volatile VALUE v_action = rb_tainted_str_new2(action);
-    forward(v, id_drawlink, v_line, v_action);
+
+    forward(v, id_drawlink, 2, v_line, v_action);
 }
 void rb_endpage(gfxdevice_t*dev)
 {
