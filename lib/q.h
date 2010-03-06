@@ -152,6 +152,7 @@ float medianf(float*values, int n);
 
 unsigned int crc32_add_byte(unsigned int crc32, unsigned char b);
 unsigned int crc32_add_string(unsigned int crc32, const char*s);
+unsigned int crc32_add_bytes(unsigned int checksum, const void*s, int len);
 
 void mem_init(mem_t*mem);
 int mem_put(mem_t*m, void*data, int length);

@@ -158,22 +158,27 @@ readers/image.$(O): readers/image.c readers/image.h
 	$(C) readers/image.c -o readers/image.$(O)
 
 libocr$(A): $(ocr_objects) devices/ocr.$(O)
+	rm -f libocr$(A)
 	$(AR) r libocr$(A) $(ocr_objects) devices/ocr.$(O)
 	$(RANLIB) libocr$(A)
 
 libbase$(A): $(base_objects) Makefile
+	rm -f libbase$(A)
 	$(AR) r libbase$(A) $(base_objects)
 	$(RANLIB) libbase$(A)
 
 libgfxswf$(A): devices/swf.$(O) readers/swf2.$(O) readers/image.$(O)
+	rm -f libgfxswf$(A)
 	$(AR) r libgfxswf$(A) devices/swf.$(O) readers/swf2.$(O) readers/image.$(O)
 	$(RANLIB) libgfxswf$(A)
 
 libgfx$(A): $(gfx_objects) $(gfxpoly_objects) Makefile
+	rm -f libgfx$(A)
 	$(AR) r libgfx$(A) $(gfx_objects) $(gfxpoly_objects)
 	$(RANLIB) libgfx$(A)
 
 librfxswf$(A): Makefile $(rfxswf_objects) rfxswf.$(O) drawer.$(O) $(lame_in_source) $(h263_objects) $(as12compiler_in_source) $(as3compiler_objects) Makefile
+	rm -f librfxswf$(A)
 	$(AR) r librfxswf$(A) $(rfxswf_objects) rfxswf.$(O) drawer.$(O) $(lame_in_source) $(h263_objects) $(as12compiler_in_source) $(as3compiler_objects)
 	$(RANLIB) librfxswf$(A)
 

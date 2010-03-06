@@ -688,6 +688,18 @@ unsigned int crc32_add_string(unsigned int checksum, const char*s)
     }
     return checksum;
 }
+unsigned int crc32_add_bytes(unsigned int checksum, const void*_s, int len)
+{
+    unsigned char*s = (unsigned char*)_s;
+    crc32_init();
+    if(!s || !len)
+        return checksum;
+    do {
+        checksum = checksum>>8 ^ crc32[(*s^checksum)&0xff];
+        s++;
+    } while(--len);
+    return checksum;
+}
 
 unsigned int string_hash(const string_t*str)
 {
