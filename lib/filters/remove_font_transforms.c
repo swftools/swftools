@@ -44,6 +44,7 @@ void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
     memset(f, 0, sizeof(gfxtwopassfilter_t));
+    f->type = gfxfilter_twopass;
     f->pass1.name = "remove font transforms pass 1";
     f->pass1.drawchar = pass1_drawchar;
     f->pass1.internal = i;

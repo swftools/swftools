@@ -28,10 +28,19 @@
 extern "C" {
 #endif
 
+typedef enum {gfxfilter_none, gfxfilter_onepass, gfxfilter_twopass} gfxfiltertype_t;
+
+typedef struct _gfxfilterbase
+{
+    gfxfiltertype_t type;
+} gfxfilterbase_t;
+
 typedef struct _gfxfilter
 {
+    gfxfiltertype_t type;
     int num_passes;
     const char*name;
+
     int pass;
 
     int (*setparameter)(struct _gfxfilter*in, const char*key, const char*value, struct _gfxdevice*out);
@@ -55,12 +64,22 @@ typedef struct _gfxfilter
 
 typedef struct _gfxtwopassfilter
 {
+    gfxfiltertype_t type;
     gfxfilter_t pass1;
     gfxfilter_t pass2;
 } gfxtwopassfilter_t;
 
 gfxdevice_t*gfxfilter_apply(gfxfilter_t*filter, gfxdevice_t*dev);
 gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*filter, gfxdevice_t*dev);
+
+typedef struct _gfxfilterchain {
+    gfxfilterbase_t*filter;
+    struct _gfxfilterchain*next;
+} gfxfilterchain_t;
+
+gfxfilterchain_t* gfxfilterchain_parse(const char*filterexpr);
+gfxdevice_t* gfxfilterchain_apply(gfxfilterchain_t*chain, gfxdevice_t*dev);
+void gfxfilterchain_destroy(gfxfilterchain_t*chain);
 
 #define wrap_filter(dev, name, args...) \
     {gfxfilter_t f_##name; \
@@ -77,8 +96,8 @@ gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*filter, gfxdevice_t*dev);
 /* known filters */
 void gfxfilter_maketransparent_init(gfxfilter_t*f, U8 alpha);
 void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f);
+void gfxtwopassfilter_one_big_font_init(gfxtwopassfilter_t*f);
 
-void check_filter();
 
 #ifdef __cplusplus
 }

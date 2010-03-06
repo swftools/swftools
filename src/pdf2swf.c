@@ -72,6 +72,8 @@ static int max_time = 0;
 
 static int flatten = 0;
 
+static char* filters = 0;
+
 char* fontpaths[256];
 int fontpathpos = 0;
 
@@ -335,6 +337,20 @@ int args_callback_option(char*name,char*val) {
 	store_parameter("extrafontdata", "1");
 	return 0;
     }
+    else if (!strcmp(name, "ff"))
+    {
+	if(filters) {
+	    // append this to the current filter expression (we allow more than one --filter)
+	    int l = strlen(filters);
+	    int new_len = l + strlen(val) + 2;
+	    filters = (char*)realloc(filters, new_len);
+	    filters[l] = ':';
+	    strcpy(filters+l+1, val);
+	} else {
+	    filters = strdup(val);
+	}
+	return 1;
+    }
     else if (!strcmp(name, "w"))
     {
 	store_parameter("linksopennewwindow", "0");
@@ -455,6 +471,7 @@ static struct options_t options[] = {
 {"t", "stop"},
 {"T", "flashversion"},
 {"F", "fontdir"},
+{"ff", "filter"},
 {"b", "defaultviewer"},
 {"l", "defaultloader"},
 {"B", "viewer"},
@@ -587,6 +604,16 @@ gfxdevice_t*create_output_device()
     if(maxwidth || maxheight) {
         gfxdevice_rescale_init(&rescale, out, maxwidth, maxheight, 0);
         out = &rescale;
+    }
+
+    if(filters) {
+	gfxfilterchain_t*chain = gfxfilterchain_parse(filters);
+	if(!chain) {
+	    fprintf(stderr, "Unable to parse filters: %s\n", filters);
+	    exit(1);
+	}
+	out = gfxfilterchain_apply(chain, out);
+	gfxfilterchain_destroy(chain);
     }
 
     /* pass global parameters to output device */
@@ -887,6 +914,9 @@ int main(int argn, char *argv[])
 	if(p->value) free((void*)p->value);p->value =0;
 	p->next = 0;free(p);
 	p = next;
+    }
+    if(filters) {
+	free(filters);
     }
 
     return 0;

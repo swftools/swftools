@@ -25,6 +25,7 @@
 #include "mem.h"
 #include "gfxfilter.h"
 #include "devices/record.h"
+#include "q.h"
 
 typedef struct _internal {
     gfxfilter_t*filter;
@@ -304,7 +305,7 @@ static gfxresult_t* twopass_finish(gfxdevice_t*dev)
     }
 
     i->pass++;
-    gfxresult_record_replay(r, i->out);
+    gfxresult_record_replay(r, dev);
     r->destroy(r);
 
     return twopass_finish(dev);
@@ -335,3 +336,103 @@ gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*_twopass, gfxdevice_t*out)
     return dev;
 }
 
+gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
+{
+    char*filterexpr = strdup(_filterexpr);    
+    char*f = filterexpr;
+    char*end = filterexpr+strlen(filterexpr);
+    dict_t* params = dict_new2(&charptr_type);
+    char*cmd = 0;
+
+    gfxfilterchain_t*chain = 0;
+    gfxfilterchain_t*next = 0;
+
+    if(!*f)
+	return 0;
+
+    while(1) {
+	char* eq = strchr(f, '=');
+	char* colon = strchr(f, ':');
+	char lastitem = 0;
+	if(!colon) {
+	    colon = end;
+	    lastitem = 1;
+	}
+	*colon = 0;
+	char*newcmd = 0;
+	char param = 0;
+
+	/* fixme: change this from a dict_t to gfxparams_t? */
+	if(eq && eq < colon) { // parameter
+	    *eq = 0;
+	    if(!cmd) {
+		fprintf(stderr, "Error: need a filter before specifying parameters (%s=%s)\n", f, eq+1);
+		return 0;
+	    }
+	    dict_put(params, f, strdup(eq+1));
+	    param = 1;
+	} else {
+	    newcmd = f;
+	}
+	if(!param || lastitem) {
+	    if(!cmd && lastitem) 
+		cmd = newcmd;
+	    gfxfilterbase_t*f = 0;
+	    if(!strcmp(cmd, "maketransparent")) {
+		char*alphastr = dict_lookup(params, "alpha");
+		int alpha = 255;
+		if(alphastr) alpha=atoi(alphastr);
+		f = malloc(sizeof(gfxfilter_t));
+		gfxfilter_maketransparent_init((gfxfilter_t*)f, alpha);
+	    } else if(!strcmp(cmd, "remove_font_transforms")) {
+		f = malloc(sizeof(gfxtwopassfilter_t));
+		gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
+	    } else if(!strcmp(cmd, "one_big_font")) {
+		f = malloc(sizeof(gfxtwopassfilter_t));
+		gfxtwopassfilter_one_big_font_init((gfxtwopassfilter_t*)f);
+	    } else {
+		fprintf(stderr, "Unknown filter: %s\n", cmd);
+		return 0;
+	    }
+	    dict_clear(params);
+	    gfxfilterchain_t*n = rfx_calloc(sizeof(gfxfilterchain_t));
+	    if(!chain) {
+		chain = next = n;
+	    } else {
+		next->next = n;
+		next = n;
+	    }
+	    n->filter = f;
+
+	    cmd = newcmd;
+	    if(lastitem) break;
+	}
+	f = colon+1;
+    }
+    dict_destroy(params);
+    return chain;
+}
+
+gfxdevice_t* gfxfilterchain_apply(gfxfilterchain_t*chain, gfxdevice_t*dev)
+{
+    while(chain) {
+	if(chain->filter->type == gfxfilter_onepass) {
+	    dev = gfxfilter_apply((gfxfilter_t*)chain->filter, dev);
+	} else if(chain->filter->type == gfxfilter_twopass) {
+	    dev = gfxtwopassfilter_apply((gfxtwopassfilter_t*)chain->filter, dev);
+	} else {
+	    fprintf(stderr, "Internal error in gfxfilterchain_apply- unknown filter type %d\n", chain->filter->type);
+	}
+	chain = chain->next;
+    }
+    return dev;
+}
+
+void gfxfilterchain_destroy(gfxfilterchain_t*chain)
+{
+    while(chain) {
+	gfxfilterchain_t*next = chain->next;
+	free(chain);
+	chain = next;
+    }
+}

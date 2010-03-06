@@ -105,6 +105,7 @@ void gfxfilter_maketransparent_init(gfxfilter_t*f, U8 alpha)
     i->alpha = alpha;
 
     memset(f, 0, sizeof(gfxfilter_t));
+    f->type = gfxfilter_onepass;
     f->name = "maketransparent";
     f->internal = i;
     f->stroke = maketransparent_stroke;
