@@ -78,6 +78,8 @@ FontInfo::FontInfo(char*id)
     this->lasty = 0;
     this->gfxfont = 0;
     this->space_char = -1;
+    this->ascender = 0;
+    this->descender = 0;
 }
 FontInfo::~FontInfo()
 {
@@ -134,8 +136,7 @@ static int addSpace(gfxfont_t*font)
     gfxglyph_t*g = &font->glyphs[font->num_glyphs-1];
     memset(g, 0, sizeof(*g));
     g->unicode = 32;
-    //g->advance = font->ascent;
-    g->advance = fabs(font->ascent - font->descent)*2 / 3;
+    g->advance = fabs(font->ascent + font->descent)*2 / 3;
     if(font->max_unicode > 32)
 	font->unicode2glyph[32] = font->num_glyphs-1;
 #if 0
@@ -281,7 +282,7 @@ gfxfont_t* FontInfo::getGfxFont()
 		    this->gfxfont->glyphs[this->space_char].unicode);
 	} else if(config_addspace) {
 	    this->space_char = addSpace(this->gfxfont);
-	    msg("<debug> Appending space char to font %s, position %d", this->gfxfont->id, this->space_char);
+	    msg("<debug> Appending space char to font %s, position %d, width %f", this->gfxfont->id, this->space_char, this->gfxfont->glyphs[this->space_char].advance);
 	}
     }
     return this->gfxfont;
@@ -498,6 +499,7 @@ GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 	currentglyph->y1=0;
 	currentglyph->x2=dx;
 	currentglyph->y2=dy;
+	currentglyph->advance=dx;
 	return gFalse;
     } else {
 	return gTrue;
@@ -514,6 +516,11 @@ void InfoOutputDev::type3D0(GfxState *state, double wx, double wy)
 
 void InfoOutputDev::type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury)
 {
+    if(-lly>currentfont->descender)
+	currentfont->descender = -lly;
+    if(ury>currentfont->ascender)
+	currentfont->ascender = ury;
+
     currentglyph->x1=llx;
     currentglyph->y1=lly;
     currentglyph->x2=urx;
