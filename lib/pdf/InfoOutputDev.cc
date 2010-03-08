@@ -207,7 +207,6 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	    if(src->glyphs[t]->advance>0) {
 		glyph->advance = src->glyphs[t]->advance;
 	    } else {
-		msg("<warning> Approximating advance value for glyph %d", t);
 		glyph->advance = xmax*scale;
 	    }
 	    if(config_bigchar) {

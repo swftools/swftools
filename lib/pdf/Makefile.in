@@ -155,7 +155,7 @@ xpdf/%.$(O): xpdf/%.cc
 
 
 ../libgfxpdf$(A): $(XPDFOK) $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source)
-	rm -f ../librfxswf$(A)
+	rm -f ../libgfxpdf$(A)
 	$(AR) r ../libgfxpdf$(A) $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source)
 	$(RANLIB) ../libgfxpdf$(A)
 
