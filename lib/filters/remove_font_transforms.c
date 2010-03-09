@@ -31,7 +31,6 @@
 typedef struct _mymatrix {
     float m00,m01,m10,m11;
     char*id;
-    double size; // not hashed
 } mymatrix_t;
 
 static void* mymatrix_clone(const void*_m) {
@@ -52,6 +51,7 @@ static unsigned int mymatrix_hash(const void*_m) {
     h = crc32_add_bytes(h, (char*)&m->m01, sizeof(m->m01));
     h = crc32_add_bytes(h, (char*)&m->m10, sizeof(m->m10));
     h = crc32_add_bytes(h, (char*)&m->m11, sizeof(m->m11));
+    h = crc32_add_string(h, m->id);
     return h;
 }
 static void mymatrix_destroy(void*_m) {
@@ -74,7 +74,8 @@ static char mymatrix_equals(const void*_m1, const void*_m2) {
     return *(U32*)&m1->m00 == *(U32*)&m2->m00 &&
            *(U32*)&m1->m01 == *(U32*)&m2->m01 &&
            *(U32*)&m1->m10 == *(U32*)&m2->m10 &&
-           *(U32*)&m1->m11 == *(U32*)&m2->m11;
+           *(U32*)&m1->m11 == *(U32*)&m2->m11 &&
+	   !strcmp(m1->id, m2->id);
 }
 type_t mymatrix_type = {
     dup: mymatrix_clone,
@@ -91,15 +92,15 @@ typedef struct _internal {
 
 #ifdef __GNUC__
 void __attribute__((noinline)) 
-     matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out)
+     matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix)
 #else
-void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out)
+void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix)
 #endif
 {
     double l1 = sqrt(in->m00 * in->m00 + in->m01 * in->m01);
     double l2 = sqrt(in->m10 * in->m10 + in->m11 * in->m11);
     double l = l1+l2;
-    if(l < 1e-20) {
+    if(l < 1e-10) {
 	memset(out, 0, sizeof(*out));
 	return;
     }
@@ -108,7 +109,15 @@ void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out)
     out->m10 = in->m10 / l;
     out->m11 = in->m11 / l;
     out->id = (char*)id;
-    out->size = l;
+
+    if(scalematrix) {
+	scalematrix->m00 = l;
+	scalematrix->m01 = 0;
+	scalematrix->m10 = 0;
+	scalematrix->m11 = l;
+	scalematrix->tx = in->tx;
+	scalematrix->ty = in->ty;
+    }
 }
 
 typedef struct _matrixdata {
@@ -135,7 +144,7 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
 {
     internal_t*i = (internal_t*)f->internal;
     mymatrix_t m;
-    matrix_convert(matrix, font->id, &m);
+    matrix_convert(matrix, font->id, &m, 0);
     transformedfont_t*fd = dict_lookup(i->matrices, &m);
     if(!fd) {
 	fd = transformedfont_new(font, &m);
@@ -143,6 +152,21 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     }
     fd->used[glyphnr]=1;
     out->drawchar(out, font, glyphnr, color, matrix);
+}
+
+static void glyph_transform(gfxglyph_t*g, mymatrix_t*mm)
+{
+    gfxmatrix_t m;
+    m.m00 = mm->m00;
+    m.m01 = mm->m01;
+    m.m10 = mm->m10;
+    m.m11 = mm->m11;
+    m.tx = 0;
+    m.ty = 0;
+    gfxline_transform(g->line, &m);
+    g->advance *= m.m00;
+    if(g->advance<0) 
+	g->advance = 0;
 }
 
 static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
@@ -157,7 +181,8 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	int t;
 	int count=0;
 	for(t=0;t<fd->orig->num_glyphs;t++) {
-	    if(fd->used[t]) count++;
+	    if(fd->used[t]) 
+		count++;
 	}
 	font->num_glyphs = count;
 	font->glyphs = rfx_calloc(sizeof(gfxglyph_t)*font->num_glyphs);
@@ -165,6 +190,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	for(t=0;t<fd->orig->num_glyphs;t++) {
 	    if(fd->used[t]) {
 		font->glyphs[count] = fd->orig->glyphs[t];
+		glyph_transform(&font->glyphs[count], &fd->matrix);
 		fd->used[t] = count;
 		count++;
 	    }
@@ -186,9 +212,10 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     }
 
     mymatrix_t m;
-    matrix_convert(matrix, font->id, &m);
+    gfxmatrix_t scalematrix;
+    matrix_convert(matrix, font->id, &m, &scalematrix);
     transformedfont_t*d = dict_lookup(i->matrices, &m);
-    out->drawchar(out, d->font, d->used[glyphnr], color, matrix);
+    out->drawchar(out, d->font, d->used[glyphnr], color, &scalematrix);
 }
 
 void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)

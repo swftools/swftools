@@ -460,6 +460,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 	    }
 	    case OP_ENDPAGE: {
 		msg("<trace> replay: ENDPAGE");
+		out->endpage(out);
 		break;
 	    }
 	    case OP_FINISH: {

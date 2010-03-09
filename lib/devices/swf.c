@@ -956,6 +956,7 @@ static void endpage(gfxdevice_t*dev)
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
     if(i->pagefinished)
 	return;
+    
     if(i->shapeid>=0)
 	endshape(dev);
     if(i->textmode)
