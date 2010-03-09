@@ -767,6 +767,7 @@ void Init_gfx()
     imagedriver = gfxsource_image_create();
 
     GFX = rb_define_module("GFX");
+    rb_define_const(GFX, "VERSION", FIX2INT(20100309));
     
     rb_define_module_function(GFX, "setparameter", gfx_setparameter, 2);
     
