@@ -166,6 +166,8 @@ static void glyph_transform(gfxglyph_t*g, mymatrix_t*mm)
     m.ty = 0;
     g->line = gfxline_clone(g->line);
     gfxline_transform(g->line, &m);
+    if(m.m00>0)
+	g->advance *= m.m00;
 }
 
 static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
@@ -203,8 +205,6 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    gfxline_t*line = font->glyphs[t].line;
 	    gfxbbox_t b = gfxline_getbbox(line);
 	    total = gfxbbox_expand_to_bbox(total, b);
-	    if(b.xmax > 0)
-		font->glyphs[t].advance = b.xmax;
 	}
 	if(count) 
 	    average_xmax /= count;
@@ -212,11 +212,8 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	fd->dx = -total.xmin;
 	fd->dy = 0;
 
-	double adx = fd->dx>0?fd->dx:0;
-	
 	for(t=0;t<count;t++) {
 	    gfxline_t*line = font->glyphs[t].line;
-	    font->glyphs[t].advance += adx;
 	    while(line) {
 		line->x += fd->dx;
 		line->y += fd->dy;
