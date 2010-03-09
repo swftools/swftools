@@ -203,17 +203,20 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    gfxline_t*line = font->glyphs[t].line;
 	    gfxbbox_t b = gfxline_getbbox(line);
 	    total = gfxbbox_expand_to_bbox(total, b);
-	    font->glyphs[t].advance = b.xmax;
+	    if(b.xmax > 0)
+		font->glyphs[t].advance = b.xmax;
 	}
 	if(count) 
 	    average_xmax /= count;
 
 	fd->dx = -total.xmin;
 	fd->dy = 0;
+
+	double adx = fd->dx>0?fd->dx:0;
 	
 	for(t=0;t<count;t++) {
 	    gfxline_t*line = font->glyphs[t].line;
-	    font->glyphs[t].advance += fd->dx;
+	    font->glyphs[t].advance += adx;
 	    while(line) {
 		line->x += fd->dx;
 		line->y += fd->dy;
