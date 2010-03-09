@@ -94,6 +94,7 @@ void* gfxfontlist_getuserdata(gfxfontlist_t*list, const char*id);
 void gfxfontlist_free(gfxfontlist_t*list, char deletefonts);
 
 gfxbbox_t* gfxline_isrectangle(gfxline_t*_l);
+gfxbbox_t gfxbbox_expand_to_bbox(gfxbbox_t box, gfxbbox_t box2);
 
 gfxline_t*gfxline_makerectangle(double x1, double y1, double x2, double y2);
 gfxline_t*gfxline_makecircle(double x,double y,double rx, double ry);

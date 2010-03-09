@@ -105,16 +105,16 @@ void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*s
 	return;
     }
     out->m00 = in->m00 / l;
-    out->m01 = in->m01 / l;
     out->m10 = in->m10 / l;
-    out->m11 = in->m11 / l;
+    out->m01 = -in->m01 / l;
+    out->m11 = -in->m11 / l;
     out->id = (char*)id;
 
     if(scalematrix) {
 	scalematrix->m00 = l;
 	scalematrix->m01 = 0;
 	scalematrix->m10 = 0;
-	scalematrix->m11 = l;
+	scalematrix->m11 = -l;
 	scalematrix->tx = in->tx;
 	scalematrix->ty = in->ty;
     }
@@ -129,6 +129,7 @@ typedef struct _transformedfont {
     gfxfont_t*font;
     mymatrix_t matrix;
     int*used;
+    double dx,dy;
 } transformedfont_t;
 
 static transformedfont_t* transformedfont_new(gfxfont_t*orig, mymatrix_t*m)
@@ -163,10 +164,8 @@ static void glyph_transform(gfxglyph_t*g, mymatrix_t*mm)
     m.m11 = mm->m11;
     m.tx = 0;
     m.ty = 0;
+    g->line = gfxline_clone(g->line);
     gfxline_transform(g->line, &m);
-    g->advance *= m.m00;
-    if(g->advance<0) 
-	g->advance = 0;
 }
 
 static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
@@ -195,6 +194,34 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 		count++;
 	    }
 	}
+
+	/* adjust the origin so that every character is to the
+	   right of the origin */
+	gfxbbox_t total = {0,0,0,0};
+	double average_xmax = 0;
+	for(t=0;t<count;t++) {
+	    gfxline_t*line = font->glyphs[t].line;
+	    gfxbbox_t b = gfxline_getbbox(line);
+	    total = gfxbbox_expand_to_bbox(total, b);
+	    font->glyphs[t].advance = b.xmax;
+	}
+	if(count) 
+	    average_xmax /= count;
+
+	fd->dx = -total.xmin;
+	fd->dy = 0;
+	
+	for(t=0;t<count;t++) {
+	    gfxline_t*line = font->glyphs[t].line;
+	    font->glyphs[t].advance += fd->dx;
+	    while(line) {
+		line->x += fd->dx;
+		line->y += fd->dy;
+		line->sx += fd->dx;
+		line->sy += fd->dy;
+		line = line->next;
+	    }
+	}
 	gfxfont_fix_unicode(font);
     }
     return out->finish(out);
@@ -215,6 +242,8 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     gfxmatrix_t scalematrix;
     matrix_convert(matrix, font->id, &m, &scalematrix);
     transformedfont_t*d = dict_lookup(i->matrices, &m);
+    scalematrix.tx -= d->dx;
+    scalematrix.ty -= d->dy;
     out->drawchar(out, d->font, d->used[glyphnr], color, &scalematrix);
 }
 
