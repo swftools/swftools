@@ -212,6 +212,9 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	fd->dx = -total.xmin;
 	fd->dy = 0;
 
+	font->ascent = total.ymax;
+	font->descent = total.ymin;
+
 	for(t=0;t<count;t++) {
 	    gfxline_t*line = font->glyphs[t].line;
 	    while(line) {

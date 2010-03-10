@@ -695,14 +695,17 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    }
 	}
     }
+	
     ttf->ascent = font->ascent;
     ttf->descent = font->descent;
-    ttf->lineGap = font->ascent + font->descent;
+    ttf->lineGap = font->ascent - font->descent;
 
     ttf->full_name = strdup(font->id);
     ttf->family_name = strdup(font->id);
     ttf->subfamily_name = strdup(font->id);
+    ttf->postscript_name = strdup(font->id);
     ttf->version_string = strdup("Version 1.0");
+    ttf->font_uid = strdup(font->id);
 
     ttf_create_truetype_tables(ttf);
     return ttf;

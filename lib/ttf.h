@@ -146,10 +146,12 @@ typedef struct _table_post {
 } table_post_t;
 
 typedef struct _ttf {
-    char*full_name;
-    char*family_name;
-    char*subfamily_name;
-    char*version_string;
+    char*family_name;     /* nameId 1 */
+    char*subfamily_name;  /* nameId 2 */
+    char*font_uid;        /* nameId 3 */
+    char*full_name;       /* nameId 4 */
+    char*version_string;  /* nameId 5 */
+    char*postscript_name; /* nameId 6 */
 
     ttf_table_t*tables;
 

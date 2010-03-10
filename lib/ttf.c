@@ -736,7 +736,7 @@ static table_hea_t*hea_new(ttf_t*ttf)
 	    if(width > hea->xMaxExtent)
 		hea->xMaxExtent = width;
 	}
-	/* TODO: caret */
+	hea->caretSlopeRise = 1;
     }
     return hea;
 }
@@ -1512,34 +1512,34 @@ void name_parse(memreader_t*r, ttf_t*ttf)
 	U16 len = readU16(r);
 	U16 offset_2 = readU16(r);
 
+	char ** read_name = 0;
+
 	INIT_READ(ss, r->mem, r->size, offset+offset_2);
 	if(!(platform==0 || (platform==1 && encoding==0)))
 		continue;
 
 	INIT_READ(s, r->mem, r->size, offset+offset_2);
 
-	if(name_id==1) {
-	    if(ttf->family_name) free(ttf->family_name);
-	    ttf->family_name = readString(&s, len);
+	switch (name_id) {
+	    case 1: read_name = &ttf->family_name; break;
+	    case 2: read_name = &ttf->subfamily_name; break;
+	    case 3: read_name = &ttf->font_uid; break;
+	    case 4: read_name = &ttf->full_name; break;
+	    case 5: read_name = &ttf->version_string; break;
+	    case 6: read_name = &ttf->postscript_name; break;
+	    default: read_name = 0;
 	}
-	if(name_id==2) {
-	    if(ttf->subfamily_name) free(ttf->subfamily_name);
-	    ttf->subfamily_name = readString(&s, len);
-	}
-	if(name_id==3) {
-	    if(ttf->version_string) free(ttf->version_string);
-	    ttf->version_string = readString(&s, len);
-	}
-	if(name_id==4) {
-	    if(ttf->full_name) free(ttf->full_name);
-	    ttf->full_name = readString(&s, len);
+
+	if (read_name) {
+	    if (*read_name) free(*read_name);
+	    *read_name = readString(&s, len);
 	}
     }
 }
 void name_write(ttf_t*ttf, ttf_table_t*table)
 {
-    char*strings[4] = {ttf->family_name, ttf->subfamily_name, ttf->version_string, ttf->full_name};
-    int codes[4] = {1,2,3,4};
+    char*strings[6] = {ttf->family_name, ttf->subfamily_name, ttf->font_uid, ttf->full_name, ttf->version_string, ttf->postscript_name};
+    int codes[6] = {1,2,3,4,5,6};
 
     writeU16(table, 0); //format
     int count = 0;
@@ -1619,6 +1619,14 @@ void name_delete(ttf_t*ttf)
     if(ttf->version_string) {
 	free(ttf->version_string);
 	ttf->version_string=0;
+    }
+    if(ttf->font_uid) {
+	free(ttf->font_uid);
+	ttf->font_uid=0;
+    }
+    if(ttf->postscript_name) {
+	free(ttf->postscript_name);
+	ttf->postscript_name=0;
     }
 }
 
@@ -1818,7 +1826,7 @@ static void ttf_collapse_tables(ttf_t*ttf)
 	}
     }
 
-    if(ttf->full_name || ttf->family_name || ttf->subfamily_name) {
+    if(ttf->full_name || ttf->family_name || ttf->subfamily_name || ttf->font_uid || ttf->postscript_name) {
 	table = ttf_addtable(ttf, TAG_NAME);
 	name_write(ttf, table);
 	name_delete(ttf);
@@ -2100,42 +2108,24 @@ ttf_table_t* ttf_eot_head(ttf_t*ttf)
     writeU32(file, 0); //reserved[3]
     writeU16(file, 0); //padding(1)
 
-    int t,len;
+    int i,t,len;
 
-    //family name
-    len = strlen(ttf->family_name);
-    writeU16_LE(file, len*2);
-    for(t=0;t<len;t++) {
-	writeU8(file, 0);
-	writeU8(file, ttf->family_name[t]);
-    }
-    writeU16(file, 0); //zero byte pad
+    char* strings[] = {ttf->family_name, ttf->subfamily_name, ttf->version_string, ttf->full_name};
+    int nr = sizeof(strings)/sizeof(strings[0]);
 
-    //subfamily name
-    len = strlen(ttf->subfamily_name);
-    writeU16_LE(file, len*2);
-    for(t=0;t<len;t++) {
-	writeU8(file, 0);
-	writeU8(file, ttf->subfamily_name[t]);
-    }
-    writeU16(file, 0); //zero byte pad
+    for(i=0;i<nr;i++) {
+	char *string = strings[i];
 
-    //version string
-    len = strlen(ttf->version_string);
-    writeU16_LE(file, len*2); //len
-    for(t=0;t<len;t++) {
-	writeU8(file, 0);
-	writeU8(file, ttf->version_string[t]);
+	//family name
+	len = strlen(string);
+	writeU16_LE(file, len*2);
+	for(t=0;t<len;t++) {
+	    writeU8(file, 0);
+	    writeU8(file, string[t]);
+	}
+	writeU16(file, 0); //zero byte pad
     }
-    writeU16(file, 0); //zero byte pad
 
-    //full name
-    len = strlen(ttf->full_name);
-    writeU16_LE(file, len*2); //len
-    for(t=0;t<len;t++) {
-	writeU8(file, 0);
-	writeU8(file, ttf->full_name[t]);
-    }
     writeU16(file, 0); //zero byte pad
 
     writeU16(file, 0); //padding(2)
@@ -2261,6 +2251,8 @@ int main(int argn, const char*argv[])
     ttf->family_name = strdup("Test");
     ttf->subfamily_name = strdup("Normal");
     ttf->version_string = strdup("Version 1.0");
+    ttf->font_uid = strdup("omguid");
+    ttf->postscript_name = strdup("Test-psname");
 
     if(!ttf) return 1;
     memfile_close(m);
