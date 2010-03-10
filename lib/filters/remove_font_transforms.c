@@ -227,6 +227,12 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
     return out->finish(out);
 }
 
+static void pass2_addfont(gfxfilter_t*f, gfxfont_t*font, gfxdevice_t*out)
+{
+    /* we throw away original fonts, and do the addfont() for the transformed
+       fonts in the first drawchar() */
+}
+
 static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
