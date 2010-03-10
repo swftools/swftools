@@ -1739,9 +1739,21 @@ void gasp_delete(ttf_t*ttf)
     }
 }
 
-void fpgm_new(ttf_t*ttf)
+table_code_t*prep_new(ttf_t*ttf)
 {
-    table_code_t*fpgm = ttf->fpgm = rfx_calloc(sizeof(table_code_t));
+    table_code_t*prep = ttf->prep = rfx_calloc(sizeof(table_code_t));
+    ttf_table_t*t = ttf_table_new(0);
+    writeU8(t,0xb8);writeU16(t,0x1ff); // pushword(0x1ff)
+    writeU8(t,0x85); //scanctrl (always do dropout, for all sizes)
+    writeU8(t,0xb0);writeU8(t,1); // pushbyte(1)
+    writeU8(t,0x8d); //scantype (simple dropout control w/o stubs)
+    writeU8(t,0xb0);writeU8(t,5); // pushbyte(5)
+    writeU8(t,0x8d); //scantype (for windows) smart dropout control w/o stubs
+    prep->code = t->data;
+    prep->size = t->len;
+    free(t);
+    return prep;
+
 }
 void fpgm_parse(memreader_t*r, ttf_t*ttf)
 {
@@ -1994,6 +2006,16 @@ static void ttf_collapse_tables(ttf_t*ttf)
 	gasp_write(ttf, table);
 	gasp_delete(ttf);
     }
+    if(ttf->fpgm) {
+	table = ttf_addtable(ttf, TAG_FPGM);
+	fpgm_write(ttf, table);
+	fpgm_delete(ttf);
+    }
+    if(ttf->prep) {
+	table = ttf_addtable(ttf, TAG_PREP);
+	prep_write(ttf, table);
+	prep_delete(ttf);
+    }
 
     table = ttf_addtable(ttf, TAG_HEAD);
     head_write(ttf, table, loca_size);
@@ -2118,11 +2140,6 @@ ttf_t* ttf_load(void*data, int length)
 	U32 pos = table_data[t*4+2];
 	U32 len = table_data[t*4+3];
 	
-	printf("TTF Table %02x%02x%02x%02x %c%c%c%c\n", 
-		(tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff, 
-		(tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff
-		);
-
 	if(pos+len > length) {
 	    msg("<error> TTF Table %02x%02x%02x%02x outside of stream (pos %d)", (tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff, pos);
 	} else {
@@ -2165,8 +2182,8 @@ void ttf_create_truetype_tables(ttf_t*ttf)
 	ttf->post = post_new(ttf);
     if(!ttf->gasp)
 	ttf->gasp = gasp_new(ttf);
-    if(!ttf->fpgm)
-	ttf->fpgm = fpgm_new(ttf);
+    if(!ttf->prep)
+	ttf->prep = prep_new(ttf);
 }
 
 ttf_table_t* ttf_write(ttf_t*ttf, U32*checksum_adjust)
@@ -2415,12 +2432,7 @@ int main(int argn, const char*argv[])
     }
     ttf_reduce(ttf);
 
-    ttf->full_name = strdup("Test-Normal");
-    ttf->family_name = strdup("Test");
-    ttf->subfamily_name = strdup("Normal");
-    ttf->version_string = strdup("Version 1.0");
-    ttf->font_uid = strdup("omguid");
-    ttf->postscript_name = strdup("Test-psname");
+    ttf_create_truetype_tables(ttf);
 
     if(!ttf) return 1;
     memfile_close(m);
