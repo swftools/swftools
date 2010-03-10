@@ -690,7 +690,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    int g = font->unicode2glyph[u];
 	    if(invalid_unicode(u))
 		continue;
-	    if(g>=0 && !ttf->unicode[u]) {
+	    if(g>=0 && g<font->num_glyphs && !ttf->unicode[u]) {
 		ttf->unicode[u] = g+offset;
 	    }
 	}
