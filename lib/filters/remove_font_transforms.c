@@ -129,7 +129,7 @@ typedef struct _transformedfont {
     gfxfont_t*font;
     mymatrix_t matrix;
     int*used;
-    double dx,dy;
+    double dx;
 } transformedfont_t;
 
 static transformedfont_t* transformedfont_new(gfxfont_t*orig, mymatrix_t*m)
@@ -210,7 +210,6 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    average_xmax /= count;
 
 	fd->dx = -total.xmin;
-	fd->dy = 0;
 
 	font->ascent = total.ymax;
 	font->descent = total.ymin;
@@ -219,9 +218,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    gfxline_t*line = font->glyphs[t].line;
 	    while(line) {
 		line->x += fd->dx;
-		line->y += fd->dy;
 		line->sx += fd->dx;
-		line->sy += fd->dy;
 		line = line->next;
 	    }
 	}
@@ -251,8 +248,7 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     gfxmatrix_t scalematrix;
     matrix_convert(matrix, font->id, &m, &scalematrix);
     transformedfont_t*d = dict_lookup(i->matrices, &m);
-    scalematrix.tx -= d->dx;
-    scalematrix.ty -= d->dy;
+    scalematrix.tx -= d->dx*scalematrix.m00;
     out->drawchar(out, d->font, d->used[glyphnr], color, &scalematrix);
 }
 
