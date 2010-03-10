@@ -405,8 +405,8 @@ static table_os2_t*os2_new(ttf_t*ttf)
 	os2->ySuperscriptYOffset = (ttf->head->ymax - ttf->head->ymin)/2;
 	os2->yStrikeoutSize = ttf->head->units_per_em / 10;
 	os2->yStrikeoutPosition = ymid;
-	os2->usWinAscent = ttf->head->ymax>0?ttf->head->ymax:0;
-	os2->usWinDescent = ttf->head->ymin<0?-ttf->head->ymin:0;
+	os2->usWinAscent = ttf->ascent;
+	os2->usWinDescent = -ttf->descent;
 	os2->sxHeight = ymid;
 	os2->sCapHeight = height*2/3;
     }
