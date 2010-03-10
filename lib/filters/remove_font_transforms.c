@@ -266,6 +266,7 @@ void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)
     f->pass1.internal = i;
 
     f->pass2.name = "remove font transforms pass 2";
+    f->pass2.addfont = pass2_addfont;
     f->pass2.drawchar = pass2_drawchar;
     f->pass2.internal = i;
 
