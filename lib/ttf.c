@@ -49,13 +49,11 @@
 #define TAG_NAME 0x6e616d65
 #define TAG_POST 0x706f7374
 #define TAG_CFF  0x43464620 //required for opentype
+#define TAG_CVT  0x63767420 
+#define TAG_FPGM 0x6670676d 
+#define TAG_GASP 0x67617370 
+#define TAG_PREP 0x70726570 
 
-/* TODO:
-    fpgm - assembly instructions
-    prep - assembly instructions
-    cvt - constant value table
-    gasp - gridfitting procedure
-*/
 
 static U32 checksum_block(U8*_data, int len)
 {
@@ -1669,6 +1667,128 @@ void post_delete(ttf_t*ttf)
     }
 }
 
+void cvt_parse(memreader_t*r, ttf_t*ttf)
+{
+    table_cvt_t*cvt = ttf->cvt = rfx_calloc(sizeof(table_cvt_t));
+    cvt->num = r->size/2;
+    cvt->values = malloc(cvt->num*sizeof(S16));
+    int t;
+    for(t=0;t<cvt->num;t++) {
+	cvt->values[t] = readS16(r);
+    }
+}
+void cvt_write(ttf_t*ttf, ttf_table_t*table)
+{
+    table_cvt_t*cvt = ttf->cvt;
+    int t;
+    for(t=0;t<cvt->num;t++) {
+	writeS16(table, cvt->values[t]);
+    }
+}
+void cvt_delete(ttf_t*ttf)
+{
+    if(ttf->cvt) {
+	if(ttf->cvt->values) 
+	    free(ttf->cvt->values);
+	free(ttf->cvt);
+	ttf->cvt = 0;
+    }
+}
+
+static table_gasp_t*gasp_new(ttf_t*ttf)
+{
+    table_gasp_t*gasp = rfx_calloc(sizeof(table_gasp_t));
+    gasp->num = 1;
+    gasp->records = rfx_calloc(sizeof(gasp->records[0])*gasp->num);
+
+    gasp->records[0].size = 65535;
+    gasp->records[0].behaviour = 15; //gridfit+grayscale rendering
+    return gasp;
+}
+void gasp_parse(memreader_t*r, ttf_t*ttf)
+{
+    table_gasp_t*gasp = ttf->gasp = rfx_calloc(sizeof(table_gasp_t));
+    readU16(r); //version
+    int num = readU16(r);
+    int t;
+    if(!num) return;
+    gasp->records = malloc(sizeof(gasp->records[0])*num);
+    for(t=0;t<num;t++) {
+	gasp->records[t].size = readU16(r);
+	gasp->records[t].behaviour = readU16(r);
+    }
+}
+void gasp_write(ttf_t*ttf, ttf_table_t*table)
+{
+    table_gasp_t*gasp = ttf->gasp;
+    writeU16(table, 0);
+    writeU16(table, gasp->num);
+    int t;
+    for(t=0;t<gasp->num;t++) {
+	writeU16(table, gasp->records[t].size);
+	writeU16(table, gasp->records[t].behaviour);
+    }
+}
+void gasp_delete(ttf_t*ttf)
+{
+    if(ttf->gasp) {
+	if(ttf->gasp->records)
+	    free(ttf->gasp->records);
+	free(ttf->gasp);
+	ttf->gasp = 0;
+    }
+}
+
+void fpgm_new(ttf_t*ttf)
+{
+    table_code_t*fpgm = ttf->fpgm = rfx_calloc(sizeof(table_code_t));
+}
+void fpgm_parse(memreader_t*r, ttf_t*ttf)
+{
+    table_code_t*fpgm = ttf->fpgm  = rfx_calloc(sizeof(table_code_t));
+    if(!r->size) return;
+    fpgm->size = r->size;
+    fpgm->code = malloc(r->size);
+    readBlock(r, fpgm->code, r->size);
+}
+void fpgm_write(ttf_t*ttf, ttf_table_t*table)
+{
+    table_code_t*code = ttf->fpgm;
+    writeBlock(table, code->code, code->size);
+}
+void fpgm_delete(ttf_t*ttf)
+{
+    if(ttf->fpgm) {
+	if(ttf->fpgm->code)
+	    free(ttf->fpgm->code);
+	free(ttf->fpgm);
+	ttf->fpgm = 0;
+    }
+}
+
+void prep_parse(memreader_t*r, ttf_t*ttf)
+{
+    table_code_t*prep = ttf->prep  = rfx_calloc(sizeof(table_code_t));
+    if(!r->size) return;
+    prep->size = r->size;
+    prep->code = malloc(r->size);
+    readBlock(r, prep->code, r->size);
+}
+void prep_write(ttf_t*ttf, ttf_table_t*table)
+{
+    table_code_t*code = ttf->prep;
+    writeBlock(table, code->code, code->size);
+}
+void prep_delete(ttf_t*ttf)
+{
+    if(ttf->prep) {
+	if(ttf->prep->code)
+	    free(ttf->prep->code);
+	free(ttf->prep);
+	ttf->prep = 0;
+    }
+}
+
 static int ttf_parse_tables(ttf_t*ttf)
 {
     ttf_table_t*table;
@@ -1770,6 +1890,34 @@ static int ttf_parse_tables(ttf_t*ttf)
 	ttf_table_delete(ttf, table);
     }
 
+    table = ttf_find_table(ttf, TAG_CVT);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	cvt_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
+    
+    table = ttf_find_table(ttf, TAG_GASP);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	gasp_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
+    
+    table = ttf_find_table(ttf, TAG_PREP);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	prep_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
+    
+    table = ttf_find_table(ttf, TAG_FPGM);
+    if(table) {
+	INIT_READ(m, table->data, table->len, 0);
+	fpgm_parse(&m, ttf);
+	ttf_table_delete(ttf, table);
+    }
+
     return 1;
 }
 static void ttf_collapse_tables(ttf_t*ttf)
@@ -1835,6 +1983,16 @@ static void ttf_collapse_tables(ttf_t*ttf)
 	table = ttf_addtable(ttf, TAG_POST);
 	post_write(ttf, table);
 	post_delete(ttf);
+    }
+    if(ttf->cvt) {
+	table = ttf_addtable(ttf, TAG_CVT);
+	cvt_write(ttf, table);
+	cvt_delete(ttf);
+    }
+    if(ttf->gasp) {
+	table = ttf_addtable(ttf, TAG_GASP);
+	gasp_write(ttf, table);
+	gasp_delete(ttf);
     }
 
     table = ttf_addtable(ttf, TAG_HEAD);
@@ -1959,6 +2117,11 @@ ttf_t* ttf_load(void*data, int length)
 	U32 checksum = table_data[t*4+1];
 	U32 pos = table_data[t*4+2];
 	U32 len = table_data[t*4+3];
+	
+	printf("TTF Table %02x%02x%02x%02x %c%c%c%c\n", 
+		(tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff, 
+		(tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff
+		);
 
 	if(pos+len > length) {
 	    msg("<error> TTF Table %02x%02x%02x%02x outside of stream (pos %d)", (tag>>24)&0xff, (tag>>16)&0xff, (tag>>8)&0xff, (tag)&0xff, pos);
@@ -2000,6 +2163,10 @@ void ttf_create_truetype_tables(ttf_t*ttf)
 	ttf->os2 = os2_new(ttf);
     if(!ttf->post)
 	ttf->post = post_new(ttf);
+    if(!ttf->gasp)
+	ttf->gasp = gasp_new(ttf);
+    if(!ttf->fpgm)
+	ttf->fpgm = fpgm_new(ttf);
 }
 
 ttf_table_t* ttf_write(ttf_t*ttf, U32*checksum_adjust)
@@ -2226,6 +2393,7 @@ void ttf_destroy(ttf_t*ttf)
     hea_delete(ttf);
     glyf_delete(ttf);
     post_delete(ttf);
+    cvt_delete(ttf);
     name_delete(ttf);
     free(ttf);
 }

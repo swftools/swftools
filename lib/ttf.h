@@ -145,6 +145,24 @@ typedef struct _table_post {
     U16 underline_thickness;
 } table_post_t;
 
+typedef struct _table_cvt {
+    S16*values;
+    int num;
+} table_cvt_t;
+
+typedef struct _table_gasp {
+    int num;
+    struct {
+	U16 size;
+	U16 behaviour;
+    } *records;
+} table_gasp_t;
+
+typedef struct _table_code {
+    U8*code;
+    int size;
+} table_code_t;
+
 typedef struct _ttf {
     char*family_name;     /* nameId 1 */
     char*subfamily_name;  /* nameId 2 */
@@ -160,6 +178,10 @@ typedef struct _ttf {
     table_os2_t*os2;
     table_hea_t*hea;
     table_post_t*post;
+    table_cvt_t*cvt;
+    table_gasp_t*gasp;
+    table_code_t*prep;
+    table_code_t*fpgm;
 
     U16 flags;
     char is_vertical;
