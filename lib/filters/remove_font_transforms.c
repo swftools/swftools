@@ -99,7 +99,7 @@ void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*s
 {
     double l1 = sqrt(in->m00 * in->m00 + in->m01 * in->m01);
     double l2 = sqrt(in->m10 * in->m10 + in->m11 * in->m11);
-    double l = l1+l2;
+    double l = (l1+l2)/2.0;
     if(l < 1e-10) {
 	memset(out, 0, sizeof(*out));
 	return;
