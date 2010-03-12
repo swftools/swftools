@@ -131,6 +131,12 @@ static int findSpace(gfxfont_t*font)
 
 static int addSpace(gfxfont_t*font)
 {
+    /* first, make sure the new space char is the only char that'll use unicode 32 */
+    int t;
+    for(t=0;t<font->num_glyphs;t++) {
+	if(font->glyphs[t].unicode==32)
+	    font->glyphs[t].unicode=0;
+    }
     font->num_glyphs++;
     font->glyphs = (gfxglyph_t*)realloc(font->glyphs, sizeof(gfxglyph_t)*font->num_glyphs);
     gfxglyph_t*g = &font->glyphs[font->num_glyphs-1];
