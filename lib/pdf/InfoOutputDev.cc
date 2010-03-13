@@ -176,8 +176,6 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	    gfxglyph_t*glyph = &font->glyphs[font->num_glyphs];
 	    src->glyphs[t]->glyphid = font->num_glyphs;
 	    glyph->unicode = src->glyphs[t]->unicode;
-	    if(glyph->unicode >= font->max_unicode)
-		font->max_unicode = glyph->unicode+1;
 	    gfxdrawer_t drawer;
 	    gfxdrawer_target_gfxline(&drawer);
 	    int s;
