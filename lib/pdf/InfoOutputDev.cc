@@ -227,8 +227,6 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	}
     }
 
-    gfxfont_fix_unicode(font);
-
     int kerning_size = 0;
     for(t=0;t<src->num_glyphs;t++) {
 	dict_t* d = src->kerning[t];
@@ -290,6 +288,7 @@ gfxfont_t* FontInfo::getGfxFont()
 	    this->space_char = addSpace(this->gfxfont);
 	    msg("<debug> Appending space char to font %s, position %d, width %f", this->gfxfont->id, this->space_char, this->gfxfont->glyphs[this->space_char].advance);
 	}
+	gfxfont_fix_unicode(this->gfxfont);
     }
     return this->gfxfont;
 }

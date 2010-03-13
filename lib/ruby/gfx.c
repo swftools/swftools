@@ -234,7 +234,7 @@ static VALUE image_has_alpha(VALUE cls)
     gfxcolor_t*data = image->image->data;
     int t;
     for(t=0;t<size;t++) {
-	if(data->a!=255) 
+	if(data[t].a!=255) 
 	    return Qtrue;
     }
     return Qfalse;
