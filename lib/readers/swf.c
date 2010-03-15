@@ -565,7 +565,7 @@ static void placeObject(void*self, int id, void*data)
 
         sprite_t* s = (sprite_t*)c->data;
 
-        map16_t* depths = extractFrame(c->tag->next, p->age % s->frameCount);
+        map16_t* depths = extractFrame(c->tag->next, s->frameCount>0? p->age % s->frameCount : 0);
         map16_enumerate(depths, placeObject, r);
        
         int t;
