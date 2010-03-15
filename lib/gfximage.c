@@ -155,10 +155,10 @@ void blurImage(gfxcolor_t*src, int width, int height, int r)
     for(y=0;y<height;y++) {
         gfxcolor_t*s = &src[y*width];
         gfxcolor_t*d = &tmp[y*width];
-        for(x=0;x<range;x++) {
+        for(x=0;x<range && x<width;x++) {
             d[x] = s[x];
         }
-        for(x=range;x<width-range;x++) {
+        for(;x<width-range;x++) {
             int r=0;
             int g=0;
             int b=0;
@@ -177,7 +177,7 @@ void blurImage(gfxcolor_t*src, int width, int height, int r)
             d[x].b = b >> 16;
             d[x].a = a >> 16;
         }
-        for(x=width-range;x<width;x++) {
+        for(;x<width;x++) {
             d[x] = s[x];
         }
     }
@@ -186,11 +186,11 @@ void blurImage(gfxcolor_t*src, int width, int height, int r)
         gfxcolor_t*s = &tmp[x];
         gfxcolor_t*d = &src[x];
         int yy=0;
-        for(y=0;y<range;y++) {
+        for(y=0;y<range&&y<height;y++) {
             d[yy] = s[yy];
             yy+=width;
         }
-        for(y=range;y<height-range;y++) {
+        for(;y<height-range;y++) {
             int r=0;
             int g=0;
             int b=0;
@@ -211,7 +211,7 @@ void blurImage(gfxcolor_t*src, int width, int height, int r)
             d[yy].a = a >> 16;
             yy += width;
         }
-        for(y=0;y<range;y++) {
+        for(;y<height;y++) {
             d[yy] = s[yy];
             yy += width;
         }
