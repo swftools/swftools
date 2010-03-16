@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#ifdef __CPLUSPLUS__
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -14,7 +14,7 @@ int jpeg_save_to_mem(unsigned char*data, int width, int height, int quality, uns
 int jpeg_load(const char*filename, unsigned char**dest, int*width, int*height);
 int jpeg_load_from_mem(unsigned char*_data, int size, unsigned char*dest, int width, int height);
 
-#ifdef __CPLUSPLUS__
+#ifdef __cplusplus
 }
 #endif
 

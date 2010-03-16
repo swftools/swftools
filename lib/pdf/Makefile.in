@@ -4,7 +4,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../../Makefile.common
 
-all: ../libgfxpdf$(A) pdf2swf$(E)
+all: ../libgfxpdf$(A) pdf2swf$(E) pdf2jpeg$(E)
 
 libgfxpdf: ../libgfxpdf$(A)
 
@@ -183,6 +183,8 @@ pdfinfo$(E): $(XPDFOK) xpdf/pdfinfo.$(O) xpdf/parseargs.$(O) $(xpdf_objects)
 gfx_objects = ../libgfxswf$(A) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
 gfx_objects2 = $(gfx_objects) ../devices/lrf.$(O) ../libocr$(A)
 
+pdf2jpeg$(E): $(XPDFOK) pdf2jpeg.c ../libbase$(A) xpdf/parseargs.$(O) $(xpdf_objects) $(splash_objects)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -Ixpdf -I. -g pdf2jpeg.c xpdf/parseargs.$(O) ../libbase$(A) $(xpdf_objects) $(splash_objects) -o pdf2jpeg$(E) $(LIBS)
 pdf2swf$(E): $(XPDFOK) ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
 	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
 pdf2pdf$(E): $(XPDFOK) ../../src/pdf2pdf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
