@@ -697,7 +697,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
     }
 	
     ttf->ascent = font->ascent;
-    ttf->descent = font->descent;
+    ttf->descent = -font->descent;
     ttf->lineGap = 0;
 
     ttf->full_name = strdup(font->id);

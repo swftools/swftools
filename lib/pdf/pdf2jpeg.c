@@ -79,11 +79,9 @@ int main(int argc, char *argv[]) {
   GString *ownerPW, *userPW;
   SplashColor paperColor;
   SplashOutputDev *splashOut;
-  SplashBitmap*bitmap = 0;
   GBool ok;
   int exitCode;
   int pg;
-  double r;
 
   exitCode = 99;
 
@@ -132,22 +130,22 @@ int main(int argc, char *argv[]) {
   
   splashOut->startDoc(doc->getXRef());
 
-  r = resolution;
-  if(width) {
-    int old_width = doc->getPageCropWidth(page);
-    r = 72.0*width/old_width;
-  }
-
-  doc->displayPage(splashOut, page, r, r, 0, gFalse, gTrue, gFalse);
-  bitmap = splashOut->getBitmap();
-  if(bitmap) {
-    Guchar*rgb = bitmap->getDataPtr();
-    int width = bitmap->getWidth();
-    int height = bitmap->getHeight();
-    jpeg_save(rgb, width, height, quality, output);
+  if(page>=1 && page<=doc->getNumPages()) {
+      double r = resolution;
+      if(width) {
+	int old_width = doc->getPageCropWidth(page);
+	r = 72.0*width/old_width;
+      }
+      doc->displayPage(splashOut, page, r, r, 0, gFalse, gTrue, gFalse);
+      SplashBitmap*bitmap = splashOut->getBitmap();
+      if(bitmap) {
+	Guchar*rgb = bitmap->getDataPtr();
+	int width = bitmap->getWidth();
+	int height = bitmap->getHeight();
+	jpeg_save(rgb, width, height, quality, output);
+      }
   }
   delete splashOut;
- 
 
   exitCode = 0;
 

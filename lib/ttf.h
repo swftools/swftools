@@ -187,7 +187,7 @@ typedef struct _ttf {
     char is_vertical;
 
     S16 ascent;
-    S16 descent;
+    S16 descent; // ymin, *not* negative ymin
     S16 lineGap;
 
     int num_glyphs;
