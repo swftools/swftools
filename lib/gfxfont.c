@@ -570,6 +570,7 @@ void gfxfont_fix_unicode(gfxfont_t*font)
 	    int u = font->glyphs[t].unicode;
 	    if(u>=0) {
 		assert(font->unicode2glyph[u]<0); // we took care of duplicates, right?
+		assert(u<font->max_unicode);
 		font->unicode2glyph[u] = t;
 	    }
 	}
@@ -691,7 +692,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	}
     } else {
 	int u;
-	for(u=1;u<ttf->unicode_size;u++) {
+	for(u=1;u<font->max_unicode;u++) {
 	    int g = font->unicode2glyph[u];
 	    if(g>=0 && u<32) {
 		msg("<warning> gfxfont_to_ttf: Font contains an invalid unicode (%d)", u);
