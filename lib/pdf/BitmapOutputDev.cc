@@ -1448,7 +1448,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 
         if(!path) {
             if(code)
-                msg("<error> couldn't create outline for char %d", code);
+                msg("<warning> couldn't create outline for char %d", code);
             return;
         }
         x-=originX;
