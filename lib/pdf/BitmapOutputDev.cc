@@ -1445,27 +1445,23 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	int x1 = (int)x, x2 = (int)x+1, y1 = (int)y, y2 = (int)y+1;
         SplashFont*font = clip0dev->getCurrentFont();
 	SplashPath*path = font?font->getGlyphPath(code):NULL;
-
-        if(!path) {
-            if(code)
-                msg("<warning> couldn't create outline for char %d", code);
-            return;
-        }
         x-=originX;
         y-=originY;
-        path->offset((SplashCoord)x, (SplashCoord)y);
-	int t;
-	for(t=0;t<path->getLength();t++) {
-	    double xx,yy;
-	    Guchar f;
-	    path->getPoint(t,&xx,&yy,&f);
-            state->transform(xx,yy,&xx,&yy);
-	    if(xx<x1) x1=(int)xx;
-	    if(yy<y1) y1=(int)yy;
-	    if(xx>=x2) x2=(int)xx+1;
-	    if(yy>=y2) y2=(int)yy+1;
+	if(path) {
+	    path->offset((SplashCoord)x, (SplashCoord)y);
+	    int t;
+	    for(t=0;t<path->getLength();t++) {
+		double xx,yy;
+		Guchar f;
+		path->getPoint(t,&xx,&yy,&f);
+		state->transform(xx,yy,&xx,&yy);
+		if(xx<x1) x1=(int)xx;
+		if(yy<y1) y1=(int)yy;
+		if(xx>=x2) x2=(int)xx+1;
+		if(yy>=y2) y2=(int)yy+1;
+	    }
+	    delete(path);path=0;
 	}
-	delete(path);path=0;
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
