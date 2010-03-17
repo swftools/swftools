@@ -1418,11 +1418,12 @@ void cmap_write(ttf_t* ttf, ttf_table_t*w)
     w->data[num_segments_pos++]=(search_range*2);
     /* backpatch entry selector */
     int entry_selector = 0;
+    tmp = search_range;
     while(tmp>1) {tmp>>=1;entry_selector++;}
     w->data[num_segments_pos++]=entry_selector>>8;
     w->data[num_segments_pos++]=entry_selector;
     /* backpatch range shift */
-    int range_shift = num_segments*2 - search_range;
+    int range_shift = num_segments*2 - search_range*2;
     w->data[num_segments_pos++]=range_shift>>8;
     w->data[num_segments_pos++]=range_shift;
 
