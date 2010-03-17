@@ -28,6 +28,7 @@
 #include "gfxfont.h"
 #include "ttf.h"
 #include "mem.h"
+#include "log.h"
 
 static int loadfont_scale = 64;
 static int full_unicode = 1;
@@ -666,30 +667,36 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	dest->advance = src->advance*scale;
 
 	int u = font->glyphs[t].unicode;
-	if(invalid_unicode(u)) {
-	    u = 0xe000 + remap_pos++;
-	}
 	if(u > max_unicode)
 	    max_unicode = u;
     }
     ttf->unicode_size = max_unicode+1;
     ttf->unicode = rfx_calloc(sizeof(unicode_t)*ttf->unicode_size);
-    remap_pos=0;
-    for(t=0;t<font->num_glyphs;t++) {
-	gfxglyph_t*src = &font->glyphs[t];
-	int u = font->glyphs[t].unicode;
-	if(invalid_unicode(u)) {
-	    u = 0xe000 + remap_pos++;
-	}
-	if(u>=0 && u<ttf->unicode_size)
-	    ttf->unicode[u] = t+offset;
-    }
-    int u;
-    if(font->unicode2glyph) {
-	for(u=0;u<ttf->unicode_size;u++) {
-	    int g = font->unicode2glyph[u];
-	    if(invalid_unicode(u))
+    
+    if(!font->unicode2glyph) {
+	for(t=0;t<font->num_glyphs;t++) {
+	    gfxglyph_t*src = &font->glyphs[t];
+	    int u = font->glyphs[t].unicode;
+	    if(u<=0)
 		continue;
+	    if(u<32) {
+		msg("<warning> gfxfont_to_ttf: glyph %d has an invalid unicode (%d)", t, u);
+		continue;
+	    } else if(ttf->unicode[u]) {
+		msg("<warning> gfxfont_to_ttf: glyph %d has a duplicate unicode (%d)", t, u);
+		continue;
+	    }
+	    if(u<ttf->unicode_size)
+		ttf->unicode[u] = t+offset;
+	}
+    } else {
+	int u;
+	for(u=1;u<ttf->unicode_size;u++) {
+	    int g = font->unicode2glyph[u];
+	    if(g>=0 && u<32) {
+		msg("<warning> gfxfont_to_ttf: Font contains an invalid unicode (%d)", u);
+		continue;
+	    }
 	    if(g>=0 && g<font->num_glyphs && !ttf->unicode[u]) {
 		ttf->unicode[u] = g+offset;
 	    }
