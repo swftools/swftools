@@ -119,14 +119,9 @@ static int findSpace(gfxfont_t*font)
 	gfxglyph_t*g = &font->glyphs[t];
 	if(GLYPH_IS_SPACE(g)) {
 	    if(g->unicode == 32) return t;
-	    if(first_space<0)
-		first_space = t;
 	}
     }
-    if(font->num_glyphs>32 && GLYPH_IS_SPACE(&font->glyphs[32])) {
-	return 32;
-    }
-    return first_space;
+    return -1;
 }
 
 static int addSpace(gfxfont_t*font)
