@@ -137,7 +137,7 @@ static transformedfont_t* transformedfont_new(gfxfont_t*orig, mymatrix_t*m)
     transformedfont_t*f = rfx_calloc(sizeof(transformedfont_t));
     f->orig = orig;
     f->matrix = *m;
-    f->used = malloc(sizeof(f->used[0])*orig->num_glyphs);
+    f->used = rfx_calloc(sizeof(f->used[0])*orig->num_glyphs);
     int t;
     for(t=0;t<orig->num_glyphs;t++) {
 	if(orig->glyphs[t].unicode==32)

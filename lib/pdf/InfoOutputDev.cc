@@ -148,8 +148,7 @@ static int addSpace(gfxfont_t*font)
 
 static gfxfont_t* createGfxFont(FontInfo*src)
 {
-    gfxfont_t*font = (gfxfont_t*)malloc(sizeof(gfxfont_t));
-    memset(font, 0, sizeof(gfxfont_t));
+    gfxfont_t*font = (gfxfont_t*)rfx_calloc(sizeof(gfxfont_t));
 
     font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*src->num_glyphs);
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*src->num_glyphs);
