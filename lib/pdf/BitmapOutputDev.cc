@@ -497,9 +497,9 @@ GBool BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
         char filename1[80];
         char filename2[80];
         char filename3[80];
-        sprintf(filename1, "state%dboolbitmap_afternewtext.png", dbg_btm_counter);
-        sprintf(filename2, "state%dbooltext_afternewtext.png", dbg_btm_counter);
-        sprintf(filename3, "state%dbitmap_afternewtext.png", dbg_btm_counter);
+        sprintf(filename1, "state%03dboolbitmap_afternewtext.png", dbg_btm_counter);
+        sprintf(filename2, "state%03dbooltext_afternewtext.png", dbg_btm_counter);
+        sprintf(filename3, "state%03dbitmap_afternewtext.png", dbg_btm_counter);
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(stalepolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
@@ -553,9 +553,9 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
         char filename1[80];
         char filename2[80];
         char filename3[80];
-        sprintf(filename1, "state%dboolbitmap_afternewgfx.png", dbg_btm_counter);
-        sprintf(filename2, "state%dbooltext_afternewgfx.png", dbg_btm_counter);
-        sprintf(filename3, "state%dbitmap_afternewgfx.png", dbg_btm_counter);
+        sprintf(filename1, "state%03dboolbitmap_afternewgfx.png", dbg_btm_counter);
+        sprintf(filename2, "state%03dbooltext_afternewgfx.png", dbg_btm_counter);
+        sprintf(filename3, "state%03dbitmap_afternewgfx.png", dbg_btm_counter);
         msg("<verbose> %s %s %s", filename1, filename2, filename3);
 	writeAlpha(stalepolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
@@ -1589,22 +1589,22 @@ gfxbbox_t BitmapOutputDev::getImageBBox(GfxState*state)
     double x,y;
     state->transform(0, 1, &x, &y);
     bbox.xmin=bbox.xmax = x;
-    bbox.ymin=bbox.ymax = x;
+    bbox.ymin=bbox.ymax = y;
     state->transform(0, 0, &x, &y);
     bbox.xmin=min(bbox.xmin,x);
     bbox.ymin=min(bbox.ymin,y);
-    bbox.xmax=max(bbox.xmin,x);
-    bbox.ymax=max(bbox.ymin,y);
+    bbox.xmax=max(bbox.xmax,x);
+    bbox.ymax=max(bbox.ymax,y);
     state->transform(1, 0, &x, &y);
     bbox.xmin=min(bbox.xmin,x);
     bbox.ymin=min(bbox.ymin,y);
-    bbox.xmax=max(bbox.xmin,x);
-    bbox.ymax=max(bbox.ymin,y);
+    bbox.xmax=max(bbox.xmax,x);
+    bbox.ymax=max(bbox.ymax,y);
     state->transform(1, 1, &x, &y);
     bbox.xmin=min(bbox.xmin,x);
     bbox.ymin=min(bbox.ymin,y);
-    bbox.xmax=max(bbox.xmin,x);
-    bbox.ymax=max(bbox.ymin,y);
+    bbox.xmax=max(bbox.xmax,x);
+    bbox.ymax=max(bbox.ymax,y);
     return bbox;
 }
 void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
