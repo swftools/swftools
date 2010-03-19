@@ -849,10 +849,10 @@ static int mtx_write(ttf_t*ttf, ttf_table_t*w)
     int t;
     for(t=0;t<num_advances;t++) {
 	writeU16(w, ttf->glyphs[t].advance);
-	writeU16(w, ttf->glyphs[t].bearing);
+	writeS16(w, ttf->glyphs[t].bearing);
     }
     for(;t<ttf->num_glyphs;t++) {
-	writeU16(w, ttf->glyphs[t].bearing);
+	writeS16(w, ttf->glyphs[t].bearing);
     }
     return num_advances;
 }

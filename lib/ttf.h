@@ -122,7 +122,7 @@ typedef struct _ttfpoint {
 } ttfpoint_t;
 typedef struct _ttfglyph {
     U16 advance;
-    U16 bearing;
+    S16 bearing;
     S16 xmin,ymin,xmax,ymax;
     int code_size;
     U8*code;

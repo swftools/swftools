@@ -665,6 +665,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    }
 	}
 
+	dest->bearing = dest->xmin;
 	dest->advance = src->advance*scale;
 
 	int u = font->glyphs[t].unicode;
