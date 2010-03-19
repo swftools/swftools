@@ -208,14 +208,13 @@ typedef struct _swfoutput_internal
 
 static const int NO_FONT3=0;
     
-static void swf_fillbitmap(gfxdevice_t*driver, gfxline_t*line, gfximage_t*img, gfxmatrix_t*move, gfxcxform_t*cxform);
+static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
 static int  swf_setparameter(gfxdevice_t*driver, const char*key, const char*value);
 static void swf_drawstroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
 static void swf_startclip(gfxdevice_t*dev, gfxline_t*line);
 static void swf_endclip(gfxdevice_t*dev);
 static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
 static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
-static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform);
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
 static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font);
@@ -1179,7 +1178,6 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     dev->startclip = swf_startclip;
     dev->endclip = swf_endclip;
     dev->fill = swf_fill;
-    dev->fillbitmap = swf_fillbitmap;
     dev->fillgradient = swf_fillgradient;
     dev->addfont = swf_addfont;
     dev->drawchar = swf_drawchar;

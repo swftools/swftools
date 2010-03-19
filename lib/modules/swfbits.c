@@ -887,6 +887,7 @@ void swf_SetLosslessImage(TAG*tag, RGBA*data, int width, int height)
 	tag->id = ST_DEFINEBITSLOSSLESS;
     } else {
 	tag->id = ST_DEFINEBITSLOSSLESS2;
+	/* FIXME: we're destroying the callers data here */
 	swf_PreMultiplyAlpha(data, width, height);
     }
     num = swf_ImageGetNumberOfPaletteEntries(data, width, height, 0);
@@ -1169,7 +1170,8 @@ TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quali
 #endif
 
 #if defined(HAVE_JPEGLIB)
-    /* try jpeg image */
+    /* try jpeg image. Notice that if (and only if) we tried the lossless compression
+       above, the data will now be premultiplied with alpha. */
     if(has_alpha) {
 	tag2 = swf_InsertTag(0, ST_DEFINEBITSJPEG3);
 	swf_SetU16(tag2, bitid);

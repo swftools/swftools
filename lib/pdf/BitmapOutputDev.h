@@ -46,6 +46,8 @@ class BitmapOutputDev: public CommonOutputDev {
 public:
     BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc);
     virtual ~BitmapOutputDev();
+
+    virtual void dbg_newdata(char*newdata);
    
     // CommonOutputDev:
     virtual void setDevice(gfxdevice_t*dev);

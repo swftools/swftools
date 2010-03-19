@@ -119,7 +119,10 @@ typedef struct _gfxdevice
     void (*endclip)(struct _gfxdevice*dev);
     void (*stroke)(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit);
     void (*fill)(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color);
+
+    /* expects alpha channel in image to be non-premultiplied */
     void (*fillbitmap)(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform); //cxform? tiling?
+
     void (*fillgradient)(struct _gfxdevice*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*gradcoord2devcoord); //?
 
     void (*addfont)(struct _gfxdevice*dev, gfxfont_t*font);
