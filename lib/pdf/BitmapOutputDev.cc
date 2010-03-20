@@ -454,16 +454,27 @@ static void update_bitmap(SplashBitmap*bitmap, SplashBitmap*update, int x1, int 
     if(!fixBBox(&x1, &y1, &x2, &y2, bitmap->getWidth(), bitmap->getHeight()))
 	return;
     
-    Guchar*b = bitmap->getDataPtr() + y1*width8;
-    Guchar*u = update->getDataPtr() + y1*width8;
+    Guchar*b = bitmap->getDataPtr() + y1*width8 + x1/8;
+    Guchar*u = update->getDataPtr() + y1*width8 + x1/8;
+    int yspan = y2-y1;
+    int xspan = (x2+7)/8 - x1/8;
     int size = (y2-y1)*width8;
 
     if(overwrite) {
-	memcpy(b, u, size);
+	int y;
+	for(y=0;y<yspan;y++) {
+	    memcpy(b, u, xspan);
+	    b += width8;
+	    u += width8;
+	}
     } else {
-	int t;
-	for(t=0;t<size;t++) {
-	    b[t] |= u[t];
+	int x,y;
+	for(y=0;y<yspan;y++) {
+	    for(x=0;x<xspan;x++) {
+		b[x] |= u[x];
+	    }
+	    b += width8;
+	    u += width8;
 	}
     }
 }
@@ -664,7 +675,7 @@ GBool compare8(unsigned char*data1, unsigned char*data2, int len)
     if(!len)
         return 0;
     if(((ptroff_t)data1&7)==((ptroff_t)data2&7)) {
-        // oh good, we can do aligning
+        // oh good, we can align both to 8 byte
         while((ptroff_t)data1&7) {
             if(*data1&*data2)
                 return 1;
@@ -1611,17 +1622,15 @@ void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   GBool inlineImg)
 {
     msg("<debug> drawImageMask streamkind=%d", str->getKind());
-    CopyStream*cpystr = 0;
-    if(inlineImg) {
-	cpystr = new CopyStream(str, height * ((width + 7) / 8));
-	str = cpystr->getStream();
-    }
+
+    CopyStream*cpystr = new CopyStream(str, height * ((width + 7) / 8));
+    str = cpystr->getStream();
+    
     boolpolydev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
     gfxbbox_t bbox = getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
-    if(cpystr)
-	delete cpystr;
+    delete cpystr;
     dbg_newdata("imagemask");
 }
 void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
@@ -1629,17 +1638,15 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int *maskColors, GBool inlineImg)
 {
     msg("<debug> drawImage streamkind=%d", str->getKind());
-    CopyStream*cpystr = 0;
-    if(inlineImg) {
-	cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
-	str = cpystr->getStream();
-    }
+	
+    CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
+    str = cpystr->getStream();
+
     boolpolydev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
-    if(cpystr)
-	delete cpystr;
+    delete cpystr;
     dbg_newdata("image");
 }
 void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
@@ -1649,10 +1656,15 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     GBool maskInvert)
 {
     msg("<debug> drawMaskedImage streamkind=%d", str->getKind());
+    
+    CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
+    str = cpystr->getStream();
+
     boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
+    delete cpystr;
     dbg_newdata("maskedimage");
 }
 void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
@@ -1663,10 +1675,15 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
 				 GfxImageColorMap *maskColorMap)
 {
     msg("<debug> drawSoftMaskedImage %dx%d (%dx%d) streamkind=%d", width, height, maskWidth, maskHeight, str->getKind());
+
+    CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
+    str = cpystr->getStream();
+
     boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
+    delete cpystr;
     dbg_newdata("softmaskimage");
 }
 void BitmapOutputDev::drawForm(Ref id)
