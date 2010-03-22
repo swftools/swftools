@@ -150,7 +150,9 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
 {
     internal_t*i = (internal_t*)f->internal;
     mymatrix_t m;
-    matrix_convert(matrix, font->id, &m, 0);
+    if(!font->id) 
+	msg("<error> Font has no ID");
+    matrix_convert(matrix, font->id?font->id:"unknown", &m, 0);
     transformedfont_t*fd = dict_lookup(i->matrices, &m);
     if(!fd) {
 	fd = transformedfont_new(font, &m);
@@ -251,7 +253,7 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
 
     mymatrix_t m;
     gfxmatrix_t scalematrix;
-    matrix_convert(matrix, font->id, &m, &scalematrix);
+    matrix_convert(matrix, font->id?font->id:"unknown", &m, &scalematrix);
     transformedfont_t*d = dict_lookup(i->matrices, &m);
     scalematrix.tx -= d->dx*scalematrix.m00;
     out->drawchar(out, d->font, d->used[glyphnr], color, &scalematrix);
