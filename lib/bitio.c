@@ -28,6 +28,7 @@
 #endif
 #include <string.h>
 #include <memory.h>
+#define __USE_LARGEFILE64
 #include <fcntl.h>
 #include <errno.h>
 
@@ -98,7 +99,12 @@ void reader_init_filereader(reader_t*r, int handle)
 }
 void reader_init_filereader2(reader_t*r, const char*filename)
 {
-    int fi = open(filename,
+#ifdef HAVE_OPEN64
+    int fi = open64
+#else
+    int fi = open
+#endif
+    (filename,
 #ifdef O_BINARY
 	    O_BINARY|
 #endif
@@ -356,7 +362,12 @@ void writer_init_filewriter(writer_t*w, int handle)
 }
 void writer_init_filewriter2(writer_t*w, char*filename)
 {
-    int fi = open(filename,
+#ifdef HAVE_OPEN64
+    int fi = open64
+#else
+    int fi = open
+#endif
+    (filename,
 #ifdef O_BINARY
 	    O_BINARY|
 #endif
