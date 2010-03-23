@@ -178,16 +178,8 @@ static void glyph_transform(gfxglyph_t*g, mymatrix_t*mm)
     m.ty = 0;
     if(m.m00>0)
 	g->advance *= m.m00;
-    if(!mm->alpha) {
-	/* for OCR: remove the outlines of characters that are only
-	   ever displayed with alpha=0 */
-	g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
-	g->line->type = gfx_moveTo;
-	g->line->x = g->advance;
-    } else {
-	g->line = gfxline_clone(g->line);
-	gfxline_transform(g->line, &m);
-    }
+    g->line = gfxline_clone(g->line);
+    gfxline_transform(g->line, &m);
 }
 
 static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
@@ -235,11 +227,22 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	font->descent = -total.ymin;
 
 	for(t=0;t<count;t++) {
+	    gfxglyph_t*g = &font->glyphs[t];
 	    gfxline_t*line = font->glyphs[t].line;
-	    while(line) {
-		line->x += fd->dx;
-		line->sx += fd->dx;
-		line = line->next;
+
+	    if(fd->matrix.alpha) {
+		while(line) {
+		    line->x += fd->dx;
+		    line->sx += fd->dx;
+		    line = line->next;
+		}
+	    } else {
+		gfxline_free(g->line);
+		/* for OCR: remove the outlines of characters that are only
+		   ever displayed with alpha=0 */
+		g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
+		g->line->type = gfx_moveTo;
+		g->line->x = g->advance;
 	    }
 	}
 	gfxfont_fix_unicode(font);
