@@ -27,10 +27,12 @@
 #include "../types.h"
 #include "../mem.h"
 #include "../q.h"
+#include "../log.h"
 
 typedef struct _mymatrix {
     float m00,m01,m10,m11;
     char*id;
+    unsigned char alpha;
 } mymatrix_t;
 
 static void* mymatrix_clone(const void*_m) {
@@ -51,6 +53,7 @@ static unsigned int mymatrix_hash(const void*_m) {
     h = crc32_add_bytes(h, (char*)&m->m01, sizeof(m->m01));
     h = crc32_add_bytes(h, (char*)&m->m10, sizeof(m->m10));
     h = crc32_add_bytes(h, (char*)&m->m11, sizeof(m->m11));
+    h = crc32_add_bytes(h, (char*)&m->alpha, 1);
     h = crc32_add_string(h, m->id);
     return h;
 }
@@ -75,6 +78,7 @@ static char mymatrix_equals(const void*_m1, const void*_m2) {
            *(U32*)&m1->m01 == *(U32*)&m2->m01 &&
            *(U32*)&m1->m10 == *(U32*)&m2->m10 &&
            *(U32*)&m1->m11 == *(U32*)&m2->m11 &&
+           m1->alpha == m2->alpha &&
 	   !strcmp(m1->id, m2->id);
 }
 type_t mymatrix_type = {
@@ -92,9 +96,9 @@ typedef struct _internal {
 
 #ifdef __GNUC__
 void __attribute__((noinline)) 
-     matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix)
+     matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix, unsigned char alpha)
 #else
-void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix)
+void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix, unsigned char alpha)
 #endif
 {
     double l1 = sqrt(in->m00 * in->m00 + in->m01 * in->m01);
@@ -109,6 +113,7 @@ void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*s
     out->m01 = -in->m01 / l;
     out->m11 = -in->m11 / l;
     out->id = (char*)id;
+    out->alpha = alpha?1:0;
 
     if(scalematrix) {
 	scalematrix->m00 = l;
@@ -152,7 +157,7 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     mymatrix_t m;
     if(!font->id) 
 	msg("<error> Font has no ID");
-    matrix_convert(matrix, font->id?font->id:"unknown", &m, 0);
+    matrix_convert(matrix, font->id?font->id:"unknown", &m, 0, color->a);
     transformedfont_t*fd = dict_lookup(i->matrices, &m);
     if(!fd) {
 	fd = transformedfont_new(font, &m);
@@ -171,10 +176,18 @@ static void glyph_transform(gfxglyph_t*g, mymatrix_t*mm)
     m.m11 = mm->m11;
     m.tx = 0;
     m.ty = 0;
-    g->line = gfxline_clone(g->line);
-    gfxline_transform(g->line, &m);
     if(m.m00>0)
 	g->advance *= m.m00;
+    if(!mm->alpha) {
+	/* for OCR: remove the outlines of characters that are only
+	   ever displayed with alpha=0 */
+	g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
+	g->line->type = gfx_moveTo;
+	g->line->x = g->advance;
+    } else {
+	g->line = gfxline_clone(g->line);
+	gfxline_transform(g->line, &m);
+    }
 }
 
 static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
@@ -240,9 +253,10 @@ static void pass2_addfont(gfxfilter_t*f, gfxfont_t*font, gfxdevice_t*out)
        fonts in the first drawchar() */
 }
 
-static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix, gfxdevice_t*out)
+static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_t*_color, gfxmatrix_t*matrix, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
+    gfxcolor_t color = *_color;
 
     if(i->first) {
 	i->first = 0;
@@ -253,10 +267,17 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
 
     mymatrix_t m;
     gfxmatrix_t scalematrix;
-    matrix_convert(matrix, font->id?font->id:"unknown", &m, &scalematrix);
+    matrix_convert(matrix, font->id?font->id:"unknown", &m, &scalematrix, color.a);
     transformedfont_t*d = dict_lookup(i->matrices, &m);
     scalematrix.tx -= d->dx*scalematrix.m00;
-    out->drawchar(out, d->font, d->used[glyphnr], color, &scalematrix);
+
+    /* if this character is invisible (alpha=0), then we will have removed the
+       outline, so we make set the alpha color channel to "fully visible" again to allow
+       output devices to be more performant (transparency is expensive) */
+    if(!m.alpha) 
+	color.a = 255;
+
+    out->drawchar(out, d->font, d->used[glyphnr], &color, &scalematrix);
 }
 
 void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)

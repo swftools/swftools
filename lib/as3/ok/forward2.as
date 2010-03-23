@@ -30,8 +30,9 @@ package {
 
 	public function test3()
 	{
-	    if(x instanceof Error) 
-		trace("ok 3/4")
+	    if(x == null)
+		trace("ok 3/4");
+
 	    var x:Error;
 	    try {
 		if(true) throw new Error();
