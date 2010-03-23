@@ -733,7 +733,7 @@ void gfxdevice_record_init(gfxdevice_t*dev, char use_tempfile)
 	writer_init_growingmemwriter(&i->w, 1048576);
     } else {
 	char buffer[128];
-	i->filename = strdup(mktempname(buffer));
+	i->filename = strdup(mktempname(buffer, "gfx"));
 	writer_init_filewriter2(&i->w, i->filename);
     }
     i->fontlist = gfxfontlist_create();

@@ -100,7 +100,7 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
     internal_t*i = (internal_t*)dev->internal;
 
     if(!i->tempfile) {
-	i->tempfile = strdup(mktempname(0));
+	i->tempfile = strdup(mktempname(0, "pdf"));
 
 	PDF_begin_document(i->p, i->tempfile, 0, "");
 	//PDF_set_value(i->p, "compress", 0);
@@ -281,14 +281,14 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     }
 
     char tempfile[128];
-    mktempname(tempfile);
+    mktempname(tempfile, "jpg");
 
     gfximage_save_jpeg(img, tempfile, 96);
 
     int imgid=-1;
     if(has_alpha) {
 	char tempfile2[128];
-	mktempname(tempfile2);
+	mktempname(tempfile2, "jpg");
 	int t;
 	int size = img->width*img->height;
 	unsigned char*alpha = malloc(size);

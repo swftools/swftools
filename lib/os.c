@@ -192,8 +192,8 @@ static char* getTempDir()
     return dir;
 }
 
-char* mktempname(char*ptr) {
-    static char tmpbuf[128];
+char* mktempname(char*ptr, const char*ext) {
+    static char tmpbuf[160];
     char*dir = getTempDir();
     int l = strlen(dir);
     char*sep = "";
@@ -207,20 +207,24 @@ char* mktempname(char*ptr) {
 #endif
     }
 
- //   used to be mktemp. This does remove the warnings, but
- //   It's not exactly an improvement.
 #ifdef HAVE_LRAND48
-    sprintf(ptr, "%s%s%08x%08x",dir,sep,(unsigned int)lrand48(),(unsigned int)lrand48());
+    unsigned int r1 = (unsigned int)lrand48();
+    unsigned int r2 = (unsigned int)lrand48();
+#elif HAVE_RAND
+    unsigned int r1 = rand();
+    unsigned int r2 = rand();
 #else
-#   ifdef HAVE_RAND
-	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
-#   else
-	static int count = 1;
-	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
-	count ++;
-#   endif
+    static int count = 1;
+    unsigned int r1 = time(0);
+    unsigned int r2 = (unsigned int)tmpbuf<<8^count;
+    count ++;
 #endif
-     return ptr;
+    if(ext) {
+	sprintf(ptr, "%s%s%04x%04x.%s",dir,sep,r1,r2,ext);
+    } else {
+	sprintf(ptr, "%s%s%04x%04x",dir,sep,r1,r2);
+    }
+    return ptr;
 }
 
 memfile_t* memfile_open(const char*path)
@@ -297,7 +301,7 @@ void move_file(const char*from, const char*to)
 	int bytes = fread(buffer, 16384, 1, fi);
 	if(bytes<=0)
 	    return;
-	fwrite(buffer, bytes, 1, to);
+	fwrite(buffer, bytes, 1, fo);
     }
 
     fclose(fo);
