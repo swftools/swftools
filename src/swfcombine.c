@@ -128,6 +128,11 @@ int args_callback_option(char*name,char*val) {
 	config.isframe = 1;
 	return 0;
     }
+    else if (!strcmp(name, "F"))
+    {
+	config.flashversion = atoi(val);
+	return 1;
+    }
     else if (!strcmp(name, "d"))
     {
 	config.dummy = 1;
