@@ -370,7 +370,7 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
         addGlobalFontDir(value);
     } else if(!strcmp(name, "addspacechars")) {
 	config_addspace = atoi(value);
-	gfxparams_store(i->parameters, "detectspaces", 0);
+	gfxparams_store(i->parameters, "detectspaces", "0");
     } else if(!strcmp(name, "detectspaces")) {
 	config_addspace = atoi(value);
     } else if(!strcmp(name, "fontquality")) {
