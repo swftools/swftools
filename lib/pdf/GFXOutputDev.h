@@ -291,6 +291,7 @@ public:
   int config_multiply;
   int config_bigchar;
   int config_drawonlyshapes;
+  int config_detectspaces;
   char* config_linkdatafile;
   double config_fontquality;
 };

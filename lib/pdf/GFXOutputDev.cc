@@ -627,6 +627,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_drawonlyshapes = 0;
     this->config_disable_polygon_conversion = 0;
     this->config_multiply = 1;
+    this->config_detectspaces = 1;
     this->config_linkdatafile = 0;
     this->page2page = 0;
     this->num_pages = 0;
@@ -644,6 +645,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_transparent = atoi(value);
     } else if(!strcmp(key,"drawonlyshapes")) {
         this->config_drawonlyshapes = atoi(value);
+    } else if(!strcmp(key,"detectspaces")) {
+        this->config_detectspaces = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
     } else if(!strcmp(key,"linkdatafile")) {
@@ -1453,7 +1456,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
        (render == RENDER_INVISIBLE)) {
 
 	int space = this->current_fontinfo->space_char;
-	if(config_extrafontdata && space>=0 && m.m00 && !m.m01) {
+	if(config_extrafontdata && config_detectspaces && space>=0 && m.m00 && !m.m01) {
 	    /* space char detection */
 	    if(last_char_gfxfont == current_gfxfont && 
 	       last_char_y == m.ty &&
