@@ -1147,3 +1147,22 @@ diff -u -r1.5 -r1.6
    }
    for (i = 0; i < kids.arrayGetLength(); ++i) {
      kids.arrayGetNF(i, &kidRef);
+--- xpdf/SplashOutputDev.cc.orig	2010-03-25 14:06:37.000000000 -0700
++++ xpdf/SplashOutputDev.cc	2010-03-25 14:07:23.000000000 -0700
+@@ -13,6 +13,7 @@
+@@ -509,7 +510,14 @@
+   glyphY = glyphYA;
+   glyphW = glyphWA;
+   glyphH = glyphHA;
+-  validBBox = validBBoxA;
++
++  if(glyphW<=0 || glyphH<=0 || (double)glyphH*(double)glyphW>536870912) {
++    glyphW = glyphH = 128;
++    validBBox = gFalse;
++  } else {
++    validBBox = validBBoxA;
++  }
++
+   if (aa) {
+     glyphSize = glyphW * glyphH;
+   } else {
