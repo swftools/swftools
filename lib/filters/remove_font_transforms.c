@@ -265,7 +265,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 		if(char1>=0 && char2>=0) {
 		    font->kerning[count].c1 = char1;
 		    font->kerning[count].c2 = char2;
-		    font->kerning[count].advance = fd->orig->kerning[t].advance * fd->matrix.m00 * scale;
+		    font->kerning[count].advance = fd->orig->kerning[t].advance * fd->matrix.m00;
 		    count++;
 		}
 	    }
