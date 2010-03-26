@@ -30,6 +30,7 @@
 #include <io.h>
 #endif
 #include <string.h>
+#include <assert.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../types.h"
@@ -38,8 +39,16 @@
 #include "../os.h"
 #include "record.h"
 
+typedef struct _state {
+    char*last_string[16];
+    gfxcolor_t last_color[16];
+    gfxmatrix_t last_matrix[16];
+} state_t;
+
 typedef struct _internal {
     gfxfontlist_t* fontlist;
+    state_t state;
+
     writer_t w;
     int cliplevel;
     char use_tempfile;
@@ -68,9 +77,11 @@ typedef struct _internal_result {
 #define OP_ENDPAGE 0x0c
 #define OP_FINISH 0x0d
 
-#define OP_MOVETO 0x0e
-#define OP_LINETO 0x0f
-#define OP_SPLINETO 0x10
+#define FLAG_SAME_AS_LAST 0x10
+
+#define LINE_MOVETO 0x0e
+#define LINE_LINETO 0x0f
+#define LINE_SPLINETO 0x10
 
 static int record_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
 {
@@ -86,15 +97,15 @@ static void dumpLine(writer_t*w, gfxline_t*line)
 {
     while(line) {
 	if(line->type == gfx_moveTo) {
-	    writer_writeU8(w, OP_MOVETO);
+	    writer_writeU8(w, LINE_MOVETO);
 	    writer_writeDouble(w, line->x);
 	    writer_writeDouble(w, line->y);
 	} else if(line->type == gfx_lineTo) {
-	    writer_writeU8(w, OP_LINETO);
+	    writer_writeU8(w, LINE_LINETO);
 	    writer_writeDouble(w, line->x);
 	    writer_writeDouble(w, line->y);
 	} else if(line->type == gfx_splineTo) {
-	    writer_writeU8(w, OP_SPLINETO);
+	    writer_writeU8(w, LINE_SPLINETO);
 	    writer_writeDouble(w, line->x);
 	    writer_writeDouble(w, line->y);
 	    writer_writeDouble(w, line->sx);
@@ -118,15 +129,15 @@ static gfxline_t* readLine(reader_t*r)
 	    pos->next = line;
 	    pos = line;
 	}
-	if(op == OP_MOVETO) {
+	if(op == LINE_MOVETO) {
 	    line->type = gfx_moveTo;
 	    line->x = reader_readDouble(r);
 	    line->y = reader_readDouble(r);
-	} else if(op == OP_LINETO) {
+	} else if(op == LINE_LINETO) {
 	    line->type = gfx_lineTo;
 	    line->x = reader_readDouble(r);
 	    line->y = reader_readDouble(r);
-	} else if(op == OP_SPLINETO) {
+	} else if(op == LINE_SPLINETO) {
 	    line->type = gfx_splineTo;
 	    line->x = reader_readDouble(r);
 	    line->y = reader_readDouble(r);
@@ -165,6 +176,12 @@ static gfxcolor_t readColor(reader_t*r)
     col.a = reader_readU8(r);
     return col;
 }
+static void readXY(reader_t*r, gfxmatrix_t*m)
+{
+    m->tx = reader_readDouble(r);
+    m->ty = reader_readDouble(r);
+}
+
 static gfxgradient_t* readGradient(reader_t*r)
 {
     gfxgradient_t*start = 0, *pos = 0;
@@ -210,6 +227,11 @@ static void dumpMatrix(writer_t*w, gfxmatrix_t*matrix)
     writer_writeDouble(w, matrix->m01);
     writer_writeDouble(w, matrix->m10);
     writer_writeDouble(w, matrix->m11);
+    writer_writeDouble(w, matrix->tx);
+    writer_writeDouble(w, matrix->ty);
+}
+static void dumpXY(writer_t*w, gfxmatrix_t*matrix)
+{
     writer_writeDouble(w, matrix->tx);
     writer_writeDouble(w, matrix->ty);
 }
@@ -388,14 +410,26 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
     }
 
     msg("<trace> record: %08x DRAWCHAR %d\n", glyphnr, dev);
-    writer_writeU8(&i->w, OP_DRAWCHAR);
-    if(font) 
-	writer_writeString(&i->w, font->id);
-    else
-	writer_writeString(&i->w, "*NULL*");
+    const char*font_id = font->id?font->id:"*NULL*";
+    
+    gfxmatrix_t*l = &i->state.last_matrix[OP_DRAWCHAR];
+
+    char same_font = i->state.last_string[OP_DRAWCHAR] && !strcmp(i->state.last_string[OP_DRAWCHAR], font_id);
+    char same_matrix = (l->m00 == matrix->m00) && (l->m01 == matrix->m01) && (l->m10 == matrix->m10) && (l->m11 == matrix->m11);
+    char same_color = !memcmp(color, &i->state.last_color[OP_DRAWCHAR], sizeof(gfxcolor_t));
+    U8 flags = 0;
+    if(same_font && same_matrix && same_color)
+	flags |= FLAG_SAME_AS_LAST;
+
+    writer_writeU8(&i->w, OP_DRAWCHAR|flags);
     writer_writeU32(&i->w, glyphnr);
-    dumpColor(&i->w, color);
-    dumpMatrix(&i->w, matrix);
+    if(!(flags&FLAG_SAME_AS_LAST)) {
+	writer_writeString(&i->w, font_id);
+	dumpColor(&i->w, color);
+	dumpMatrix(&i->w, matrix);
+    } else {
+	dumpXY(&i->w, matrix);
+    }
 }
 
 static void record_startpage(struct _gfxdevice*dev, int width, int height)
@@ -423,6 +457,39 @@ static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*ac
     writer_writeString(&i->w, action);
 }
 
+static char* read_string(reader_t*r, state_t*state, U8 id, U8 flags)
+{
+    assert(id>=0 && id<16);
+    if(flags&FLAG_SAME_AS_LAST) {
+	assert(state->last_string[id]);
+	return state->last_string[id];
+    }
+    char*s = reader_readString(r);
+    state->last_string[id] = strdup(s);
+    return s;
+}
+static gfxcolor_t read_color(reader_t*r, state_t*s, U8 id, U8 flags)
+{
+    assert(id>=0 && id<16);
+    if(flags&FLAG_SAME_AS_LAST)
+	return s->last_color[id];
+    gfxcolor_t c = readColor(r);
+    s->last_color[id] = c;
+    return c;
+}
+static gfxmatrix_t read_matrix(reader_t*r, state_t*s, U8 id, U8 flags)
+{
+    assert(id>=0 && id<16);
+    if(flags&FLAG_SAME_AS_LAST) {
+	gfxmatrix_t m = s->last_matrix[id];
+	readXY(r, &m);
+	return m;
+    }
+    gfxmatrix_t m = readMatrix(r);
+    s->last_matrix[id] = m;
+    return m;
+}
+
 static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 {
     internal_t*i = 0;
@@ -430,12 +497,17 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 	i = (internal_t*)dev->internal;
     }
 
+    state_t state;
+    memset(&state, 0, sizeof(state));
+
     gfxfontlist_t* fontlist = gfxfontlist_create();
 
     while(1) {
 	unsigned char op;
 	if(r->read(r, &op, 1)!=1)
 	    break;
+	unsigned char flags = op&0xf0;
+	op&=0x0f;
 
 	switch(op) {
 	    case OP_END:
@@ -557,15 +629,17 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 		break;
 	    }
 	    case OP_DRAWCHAR: {
-		char* id = reader_readString(r);
+		U32 glyph = reader_readU32(r);
+		gfxmatrix_t m = {1,0,0, 0,1,0};
+		char* id = read_string(r, &state, op, flags);
+		gfxcolor_t color = read_color(r, &state, op, flags);
+		gfxmatrix_t matrix = read_matrix(r, &state, op, flags);
+
 		gfxfont_t*font = id?gfxfontlist_findfont(fontlist, id):0;
 		if(i && !font) {
 		    font = gfxfontlist_findfont(i->fontlist, id);
 		}
-		U32 glyph = reader_readU32(r);
 		msg("<trace> replay: DRAWCHAR font=%s glyph=%d", id, glyph);
-		gfxcolor_t color = readColor(r);
-		gfxmatrix_t matrix = readMatrix(r);
 		out->drawchar(out, font, glyph, &color, &matrix);
 		free(id);
 		break;
