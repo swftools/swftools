@@ -204,7 +204,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    if(fd->used[t]) {
 		font->glyphs[count] = fd->orig->glyphs[t];
 		glyph_transform(&font->glyphs[count], &fd->matrix);
-		fd->used[t] = count;
+		fd->used[t] = count + 1;
 		count++;
 	    }
 	}
@@ -245,6 +245,31 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 		g->line->x = g->advance;
 	    }
 	}
+
+	if(fd->matrix.m00>0) {
+	    /* subset kerning table */
+	    count = 0;
+	    for(t=0;t<fd->orig->kerning_size;t++) {
+		int char1 = fd->used[fd->orig->kerning[t].c1]-1;
+		int char2 = fd->used[fd->orig->kerning[t].c2]-1;
+		if(char1>=0 && char2>=0) {
+		    count++;
+		}
+	    }
+	    font->kerning = malloc(sizeof(font->kerning[0])*count);
+	    font->kerning_size = count;
+	    count = 0;
+	    for(t=0;t<fd->orig->kerning_size;t++) {
+		int char1 = fd->used[fd->orig->kerning[t].c1]-1;
+		int char2 = fd->used[fd->orig->kerning[t].c2]-1;
+		if(char1>=0 && char2>=0) {
+		    font->kerning[count].c1 = char1;
+		    font->kerning[count].c2 = char2;
+		    font->kerning[count].advance = fd->orig->kerning[t].advance * fd->matrix.m00 * scale;
+		    count++;
+		}
+	    }
+	}
 	gfxfont_fix_unicode(font);
     }
     return out->finish(out);
@@ -280,7 +305,20 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     if(!m.alpha) 
 	color.a = 255;
 
-    out->drawchar(out, d->font, d->used[glyphnr], &color, &scalematrix);
+    out->drawchar(out, d->font, d->used[glyphnr]-1, &color, &scalematrix);
+}
+
+static gfxresult_t* pass2_finish(gfxfilter_t*f, gfxdevice_t*out)
+{
+    internal_t*i = (internal_t*)f->internal;
+    DICT_ITERATE_DATA(i->matrices, transformedfont_t*, fd) {
+	if(fd->used) {
+	    free(fd->used);fd->used=0;
+	}
+	free(fd);
+    }
+    dict_destroy(i->matrices);i->matrices=0;
+    return out->finish(out);
 }
 
 void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)
@@ -298,6 +336,7 @@ void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)
     f->pass2.name = "remove font transforms pass 2";
     f->pass2.addfont = pass2_addfont;
     f->pass2.drawchar = pass2_drawchar;
+    f->pass2.finish = pass2_finish;
     f->pass2.internal = i;
 
     i->matrices = dict_new2(&mymatrix_type);
