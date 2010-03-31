@@ -1443,11 +1443,11 @@ static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, in
 
 int png_apply_filter_8(unsigned char*dest, unsigned char*src, int width, int y)
 {
-    png_apply_filter(dest, src, width, y, 8);
+    return png_apply_filter(dest, src, width, y, 8);
 }
 int png_apply_filter_32(unsigned char*dest, unsigned char*src, int width, int y)
 {
-    png_apply_filter(dest, src, width, y, 32);
+    return png_apply_filter(dest, src, width, y, 32);
 }
 
 EXPORT void savePNG(const char*filename, unsigned char*data, int width, int height, int numcolors)
@@ -1458,8 +1458,6 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
     unsigned char format;
     unsigned char tmp;
     unsigned char* data2=0;
-    u32 datalen;
-    u32 datalen2;
     unsigned char head[] = {137,80,78,71,13,10,26,10}; // PNG header
     int cols;
     char alpha = 1;
@@ -1496,8 +1494,6 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
         png_quantize_image(data, width*height, numcolors, &data, palette);
     }
 
-    datalen = (width*height*bpp/8+cols*8);
-    
     fi = fopen(filename, "wb");
     if(!fi) {
 	perror("open");
