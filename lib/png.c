@@ -1395,28 +1395,17 @@ static void make_num_bits_table()
     }
 }
 
-static int png_find_best_filter_8(unsigned char*src, int width, int y)
-{
-    /*
-
-       FFFF I X   X    M   M EEEE
-       F    I  X X     MM MM E
-       FFF  I   X      M M M EEE
-       F    I  X X     M   M E
-       F    I X   X    M   M EEEE
-
-    */
-    return 0;
-}
-
-static int png_find_best_filter_32(unsigned char*src, int width, int y)
+static int png_find_best_filter(unsigned char*src, int width, int bpp, int y)
 {
     make_num_bits_table();
     
     int num_filters = y>0?5:2; //don't apply y-direction filter in first line
 
-    int srcwidth = y?width*4:0;
-    int x;
+    int bytes_per_pixel = bpp>>3;
+    int w = width*bytes_per_pixel;
+    int back_x = bytes_per_pixel;
+    int back_y = y?width*bytes_per_pixel:0;
+
     unsigned char*pairs[5];
     pairs[0] = calloc(1, 8192);
     pairs[1] = calloc(1, 8192);
@@ -1425,23 +1414,23 @@ static int png_find_best_filter_32(unsigned char*src, int width, int y)
     pairs[4] = calloc(1, 8192);
     
     unsigned char old[5];
-
-    old[0] = src[3];
-    old[1] = src[3];
-    old[2] = src[3] - src[3-srcwidth];
-    old[3] = src[3] - src[3-srcwidth];
-    old[4] = src[3] - PaethPredictor(0, src[3-srcwidth], 0);
+    int l = bytes_per_pixel - 1;
+    old[0] = src[l];
+    old[1] = src[l];
+    old[2] = src[l] - src[l-back_y];
+    old[3] = src[l] - src[l-back_y];
+    old[4] = src[l] - PaethPredictor(0, src[l-back_y], 0);
 
     int different_pairs[5] = {0,0,0,0,0};
 
-    int w = width*4;
-    for(x=4;x<w;x++) {
+    int x;
+    for(x=bytes_per_pixel;x<w;x++) {
 	unsigned char dest[5];
 	dest[0] = src[x];
-	dest[1] = src[x] - src[x-4];
-	dest[2] = src[x] - src[x-srcwidth];
-	dest[3] = src[x] - (src[x-4] + src[x-srcwidth])/2;
-	dest[4] = src[x] - PaethPredictor(src[x-4], src[x-srcwidth], src[x-4-srcwidth]);
+	dest[1] = src[x] - src[x-back_x];
+	dest[2] = src[x] - src[x-back_y];
+	dest[3] = src[x] - (src[x-back_x] + src[x-back_y])/2;
+	dest[4] = src[x] - PaethPredictor(src[x-back_x], src[x-back_y], src[x-back_x-back_y]);
 
 	int i;
 	for(i=0;i<5;i++) {
@@ -1514,10 +1503,7 @@ static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, in
     }
     free(pairs);
 #else
-    if(bpp==8)
-	best_nr = png_find_best_filter_8(src, width, y);
-    else
-	best_nr = png_find_best_filter_32(src, width, y);
+    best_nr = png_find_best_filter(src, width, bpp, y);
 #endif
     if(bpp==8)
 	png_apply_specific_filter_8(best_nr, dest, src, width);
@@ -1561,7 +1547,6 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
 
     if(!numcolors) {
 	int num = png_get_number_of_palette_entries((COL*)data, width, height, palette, &has_alpha);
-	num = 256;
 	if(num<=255) {
 	    //printf("image has %d different colors (alpha=%d)\n", num, has_alpha);
 	    data2 = malloc(width*height);
