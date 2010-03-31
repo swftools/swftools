@@ -118,7 +118,15 @@ static int findSpace(gfxfont_t*font)
     for(t=0;t<font->num_glyphs;t++) {
 	gfxglyph_t*g = &font->glyphs[t];
 	if(GLYPH_IS_SPACE(g)) {
-	    if(g->unicode == 32) return t;
+	    if(g->unicode == 32) {
+		/* now that we have found a space char, make sure it's unique */
+		int s;
+		for(s=0;s<font->num_glyphs;s++) {
+		    if(s!=t && font->glyphs[s].unicode==32)
+			font->glyphs[s].unicode=0;
+		}
+		return t;
+	    }
 	}
     }
     return -1;

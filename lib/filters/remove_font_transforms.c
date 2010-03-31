@@ -145,7 +145,10 @@ static transformedfont_t* transformedfont_new(gfxfont_t*orig, mymatrix_t*m)
     f->used = rfx_calloc(sizeof(f->used[0])*orig->num_glyphs);
     int t;
     for(t=0;t<orig->num_glyphs;t++) {
-	if(orig->glyphs[t].unicode==32)
+	if(orig->glyphs[t].unicode==32 && 
+	   (!orig->glyphs[t].line || 
+	    !orig->glyphs[t].line->next || 
+	    !orig->glyphs[t].line->next->next))
 	    f->used[t]=1; //always preserve the space char in fonts
     }
     return f;
