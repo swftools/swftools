@@ -358,7 +358,7 @@ static void applyfilter3(int mode, unsigned char*src, unsigned char*old, unsigne
     }    
 }
 
-static void inline applyfilter4(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
+void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
 {
     int x;
     unsigned char lastr=0;
@@ -440,7 +440,6 @@ static void inline applyfilter4(int mode, unsigned char*src, unsigned char*old, 
 	}
     }    
 }
-
 
 EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
 {
@@ -649,7 +648,7 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 		old = &data2[(y-1)*header.width*4];
 	    }
 	    if(header.mode == 6) { 
-		applyfilter4(mode, src, old, dest, header.width);
+		png_inverse_filter_32(mode, src, old, dest, header.width);
 	    } else { // header.mode = 2
 		applyfilter3(mode, src, old, dest, header.width);
 		/* replace alpha color */
@@ -1377,7 +1376,7 @@ static int png_apply_specific_filter_32(int filtermode, unsigned char*dest, unsi
     }
     return filtermode;
 }
-    
+
 static int*num_bits_table = 0;
 
 static void make_num_bits_table()
@@ -1396,13 +1395,81 @@ static void make_num_bits_table()
     }
 }
 
-static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, int y, int bpp)
+static int png_find_best_filter(unsigned char*src, int width, int bpp, int y)
 {
     make_num_bits_table();
-
+    
     int num_filters = y>0?5:2; //don't apply y-direction filter in first line
+
+    int bytes_per_pixel = bpp>>3;
+    int w = width*bytes_per_pixel;
+    int back_x = bytes_per_pixel;
+    int back_y = y?width*bytes_per_pixel:0;
+
+    unsigned char*pairs[5];
+    pairs[0] = calloc(1, 8192);
+    pairs[1] = calloc(1, 8192);
+    pairs[2] = calloc(1, 8192);
+    pairs[3] = calloc(1, 8192);
+    pairs[4] = calloc(1, 8192);
+    
+    unsigned char old[5];
+    int l = bytes_per_pixel - 1;
+    old[0] = src[l];
+    old[1] = src[l];
+    old[2] = src[l] - src[l-back_y];
+    old[3] = src[l] - src[l-back_y];
+    old[4] = src[l] - PaethPredictor(0, src[l-back_y], 0);
+
+    int different_pairs[5] = {0,0,0,0,0};
+
+    int x;
+    for(x=bytes_per_pixel;x<w;x++) {
+	unsigned char dest[5];
+	dest[0] = src[x];
+	dest[1] = src[x] - src[x-back_x];
+	dest[2] = src[x] - src[x-back_y];
+	dest[3] = src[x] - (src[x-back_x] + src[x-back_y])/2;
+	dest[4] = src[x] - PaethPredictor(src[x-back_x], src[x-back_y], src[x-back_x-back_y]);
+
+	int i;
+	for(i=0;i<5;i++) {
+	    int v = dest[i]<<8|old[i];
+	    int p = v>>3;
+	    int b = 1<<(v&7);
+	    if(!pairs[i][p]&b) {
+		pairs[i][p]|=b;
+		different_pairs[i]++;
+	    }
+	}
+	memcpy(old, dest, sizeof(old));
+    }
     int f;
     int best_nr = 0;
+    int best_energy = INT_MAX;
+    for(f=0;f<num_filters;f++) {
+	int energy = different_pairs[f];
+	if(energy<best_energy) {
+	    best_nr = f;
+	    best_energy = energy;
+	}
+    }
+    free(pairs[0]);
+    free(pairs[1]);
+    free(pairs[2]);
+    free(pairs[3]);
+    free(pairs[4]);
+    return best_nr;
+}
+    
+    
+static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, int y, int bpp)
+{
+    int best_nr = 0;
+#if 0
+    make_num_bits_table();
+    int num_filters = y>0?5:2; //don't apply y-direction filter in first line
+    int f;
     int best_energy = INT_MAX;
     int w = width*(bpp/8);
     unsigned char* pairs = malloc(8192);
@@ -1433,11 +1500,14 @@ static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, in
 	    best_energy = energy;
 	}
     }
+    free(pairs);
+#else
+    best_nr = png_find_best_filter(src, width, bpp, y);
+#endif
     if(bpp==8)
 	png_apply_specific_filter_8(best_nr, dest, src, width);
     else
 	png_apply_specific_filter_32(best_nr, dest, src, width);
-    free(pairs);
     return best_nr;
 }
 

@@ -66,7 +66,7 @@ void* rfx_calloc(int size)
     return 0;
   }
 #ifdef HAVE_CALLOC
-  ptr = calloc(size);
+  ptr = calloc(1, size);
 #else
   ptr = malloc(size);
 #endif
@@ -80,6 +80,12 @@ void* rfx_calloc(int size)
 #endif
   return ptr;
 }
+#ifndef HAVE_CALLOC
+void* rfx_calloc_replacement(int nmemb, int size)
+{
+    rfx_calloc(nmemb*size);
+}
+#endif
 
 #ifdef MEMORY_INFO
 long rfx_memory_used()

@@ -25,9 +25,8 @@
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../mem.h"
-#define PNG_INLINE_EXPORTS
 #include "../types.h"
-#include "../png.c"
+#include "../png.h"
 #include "../log.h"
 #include "render.h"
 
