@@ -23,6 +23,9 @@
 extern "C" {
 #endif
 
+int png_apply_filter_32(unsigned char*dest, unsigned char*src, int width, int y);
+void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width);
+
 int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char**destdata);
 int getPNGdimensions(const char*sname, int*destwidth, int*destheight);
 

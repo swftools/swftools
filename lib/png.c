@@ -358,7 +358,7 @@ static void applyfilter3(int mode, unsigned char*src, unsigned char*old, unsigne
     }    
 }
 
-static void inline applyfilter4(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
+void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
 {
     int x;
     unsigned char lastr=0;
@@ -440,7 +440,6 @@ static void inline applyfilter4(int mode, unsigned char*src, unsigned char*old, 
 	}
     }    
 }
-
 
 EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
 {
@@ -649,7 +648,7 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 		old = &data2[(y-1)*header.width*4];
 	    }
 	    if(header.mode == 6) { 
-		applyfilter4(mode, src, old, dest, header.width);
+		png_inverse_filter_32(mode, src, old, dest, header.width);
 	    } else { // header.mode = 2
 		applyfilter3(mode, src, old, dest, header.width);
 		/* replace alpha color */
