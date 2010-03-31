@@ -1465,11 +1465,10 @@ static int png_find_best_filter(unsigned char*src, int width, int bpp, int y)
     
 static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, int y, int bpp)
 {
-    make_num_bits_table();
-
-    int num_filters = y>0?5:2; //don't apply y-direction filter in first line
     int best_nr = 0;
 #if 0
+    make_num_bits_table();
+    int num_filters = y>0?5:2; //don't apply y-direction filter in first line
     int f;
     int best_energy = INT_MAX;
     int w = width*(bpp/8);

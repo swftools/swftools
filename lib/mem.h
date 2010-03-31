@@ -13,7 +13,7 @@ void* rfx_calloc(int size);
 void* rfx_realloc(void*data, int size);
 void rfx_free(void*data);
 #ifndef HAVE_CALLOC
-void* rfx_calloc_replacement(int nmemb, int size)
+void* rfx_calloc_replacement(int nmemb, int size);
 #endif
 #ifdef MEMORY_INFO
 long rfx_memory_used();

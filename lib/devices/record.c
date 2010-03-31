@@ -45,6 +45,8 @@
 #include "record.h"
 
 //#define STATS
+#define COMPRESS_IMAGES
+//#define FILTER_IMAGES
 
 typedef struct _state {
     char*last_string[16];
@@ -169,41 +171,51 @@ static gfxline_t* readLine(reader_t*r, state_t*s)
     return start;
 }
 
-#define COMPRESS_IMAGES
 static void dumpImage(writer_t*w, state_t*state, gfximage_t*img)
 {
     int oldpos = w->pos;
     writer_writeU16(w, img->width);
     writer_writeU16(w, img->height);
 #ifdef COMPRESS_IMAGES
-    //45.2% images (3055340 bytes) (without filter)
-    //39.9% images (2458904 bytes) (with filter, Z_BEST_SPEED)
     //35.3% images (2027305 bytes) (with filter, Z_BEST_COMPRESSION)
+    //39.9% images (2458904 bytes) (with filter, Z_BEST_SPEED)
+    //45.2% images (3055340 bytes) (without filter)
+    //45.9% images (3149247 bytes) (without filter, 5)
     //48.0% images (3480495 bytes) (with filter, fastlz)
+    //48.0% images (3488650 bytes) (without filter, Z_BEST_SPEED)
+    //55.3% images (4665889 bytes) (without filter, fastlz level 2)
+    //55.6% images (4726334 bytes) (without filter, fastlz level 1)
 
+    gfxcolor_t*image;
+#ifdef FILTER_IMAGES
     unsigned char*filter = malloc(img->height);
     int y;
-    gfxcolor_t*image = malloc(img->width*img->height*sizeof(gfxcolor_t));
+    image = malloc(img->width*img->height*sizeof(gfxcolor_t));
     for(y=0;y<img->height;y++) {
 	filter[y] = png_apply_filter_32(
 		(void*)&image[y*img->width], 
 		(void*)&img->data[y*img->width], img->width, y);
     }
+#else
+    image = img->data;
+#endif
     int size = img->width*img->height;
     uLongf compressdata_size = compressBound(size*sizeof(gfxcolor_t));
     void*compressdata = malloc(compressdata_size);
 
 #ifdef HAVE_FASTLZ
-    compressdata_size = fastlz_compress_level(1, (void*)image, size*sizeof(gfxcolor_t), compressdata);
+    compressdata_size = fastlz_compress_level(2, (void*)image, size*sizeof(gfxcolor_t), compressdata);
 #else
-    compress2(compressdata, &compressdata_size, (void*)image, sizeof(gfxcolor_t)*size, Z_BEST_SPEED);
+    compress2(compressdata, &compressdata_size, (void*)image, sizeof(gfxcolor_t)*size, 6);
 #endif
 
     writer_writeU32(w, compressdata_size);
+#ifdef FILTER_IMAGES
     w->write(w, filter, img->height);
-    w->write(w, compressdata, compressdata_size);
-    free(image);
     free(filter);
+    free(image);
+#endif
+    w->write(w, compressdata, compressdata_size);
 #else
     w->write(w, img->data, img->width*img->height*sizeof(gfxcolor_t));
 #endif
@@ -221,16 +233,19 @@ static gfximage_t readImage(reader_t*r, state_t*state)
 #ifdef COMPRESS_IMAGES
     uLongf compressdata_size = reader_readU32(r);
     void*compressdata = malloc(compressdata_size);
+# ifdef FILTER_IMAGES
     unsigned char*filter = malloc(img.height);
     r->read(r, filter, img.height);
+# endif
     r->read(r, compressdata, compressdata_size);
    
-#ifdef HAVE_FASTLZ
+# ifdef HAVE_FASTLZ
     fastlz_decompress(compressdata, compressdata_size, (void*)img.data, size);
-#else
+# else
     uncompress((void*)img.data, &size, compressdata, compressdata_size);
-#endif
+# endif
 
+# ifdef FILTER_IMAGES
     int y;
     unsigned char*line = malloc(img.width*sizeof(gfxcolor_t));
     for(y=0;y<img.height;y++) {
@@ -239,7 +254,10 @@ static gfximage_t readImage(reader_t*r, state_t*state)
 			      line, img.width);
 	memcpy(&img.data[y*img.width], line, img.width*sizeof(gfxcolor_t));
     }
+    free(line);
     free(filter);
+# endif
+
 #else
     r->read(r, img.data, size);
 #endif
