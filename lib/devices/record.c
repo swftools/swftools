@@ -185,6 +185,7 @@ static void dumpImage(writer_t*w, state_t*state, gfximage_t*img)
     //48.0% images (3488650 bytes) (without filter, Z_BEST_SPEED)
     //55.3% images (4665889 bytes) (without filter, fastlz level 2)
     //55.6% images (4726334 bytes) (without filter, fastlz level 1)
+    //83.0% images (18091804 bytes) (no compression)
 
     gfxcolor_t*image;
 #ifdef FILTER_IMAGES
@@ -206,7 +207,7 @@ static void dumpImage(writer_t*w, state_t*state, gfximage_t*img)
 #ifdef HAVE_FASTLZ
     compressdata_size = fastlz_compress_level(2, (void*)image, size*sizeof(gfxcolor_t), compressdata);
 #else
-    compress2(compressdata, &compressdata_size, (void*)image, sizeof(gfxcolor_t)*size, 6);
+    compress2(compressdata, &compressdata_size, (void*)image, sizeof(gfxcolor_t)*size, Z_BEST_SPEED);
 #endif
 
     writer_writeU32(w, compressdata_size);

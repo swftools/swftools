@@ -1513,11 +1513,11 @@ static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, in
 
 int png_apply_filter_8(unsigned char*dest, unsigned char*src, int width, int y)
 {
-    png_apply_filter(dest, src, width, y, 8);
+    return png_apply_filter(dest, src, width, y, 8);
 }
 int png_apply_filter_32(unsigned char*dest, unsigned char*src, int width, int y)
 {
-    png_apply_filter(dest, src, width, y, 32);
+    return png_apply_filter(dest, src, width, y, 32);
 }
 
 EXPORT void savePNG(const char*filename, unsigned char*data, int width, int height, int numcolors)
