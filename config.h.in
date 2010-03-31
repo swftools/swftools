@@ -82,6 +82,9 @@
 /* Define if you have the srand48 function.  */
 #undef HAVE_SRAND48
 
+/* Define if you have the calloc function.  */
+#undef HAVE_CALLOC
+
 /* Define if you have the stat function.  */
 #undef HAVE_STAT
 
@@ -272,6 +275,11 @@
 #ifdef HAVE_LIBZZIP
 #define HAVE_ZZIP 1
 #endif
+#endif
+
+// supply a substitute calloc function if necessary
+#ifndef HAVE_CALLOC
+#define calloc rfx_calloc_replacement
 #endif
 
 #endif

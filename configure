@@ -5423,7 +5423,7 @@ _ACEOF
 
 fi
  #needed for jpeglib
- for ac_func in popen wcschr wcsdup mkstemp stat mmap lrand48 rand srand48 srand bcopy bzero time getrusage mallinfo open64
+ for ac_func in popen wcschr wcsdup mkstemp stat mmap lrand48 rand srand48 srand bcopy bzero time getrusage mallinfo open64 calloc
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
