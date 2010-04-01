@@ -36,7 +36,7 @@ xrow.o: xrow.c xrow.h ../q.h ../mem.h
 stroke.o: stroke.c poly.h convert.h wind.h
 	$(CC) -c stroke.c -o stroke.o
 
-GFX=../gfxfont.o ../gfxtools.o  ../devices/ops.o ../devices/polyops.o ../devices/text.o ../devices/bbox.o ../devices/render.o ../devices/rescale.o ../devices/record.o
+GFX=../gfxfont.o ../gfxtools.o ../gfximage.o  ../devices/ops.o ../devices/polyops.o ../devices/text.o ../devices/bbox.o ../devices/render.o ../devices/rescale.o ../devices/record.o
 stroke: test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a ../libbase.a 
 	$(CC) test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a $(GFX) ../libbase.a -o stroke $(LIBS)
 

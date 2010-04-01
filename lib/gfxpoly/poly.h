@@ -4,15 +4,15 @@
 #include <stdint.h>
 #include "../q.h"
 #include "../types.h"
+#include "wind.h"
 
 //#define DEBUG
-//#define CHECKS
+#define CHECKS
 
 /* features */
 #define SPLAY
 #define DONT_REMEMBER_CROSSINGS
 
-typedef enum {DIR_UP, DIR_DOWN, DIR_UNKNOWN} segment_dir_t;
 typedef enum {EVENT_CROSS, EVENT_END, EVENT_START, EVENT_HORIZONTAL} eventtype_t;
 typedef enum {SLOPE_POSITIVE, SLOPE_NEGATIVE} slope_t;
 
@@ -23,37 +23,14 @@ typedef struct _point {
 } point_t;
 type_t point_type;
 
-typedef struct _fillstyle {
-    void*internal;
-} fillstyle_t;
-
-typedef struct _windstate
-{
-    char is_filled;
-    int wind_nr;
-} windstate_t;
-
-/* TODO: maybe we should merge windcontext and windrule */
-typedef struct _windcontext
-{
-    int num_polygons;
-} windcontext_t;
-
-typedef struct _windrule
-{
-    windstate_t (*start)(windcontext_t* num_polygons);
-    windstate_t (*add)(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int polygon_nr);
-    fillstyle_t* (*diff)(windstate_t*left, windstate_t*right);
-} windrule_t;
-
-#define SEGNR(s) ((s)?(s)->nr:-1)
+#define SEGNR(s) ((int)((s)?(s)->nr:-1))
 
 typedef struct _gfxpolystroke {
     segment_dir_t dir;
+    edgestyle_t*fs;
     int points_size;
     int num_points;
     point_t*points;
-    fillstyle_t*fs;
     struct _gfxpolystroke*next;
 } gfxpolystroke_t;
 typedef struct _gfxpoly {
@@ -69,8 +46,8 @@ typedef struct _segment {
     int32_t minx, maxx;
     
     segment_dir_t dir;
-    fillstyle_t*fs;
-    fillstyle_t*fs_out;
+    edgestyle_t*fs_orig;
+    edgestyle_t*fs_out;
 #ifdef CHECKS
     char fs_out_ok;
 #endif

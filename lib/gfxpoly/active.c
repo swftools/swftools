@@ -31,7 +31,7 @@ void actlist_dump(actlist_t*a, int32_t y)
             }
             lastx = x;
         }
-        fprintf(stderr, "[%d]", s->nr);
+        fprintf(stderr, "[%d]", (int)s->nr);
         s = s->right;
         if(s) fprintf(stderr, " ");
         else fprintf(stderr, " y=%d\n", y);
@@ -100,7 +100,7 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
 	    actlist_dump(a, p1.y);
 	    segment_t*s = a->list;
 	    while(s) {
-		fprintf(stderr, "[%d] %f/%f (%d,%d) -> (%d,%d)\n", s->nr,
+		fprintf(stderr, "[%d] %f/%f (%d,%d) -> (%d,%d)\n", SEGNR(s),
 			single_cmp(s,p1), cmp(s,p1,p2),
 			s->a.x, s->a.y, s->b.x, s->b.y);
 		s = s->right;

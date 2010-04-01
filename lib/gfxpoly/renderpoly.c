@@ -7,7 +7,7 @@ typedef struct _renderpoint
 {
     double x;
     segment_dir_t dir;
-    fillstyle_t*fs;
+    edgestyle_t*fs;
     int polygon_nr;
 } renderpoint_t;
 
@@ -27,7 +27,7 @@ typedef struct _renderbuf
     renderline_t*lines;
 } renderbuf_t;
 
-static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, fillstyle_t*fs, int polygon_nr)
+static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir, edgestyle_t*fs, int polygon_nr)
 {
     renderpoint_t p;
     p.x = x;
@@ -48,7 +48,7 @@ static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir
     l->num++;
 }
 #define CUT 0.5
-static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, fillstyle_t*fs, int polygon_nr)
+static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, edgestyle_t*fs, int polygon_nr)
 {
     x1 *= buf->zoom;
     y1 *= buf->zoom;
@@ -175,7 +175,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
         }
         if(fill.is_filled && lastx!=buf->width) {
             /* we're bleeding, fill over padding, too. */
-            fprintf(stderr, "Polygon %08x is bleeding in line %d\n", (int)polygon, y);
+            fprintf(stderr, "Polygon %p is bleeding in line %d\n", polygon, y);
             fill_bitwise(line, lastx, width8*8);
 	    assert(line[width8-1]&0x01);
 	    bleeding = 1;

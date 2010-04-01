@@ -1,6 +1,6 @@
-#include "wind.h"
+#include "poly.h"
 
-fillstyle_t fillstyle_default;
+edgestyle_t edgestyle_default;
 
 windstate_t windstate_nonfilled = {
     is_filled: 0,
@@ -13,17 +13,18 @@ windstate_t evenodd_start(windcontext_t*context)
 {
     return windstate_nonfilled;
 }
-windstate_t evenodd_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t evenodd_add(windcontext_t*context, windstate_t left, edgestyle_t*edge, segment_dir_t dir, int master)
 {
+    assert(edge);
     left.is_filled ^= 1;
     return left;
 }
-fillstyle_t* evenodd_diff(windstate_t*left, windstate_t*right)
+edgestyle_t* evenodd_diff(windstate_t*left, windstate_t*right)
 {
     if(left->is_filled==right->is_filled)
         return 0;
     else
-        return &fillstyle_default;
+        return &edgestyle_default;
 }
 
 windrule_t windrule_evenodd = {
@@ -34,29 +35,36 @@ windrule_t windrule_evenodd = {
 
 // -------------------- circular ----------------------
 
+edgestyle_t edgestyle_down;
+edgestyle_t edgestyle_up;
+
 windstate_t circular_start(windcontext_t*context)
 {
     return windstate_nonfilled;
 }
 
-windstate_t circular_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t circular_add(windcontext_t*context, windstate_t left, edgestyle_t*edge, segment_dir_t dir, int master)
 {
+    assert(edge);
     /* which one is + and which one - doesn't actually make any difference */
     if(dir == DIR_DOWN)
-        left.wind_nr++;
+	left.wind_nr++;
     else
-        left.wind_nr--;
+	left.wind_nr--;
 
     left.is_filled = left.wind_nr != 0;
     return left;
 }
 
-fillstyle_t* circular_diff(windstate_t*left, windstate_t*right)
+edgestyle_t* circular_diff(windstate_t*left, windstate_t*right)
 {
-    if(left->is_filled==right->is_filled)
+    if(left->is_filled==right->is_filled) {
         return 0;
-    else
-        return &fillstyle_default;
+    } else if(left->is_filled) {
+        return &edgestyle_down;
+    } else {//right->is_filled
+        return &edgestyle_up;
+    }
 }
 
 windrule_t windrule_circular = {
@@ -72,7 +80,7 @@ windstate_t intersect_start(windcontext_t*context)
     return windstate_nonfilled;
 }
 
-windstate_t intersect_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t intersect_add(windcontext_t*context, windstate_t left, edgestyle_t*edge, segment_dir_t dir, int master)
 {
     assert(master < context->num_polygons);
 
@@ -81,12 +89,12 @@ windstate_t intersect_add(windcontext_t*context, windstate_t left, fillstyle_t*e
     return left;
 }
 
-fillstyle_t* intersect_diff(windstate_t*left, windstate_t*right)
+edgestyle_t* intersect_diff(windstate_t*left, windstate_t*right)
 {
     if(left->is_filled==right->is_filled)
         return 0;
     else
-        return &fillstyle_default;
+        return &edgestyle_default;
 }
 
 windrule_t windrule_intersect = {
@@ -102,7 +110,7 @@ windstate_t union_start(windcontext_t*context)
     return windstate_nonfilled;
 }
 
-windstate_t union_add(windcontext_t*context, windstate_t left, fillstyle_t*edge, segment_dir_t dir, int master)
+windstate_t union_add(windcontext_t*context, windstate_t left, edgestyle_t*edge, segment_dir_t dir, int master)
 {
     assert(master<sizeof(left.wind_nr)*8); //up to 32/64 polygons max
     left.wind_nr ^= 1<<master;
@@ -110,12 +118,12 @@ windstate_t union_add(windcontext_t*context, windstate_t left, fillstyle_t*edge,
     return left;
 }
 
-fillstyle_t* union_diff(windstate_t*left, windstate_t*right)
+edgestyle_t* union_diff(windstate_t*left, windstate_t*right)
 {
     if(left->is_filled==right->is_filled)
         return 0;
     else
-        return &fillstyle_default;
+        return &edgestyle_default;
 }
 
 windrule_t windrule_union = {

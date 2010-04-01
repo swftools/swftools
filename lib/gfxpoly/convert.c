@@ -133,6 +133,7 @@ void finish_segment(compactpoly_t*data)
 	return;
     point_t*p = malloc(sizeof(point_t)*data->num_points);
     gfxpolystroke_t*s = rfx_calloc(sizeof(gfxpolystroke_t));
+    s->fs = &edgestyle_default;
     s->next = data->poly->strokes;
     data->poly->strokes = s;
     s->num_points = s->points_size = data->num_points;

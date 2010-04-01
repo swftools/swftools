@@ -180,7 +180,7 @@ int test0(int argn, char*argv[])
     double ua=M_PI/4;
     matrix.m00=cos(ua);matrix.m10=sin(ua);
     matrix.m01=-sin(ua);matrix.m11=cos(ua);
-    //gfxline_transform(box1, &matrix);
+    gfxline_transform(box1, &matrix);
     
     //gfxline_t*b = 0;
     //b = gfxline_append(b, box1);
@@ -192,9 +192,13 @@ int test0(int argn, char*argv[])
     
     gfxline_free(box1);
     gfxline_free(box2);
+    
+    //gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
     gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
     gfxpoly_dump(poly3);
+    
     gfxline_t*line = gfxline_from_gfxpoly(poly3);
+
     gfxline_dump(line, stdout, "");
     gfxline_free(line);
     gfxpoly_destroy(poly1);
@@ -594,6 +598,7 @@ finish: 0,
 internal: 0
 };
 
+#if 0
 void test5(int argn, char*argv[])
 {
     gfxsource_t*driver = gfxsource_pdf_create();
@@ -629,6 +634,7 @@ void test5(int argn, char*argv[])
     closedir(_dir);
     driver->destroy(driver);
 }
+#endif
 
 int main(int argn, char*argv[])
 {
