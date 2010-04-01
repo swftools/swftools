@@ -513,7 +513,7 @@ gfxline_t*gfxline_from_gfxpoly(gfxpoly_t*poly)
     return mkgfxline(poly, 0);
 }
 
-gfxline_t*gfxline_from_gfxpoly_updown(gfxpoly_t*poly)
+gfxline_t*gfxline_from_gfxpoly_with_direction(gfxpoly_t*poly)
 {
     return mkgfxline(poly, 1);
 }

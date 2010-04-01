@@ -97,6 +97,7 @@ typedef struct _internal_result {
 #define OP_FINISH 0x0d
 
 #define FLAG_SAME_AS_LAST 0x10
+#define FLAG_ZERO_FONT 0x20
 
 #define LINE_MOVETO 0x0e
 #define LINE_LINETO 0x0f
@@ -579,14 +580,18 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
     }
 
     msg("<trace> record: %08x DRAWCHAR %d\n", glyphnr, dev);
-    const char*font_id = font->id?font->id:"*NULL*";
+    const char*font_id = (font&&font->id)?font->id:"*NULL*";
     
     gfxmatrix_t*l = &i->state.last_matrix[OP_DRAWCHAR];
+
+    U8 flags = 0;
+    if(!font)
+	flags |= FLAG_ZERO_FONT;
 
     char same_font = i->state.last_string[OP_DRAWCHAR] && !strcmp(i->state.last_string[OP_DRAWCHAR], font_id);
     char same_matrix = (l->m00 == matrix->m00) && (l->m01 == matrix->m01) && (l->m10 == matrix->m10) && (l->m11 == matrix->m11);
     char same_color = !memcmp(color, &i->state.last_color[OP_DRAWCHAR], sizeof(gfxcolor_t));
-    U8 flags = 0;
+
     if(same_font && same_matrix && same_color)
 	flags |= FLAG_SAME_AS_LAST;
 
@@ -597,7 +602,8 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
 #endif
 
     if(!(flags&FLAG_SAME_AS_LAST)) {
-	writer_writeString(&i->w, font_id);
+	if(!(flags&FLAG_ZERO_FONT))
+	    writer_writeString(&i->w, font_id);
 	dumpColor(&i->w, &i->state, color);
 	dumpMatrix(&i->w, &i->state, matrix);
 	i->state.last_string[OP_DRAWCHAR] = strdup(font_id);
@@ -776,7 +782,9 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 	    case OP_DRAWCHAR: {
 		U32 glyph = reader_readU32(r);
 		gfxmatrix_t m = {1,0,0, 0,1,0};
-		char* id = read_string(r, &state, op, flags);
+		char* id = 0;
+		if(!(flags&FLAG_ZERO_FONT))
+		    id = read_string(r, &state, op, flags);
 		gfxcolor_t color = read_color(r, &state, op, flags);
 		gfxmatrix_t matrix = read_matrix(r, &state, op, flags);
 
@@ -786,7 +794,8 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 		}
 		msg("<trace> replay: DRAWCHAR font=%s glyph=%d", id, glyph);
 		out->drawchar(out, font, glyph, &color, &matrix);
-		free(id);
+		if(id)
+		    free(id);
 		break;
 	    }
 	}

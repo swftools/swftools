@@ -361,7 +361,7 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 	*colon = 0;
 	char*newcmd = 0;
 	char param = 0;
-
+	
 	/* fixme: change this from a dict_t to gfxparams_t? */
 	if(eq && eq < colon) { // parameter
 	    *eq = 0;
@@ -377,6 +377,7 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 	if(!param || lastitem) {
 	    if(!cmd && lastitem) 
 		cmd = newcmd;
+	    assert(cmd);
 	    gfxfilterbase_t*f = 0;
 	    if(!strcmp(cmd, "maketransparent")) {
 		char*alphastr = dict_lookup(params, "alpha");
@@ -387,6 +388,9 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 	    } else if(!strcmp(cmd, "remove_font_transforms")) {
 		f = malloc(sizeof(gfxtwopassfilter_t));
 		gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
+	    } else if(!strcmp(cmd, "vectors_to_glyphs")) {
+		f = malloc(sizeof(gfxtwopassfilter_t));
+		gfxtwopassfilter_vectors_to_glyphs_init((gfxtwopassfilter_t*)f);
 	    } else if(!strcmp(cmd, "one_big_font")) {
 		f = malloc(sizeof(gfxtwopassfilter_t));
 		gfxtwopassfilter_one_big_font_init((gfxtwopassfilter_t*)f);

@@ -437,6 +437,7 @@ static ID id_radial = 0;
 static ID id_linear = 0;
 static ID id_remove_font_transforms = 0;
 static ID id_maketransparent = 0;
+static ID id_vectors_to_glyphs = 0;
 
 static VALUE noop(int argc, VALUE *argv, VALUE obj) {return obj;}
 
@@ -707,6 +708,8 @@ static VALUE doc_render(VALUE cls, VALUE device, VALUE _range, VALUE filters)
 	                    else x = RARRAY(filters)->ptr[t++];
 	    if(id == id_remove_font_transforms) {
 		wrap_filter2(dev, remove_font_transforms);
+	    } else if(id == id_vectors_to_glyphs) {
+		wrap_filter2(dev, vectors_to_glyphs);
 	    } else if(id == id_maketransparent) {
 		PARAM(alpha);
 		wrap_filter(dev, maketransparent, FIX2INT(alpha));
@@ -856,5 +859,6 @@ void Init_gfx()
     id_linear = rb_intern("linear");
     id_remove_font_transforms = rb_intern("remove_font_transforms");
     id_maketransparent = rb_intern("maketransparent");
+    id_vectors_to_glyphs = rb_intern("vectors_to_glyphs");
 }
 
