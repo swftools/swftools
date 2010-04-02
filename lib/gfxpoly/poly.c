@@ -194,9 +194,9 @@ char gfxpoly_check(gfxpoly_t*poly)
     DICT_ITERATE_ITEMS(d, point_t*, p, void*, c) {
         int count = (ptroff_t)c;
         if(count&1) {
-            fprintf(stderr, "Point (%f,%f) occurs %d times\n", p->x*poly->gridsize, p->y*poly->gridsize, count);
+            fprintf(stderr, "Point (%d,%d) occurs %d times\n", p->x, p->y, count);
             dict_destroy(d);
-            return 0;
+	    assert(count%2 == 0);
         }
     }
     dict_destroy(d);
@@ -1376,8 +1376,8 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
     }
 #endif
 
-    //add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
-    add_horizontals(p, windrule, context);
+    add_horizontals(p, &windrule_evenodd, context); // output is always even/odd
+    //add_horizontals(p, windrule, context);
     return p;
 }
 

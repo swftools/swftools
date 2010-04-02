@@ -40,7 +40,7 @@ GFX=../gfxfont.o ../gfxtools.o ../gfximage.o  ../devices/ops.o ../devices/polyop
 stroke: test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a ../libbase.a 
 	$(CC) test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a $(GFX) ../libbase.a -o stroke $(LIBS)
 
-SWF = ../librfxswf.a ../libpdf.a -lstdc++
+SWF = ../librfxswf.a ../libgfxpdf.a -lstdc++
 test: ../libbase.a test.c $(OBJS) poly.h convert.h $(GFX) 
 	$(CC) test.c $(OBJS) $(SWF) $(GFX) ../libbase.a -o test $(LIBS)
 
