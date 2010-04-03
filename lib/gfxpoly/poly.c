@@ -276,10 +276,9 @@ static void segment_dump(segment_t*s)
             (double)s->delta.x / s->delta.y, s->fs_orig);
 }
 
-static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_t y2, edgestyle_t*fs, int polygon_nr, segment_dir_t dir)
+static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int polygon_nr, segment_dir_t dir)
 {
     s->dir = dir;
-    s->fs_orig = fs;
     if(y1!=y2) {
 	assert(y1<y2);
     } else {
@@ -339,10 +338,10 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
 #endif
 }
 
-static segment_t* segment_new(point_t a, point_t b, edgestyle_t*fs, int polygon_nr, segment_dir_t dir)
+static segment_t* segment_new(point_t a, point_t b, int polygon_nr, segment_dir_t dir)
 {
     segment_t*s = (segment_t*)rfx_calloc(sizeof(segment_t));
-    segment_init(s, a.x, a.y, b.x, b.y, fs, polygon_nr, dir);
+    segment_init(s, a.x, a.y, b.x, b.y, polygon_nr, dir);
     return s;
 }
 
@@ -367,7 +366,9 @@ static void advance_stroke(queue_t*queue, hqueue_t*hqueue, gfxpolystroke_t*strok
        before horizontal events */
     while(pos < stroke->num_points-1) {
 	assert(stroke->points[pos].y <= stroke->points[pos+1].y);
-	s = segment_new(stroke->points[pos], stroke->points[pos+1], stroke->fs, polygon_nr, stroke->dir);
+	s = segment_new(stroke->points[pos], stroke->points[pos+1], polygon_nr, stroke->dir);
+	s->fs_orig = stroke->fs;
+	s->fs_old = stroke->fs_old;
 	pos++;
 	s->stroke = 0;
 	s->stroke_pos = 0;
@@ -666,6 +667,7 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
                 s->pos.x, s->pos.y, p.x, p.y);
 #endif
 	edgestyle_t*fs = s->fs_out;
+	edgestyle_t*fs_old = s->fs_orig;
 
         // omit horizontal lines
         if(s->pos.y != p.y) {
@@ -678,7 +680,7 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
 	       matching our start point, and a matching edgestyle */
 	    while(stroke) {
 		point_t p = stroke->points[stroke->num_points-1];
-		if(p.x == a.x && p.y == a.y && stroke->fs == fs)
+		if(p.x == a.x && p.y == a.y && stroke->fs == fs && stroke->fs_old == fs_old)
 		    break;
 		stroke = stroke->next;
 	    }
@@ -686,6 +688,7 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
 		stroke = rfx_calloc(sizeof(gfxpolystroke_t));
 		stroke->dir = DIR_DOWN;
 		stroke->fs = fs;
+		stroke->fs_old = fs_old;
 		stroke->next = status->strokes;
 		status->strokes = stroke;
 		stroke->points_size = 2;

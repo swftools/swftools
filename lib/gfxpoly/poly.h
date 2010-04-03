@@ -28,6 +28,7 @@ type_t point_type;
 typedef struct _gfxpolystroke {
     segment_dir_t dir;
     edgestyle_t*fs;
+    edgestyle_t*fs_old;
     int points_size;
     int num_points;
     point_t*points;
@@ -48,6 +49,7 @@ typedef struct _segment {
     segment_dir_t dir;
     edgestyle_t*fs_orig;
     edgestyle_t*fs_out;
+    edgestyle_t*fs_old;
 #ifdef CHECKS
     char fs_out_ok;
 #endif
