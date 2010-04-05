@@ -468,13 +468,35 @@ static void update_bitmap(SplashBitmap*bitmap, SplashBitmap*update, int x1, int 
 	    u += width8;
 	}
     } else {
-	int x,y;
-	for(y=0;y<yspan;y++) {
-	    for(x=0;x<xspan;x++) {
-		b[x] |= u[x];
+	if(((ptroff_t)b&7)==((ptroff_t)u&7)) {
+	    int x,y;
+	    for(y=0;y<yspan;y++) {
+		Guchar*e1 = b+xspan-8;
+		Guchar*e2 = b+xspan;
+		while(((ptroff_t)b&7) && b<e1) {
+		    *b |= *u;
+		    b++;u++;
+		}
+		while(b<e1) {
+		    *(long long*)b |= *(long long*)u;
+		    b+=8;u+=8;
+		}
+		while(b<e2) {
+		    *b |= *u;
+		    b++;u++;
+		}
+		b += width8-xspan;
+		u += width8-xspan;
 	    }
-	    b += width8;
-	    u += width8;
+	} else {
+	    int x,y;
+	    for(y=0;y<yspan;y++) {
+		for(x=0;x<xspan;x++) {
+		    b[x] |= u[x];
+		}
+		b += width8;
+		u += width8;
+	    }
 	}
     }
 }
