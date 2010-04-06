@@ -1,4 +1,5 @@
 #include <ruby.h>
+#include "../../config.h"
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../gfxtools.h"
@@ -765,6 +766,14 @@ VALUE gfx_setparameter(VALUE module, VALUE _key, VALUE _value)
 void Init_gfx()
 {
     initLog(0,0,0,0,0,2);
+#ifdef HAVE_SRAND48
+    srand48(time(0));
+#else
+#ifdef HAVE_SRAND
+    srand(time(0));
+#endif
+#endif
+
     pdfdriver = gfxsource_pdf_create();
     swfdriver = gfxsource_swf_create();
     imagedriver = gfxsource_image_create();
