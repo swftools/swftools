@@ -210,12 +210,21 @@ void gfxpoly_dump(gfxpoly_t*poly)
     fprintf(stderr, "polyon %p (gridsize: %f)\n", poly, poly->gridsize);
     gfxpolystroke_t*stroke = poly->strokes;
     for(;stroke;stroke=stroke->next) {
-	fprintf(stderr, "%p", stroke);
-	for(s=0;s<stroke->num_points-1;s++) {
-	    point_t a = stroke->points[s];
-	    point_t b = stroke->points[s+1];
-	    fprintf(stderr, "%s (%f,%f) -> (%f,%f)%s\n", s?"           ":"", a.x*g, a.y*g, b.x*g, b.y*g,
-		                                        s==stroke->num_points-2?"]":"");
+	fprintf(stderr, "%11p", stroke);
+	if(stroke->dir==DIR_UP) {
+	    for(s=stroke->num_points-1;s>=1;s--) {
+		point_t a = stroke->points[s];
+		point_t b = stroke->points[s-1];
+		fprintf(stderr, "%s (%f,%f) -> (%f,%f)%s%s\n", s!=stroke->num_points-1?"           ":"", a.x*g, a.y*g, b.x*g, b.y*g,
+							    s==1?"]":"", a.y==b.y?"H":"");
+	    }
+	} else {
+	    for(s=0;s<stroke->num_points-1;s++) {
+		point_t a = stroke->points[s];
+		point_t b = stroke->points[s+1];
+		fprintf(stderr, "%s (%f,%f) -> (%f,%f)%s%s\n", s?"           ":"", a.x*g, a.y*g, b.x*g, b.y*g,
+							    s==stroke->num_points-2?"]":"", a.y==b.y?"H":"");
+	    }
 	}
     }
 }
@@ -1201,14 +1210,20 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
                     e->s2 = 0;
                     hqueue_put(&hqueue, e);
                     left = actlist_left(actlist, s);
-		    dir_down^=1;
+		    if(e->s1->dir==DIR_UP)
+			dir_up^=1;
+		    else
+			dir_down^=1;
                     break;
                 }
                 case EVENT_END: {
                     left = actlist_left(actlist, s);
                     actlist_delete(actlist, s);
 		    advance_stroke(0, &hqueue, s->stroke, s->polygon_nr, s->stroke_pos);
-		    dir_up^=1;
+		    if(e->s1->dir==DIR_DOWN)
+			dir_up^=1;
+		    else
+			dir_down^=1;
                     break;
                 }
                 default: assert(0);

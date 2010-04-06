@@ -216,7 +216,7 @@ int test1(int argn, char*argv[])
     gfxline_t*b = 0;
     b = gfxline_append(b, box1);
     b = gfxline_append(b, box2);
-    b = gfxline_append(b, box3);
+    //b = gfxline_append(b, box3);
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
@@ -236,6 +236,7 @@ int test1(int argn, char*argv[])
 
     gfxpoly_dump(poly);
     gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
+    gfxpoly_dump(poly2);
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
 }
@@ -638,6 +639,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test3(argn, argv);
+    test1(argn, argv);
 }
 
