@@ -638,6 +638,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test0(argn, argv);
+    test3(argn, argv);
 }
 

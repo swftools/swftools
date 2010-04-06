@@ -6,7 +6,7 @@
 #include "../types.h"
 #include "wind.h"
 
-#define DEBUG
+//#define DEBUG
 #define CHECKS
 
 /* features */
@@ -28,7 +28,6 @@ type_t point_type;
 typedef struct _gfxpolystroke {
     segment_dir_t dir;
     edgestyle_t*fs;
-    edgestyle_t*fs_old;
     int points_size;
     int num_points;
     point_t*points;
@@ -47,9 +46,8 @@ typedef struct _segment {
     int32_t minx, maxx;
     
     segment_dir_t dir;
-    edgestyle_t*fs_orig;
+    edgestyle_t*fs;
     edgestyle_t*fs_out;
-    edgestyle_t*fs_old;
 #ifdef CHECKS
     char fs_out_ok;
 #endif
