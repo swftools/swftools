@@ -211,22 +211,28 @@ int test1(int argn, char*argv[])
 {
     gfxline_t*box1 = gfxline_makerectangle(50,50,150,150);
     gfxline_t*box2 = gfxline_makerectangle(100,100,200,200);
-    gfxline_t*box3 = gfxline_makerectangle(100,100,200,200);
+    gfxline_t*box3 = gfxline_makerectangle(200,100,300,200);
+    gfxline_t*box4 = gfxline_makerectangle(300,200,400,400);
+    gfxline_t* board = mkchessboard();
     gfxline_t*star = mkstar(50,50, 150,150);
     gfxline_t*b = 0;
     b = gfxline_append(b, box1);
     b = gfxline_append(b, box2);
-    //b = gfxline_append(b, box3);
+    b = gfxline_append(b, box3);
+    b = gfxline_append(b, box4);
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
-    double ua=0.1;
-    matrix.m00=cos(ua);matrix.m10=sin(ua);
-    matrix.m01=-sin(ua);matrix.m11=cos(ua);
+    matrix.m00 = 1.0;
+    matrix.m11 = 1.0;
+    matrix.tx = 200;
+    matrix.ty = 200;
+    gfxline_transform(board, &matrix);
+    b = gfxline_append(b, board);
 
     //gfxline_transform(b, &matrix);
 
-    gfxline_dump(b, stderr, "");
+    //gfxline_dump(b, stderr, "");
     gfxpoly_t*poly = gfxpoly_from_fill(b, 0.05);
     
     gfxline_free(box1);
@@ -234,9 +240,10 @@ int test1(int argn, char*argv[])
     gfxline_free(box3);
     gfxline_free(star);
 
-    gfxpoly_dump(poly);
+    //gfxpoly_dump(poly);
     gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
-    gfxpoly_dump(poly2);
+    //gfxpoly_dump(poly2);
+    gfxpoly_save_arrows(poly2, "test.ps");
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
 }
@@ -639,6 +646,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test1(argn, argv);
+    test4(argn, argv);
 }
 

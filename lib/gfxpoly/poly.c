@@ -250,6 +250,50 @@ void gfxpoly_save(gfxpoly_t*poly, const char*filename)
     fclose(fi);
 }
 
+void gfxpoly_save_arrows(gfxpoly_t*poly, const char*filename)
+{
+    FILE*fi = fopen(filename, "wb");
+    fprintf(fi, "%% gridsize %f\n", poly->gridsize);
+    fprintf(fi, "%% begin\n");
+    int t;
+    double l = 5.0 / poly->gridsize;
+    double g = poly->gridsize;
+    gfxpolystroke_t*stroke = poly->strokes;
+    for(;stroke;stroke=stroke->next) {
+	fprintf(fi, "%g setgray\n", 0);
+
+	int s = stroke->dir==DIR_UP?stroke->num_points-1:0;
+	int end = stroke->dir==DIR_UP?-1:stroke->num_points;
+	int dir = stroke->dir==DIR_UP?-1:1;
+
+	point_t p = stroke->points[s];
+	s+=dir;
+	point_t o = p;
+	fprintf(fi, "%f %f moveto\n", p.x * g, p.y * g);
+	for(;s!=end;s+=dir) {
+	    p = stroke->points[s];
+	    int lx = p.x - o.x;
+	    int ly = p.y - o.y;
+	    double d = sqrt(lx*lx+ly*ly);
+	    if(!d) d=1;
+	    else   d = l / d;
+	    double d2 = d*1.5;
+	    fprintf(fi, "%f %f lineto\n", (p.x - lx*d2) * g, (p.y - ly*d2) * g);
+	    fprintf(fi, "%f %f lineto\n", (p.x - lx*d2 + (ly*d))*g,
+		                          (p.y - ly*d2 - (lx*d))*g);
+	    fprintf(fi, "%f %f lineto\n", p.x * g, p.y * g);
+	    fprintf(fi, "%f %f lineto\n", (p.x - lx*d2 - (ly*d))*g, 
+		                          (p.y - ly*d2 + (lx*d))*g);
+	    fprintf(fi, "%f %f lineto\n", (p.x - lx*d2) * g, (p.y - ly*d2) * g);
+	    fprintf(fi, "%f %f moveto\n", p.x * g, p.y * g);
+	    o = p;
+	}
+	fprintf(fi, "stroke\n");
+    }
+    fprintf(fi, "showpage\n");
+    fclose(fi);
+}
+
 inline static event_t* event_new()
 {
     event_t*e = rfx_calloc(sizeof(event_t));
@@ -1154,18 +1198,17 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
         actlist_verify(actlist, y-1);
 #endif
 	edgestyle_t*fill = 0;
-	char dir_up = 0;
-	char dir_down = 0;
+	int dir_up = 0;
+	int dir_down = 0;
 
         do {
 	    assert(e->s1->fs);
             if(fill && x != e->p.x) {
-		assert(!dir_up || !dir_down);
-		assert(dir_up || dir_down);
 #ifdef DEBUG
                 fprintf(stderr, "%d) draw horizontal line from %d to %d\n", y, x, e->p.x);
 #endif
 		assert(x<e->p.x);
+		assert(dir_up || dir_down);
 
                 gfxpolystroke_t*stroke = rfx_calloc(sizeof(gfxpolystroke_t));
 		stroke->next = poly->strokes;
@@ -1173,7 +1216,12 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 
 		stroke->num_points = 2;
 		stroke->points = malloc(sizeof(point_t)*2);
-		stroke->dir = dir_up?DIR_UP:DIR_DOWN;
+		if(dir_up < 0 || dir_down > 0) {
+		    stroke->dir = DIR_UP;
+		} else {
+		    stroke->dir = DIR_DOWN;
+		}
+
 		stroke->fs = fill;
 		point_t a,b;
                 a.y = b.y = y;
@@ -1210,20 +1258,14 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
                     e->s2 = 0;
                     hqueue_put(&hqueue, e);
                     left = actlist_left(actlist, s);
-		    if(e->s1->dir==DIR_UP)
-			dir_up^=1;
-		    else
-			dir_down^=1;
+		    dir_down += e->s1->dir==DIR_UP?1:-1;
                     break;
                 }
                 case EVENT_END: {
                     left = actlist_left(actlist, s);
                     actlist_delete(actlist, s);
 		    advance_stroke(0, &hqueue, s->stroke, s->polygon_nr, s->stroke_pos);
-		    if(e->s1->dir==DIR_DOWN)
-			dir_up^=1;
-		    else
-			dir_down^=1;
+		    dir_up += e->s1->dir==DIR_UP?1:-1;
                     break;
                 }
                 default: assert(0);

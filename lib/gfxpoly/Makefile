@@ -1,7 +1,7 @@
 all: test stroke
 include ../../Makefile.common
 
-CC = gcc -O2 -g
+CC = gcc -O2 -g -pg
 #CC = gcc -O3
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
