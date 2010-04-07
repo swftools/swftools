@@ -196,7 +196,7 @@ char gfxpoly_check(gfxpoly_t*poly)
         if(count&1) {
             fprintf(stderr, "Point (%d,%d) occurs %d times\n", p->x, p->y, count);
             dict_destroy(d);
-	    assert(count%2 == 0);
+	    return 0;
         }
     }
     dict_destroy(d);
