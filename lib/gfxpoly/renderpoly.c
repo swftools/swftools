@@ -48,7 +48,7 @@ static inline void add_pixel(renderbuf_t*buf, double x, int y, segment_dir_t dir
     l->num++;
 }
 #define CUT 0.5
-static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, edgestyle_t*fs, int polygon_nr)
+static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2, edgestyle_t*fs, segment_dir_t dir, int polygon_nr)
 {
     x1 *= buf->zoom;
     y1 *= buf->zoom;
@@ -56,13 +56,14 @@ static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2
     y2 *= buf->zoom;
     double diffx, diffy;
     double ny1, ny2, stepx;
-    segment_dir_t dir = DIR_DOWN;
+
     if(y2 < y1) {
-        dir = DIR_UP;
+        dir ^= DIR_UP^DIR_DOWN;
         double x,y;
 	x = x1;x1 = x2;x2=x;
 	y = y1;y1 = y2;y2=y;
     }
+
     diffx = x2 - x1;
     diffy = y2 - y1;
     ny1 = floor(y1)+CUT;
@@ -85,6 +86,8 @@ static void add_line(renderbuf_t*buf, double x1, double y1, double x2, double y2
     int endy=floor(ny2);
     double posx=0;
     double startx = x1;
+
+    //printf("line %d from %f to %f dir=%s\n", polygon_nr, y1, y2, dir==DIR_UP?"up":"down");
 
     while(posy<=endy) {
         double xx = startx + posx;
@@ -145,7 +148,7 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
 	for(t=0;t<stroke->num_points-1;t++) {
 	    point_t a = stroke->points[t];
 	    point_t b = stroke->points[t+1];
-	    add_line(buf, a.x, a.y, b.x, b.y, stroke->fs, polygon_nr);
+	    add_line(buf, a.x, a.y, b.x, b.y, stroke->fs, stroke->dir, polygon_nr);
 	}
     }
 
@@ -179,6 +182,8 @@ unsigned char* render_polygon(gfxpoly_t*polygon, intbbox_t*bbox, double zoom, wi
             fill_bitwise(line, lastx, width8*8);
 	    assert(line[width8-1]&0x01);
 	    bleeding = 1;
+	    exit(1);
+
         }
     }
     

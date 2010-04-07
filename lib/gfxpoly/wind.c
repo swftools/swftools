@@ -58,13 +58,10 @@ windstate_t circular_add(windcontext_t*context, windstate_t left, edgestyle_t*ed
 
 edgestyle_t* circular_diff(windstate_t*left, windstate_t*right)
 {
-    if(left->is_filled==right->is_filled) {
+    if(left->is_filled==right->is_filled)
         return 0;
-    } else if(left->is_filled) {
-        return &edgestyle_down;
-    } else {//right->is_filled
-        return &edgestyle_up;
-    }
+    else
+        return &edgestyle_default;
 }
 
 windrule_t windrule_circular = {

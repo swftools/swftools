@@ -165,10 +165,11 @@ int gfxpoly_size(gfxpoly_t*poly)
     return edges;
 }
 
-char gfxpoly_check(gfxpoly_t*poly)
+char gfxpoly_check(gfxpoly_t*poly, char updown)
 {
     current_polygon = poly;
-    dict_t*d = dict_new2(&point_type);
+    dict_t*d1 = dict_new2(&point_type);
+    dict_t*d2 = dict_new2(&point_type);
     int s,t;
     gfxpolystroke_t*stroke = poly->strokes;
     for(;stroke;stroke=stroke->next) {
@@ -180,26 +181,54 @@ char gfxpoly_check(gfxpoly_t*poly)
 	   that the endpoint multiplicity is two */
 	for(s=0;s<stroke->num_points;s++) {
 	    point_t p = stroke->points[s];
-	    int num = (s>=1 && s<stroke->num_points-1)?2:1; // mid points are two points (start+end)
-	    if(!dict_contains(d, &p)) {
-		dict_put(d, &p, (void*)(ptroff_t)num);
+	    int num_xor = (s>=1 && s<stroke->num_points-1)?2:1; // mid points are two points (start+end)
+	    int num_circ = (s>=1 && s<stroke->num_points-1)?0:(s==0?1:-1);
+	    if(stroke->dir==DIR_UP)
+		num_circ=-num_circ;
+
+	    if(!dict_contains(d1, &p)) {
+		dict_put(d1, &p, (void*)(ptroff_t)num_xor);
+		if(updown) {
+		    assert(!dict_contains(d2, &p));
+		    dict_put(d2, &p, (void*)(ptroff_t)num_circ);
+		}
 	    } else {
-		int count = (ptroff_t)dict_lookup(d, &p);
-		dict_del(d, &p);
-		count+=num;
-		dict_put(d, &p, (void*)(ptroff_t)count);
+		int count = (ptroff_t)dict_lookup(d1, &p);
+		dict_del(d1, &p);
+		count+=num_xor;
+		dict_put(d1, &p, (void*)(ptroff_t)count);
+
+		if(updown) {
+		    assert(dict_contains(d2, &p));
+		    count = (ptroff_t)dict_lookup(d2, &p);
+		    dict_del(d2, &p);
+		    count+=num_circ;
+		    dict_put(d2, &p, (void*)(ptroff_t)count);
+		}
 	    }
 	}
     }
-    DICT_ITERATE_ITEMS(d, point_t*, p, void*, c) {
-        int count = (ptroff_t)c;
+    DICT_ITERATE_ITEMS(d1, point_t*, p1, void*, c1) {
+        int count = (ptroff_t)c1;
         if(count&1) {
-            fprintf(stderr, "Point (%d,%d) occurs %d times\n", p->x, p->y, count);
-            dict_destroy(d);
+            fprintf(stderr, "Point (%d,%d) occurs %d times\n", p1->x, p1->y, count);
+            dict_destroy(d1);
 	    return 0;
         }
     }
-    dict_destroy(d);
+    if(updown) {
+	DICT_ITERATE_ITEMS(d2, point_t*, p2, void*, c2) {
+	    int count = (ptroff_t)c2;
+	    if(count!=0) {
+		if(count>0) fprintf(stderr, "Point (%d,%d) has %d more incoming than outgoing segments\n", p2->x, p2->y, count);
+		if(count<0) fprintf(stderr, "Point (%d,%d) has %d more outgoing than incoming segments\n", p2->x, p2->y, -count);
+		dict_destroy(d2);
+		return 0;
+	    }
+	}
+    }
+    dict_destroy(d1);
+    dict_destroy(d2);
     return 1;
 }
 
@@ -1198,17 +1227,13 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
         actlist_verify(actlist, y-1);
 #endif
 	edgestyle_t*fill = 0;
-	int dir_up = 0;
-	int dir_down = 0;
+	int wind = 0;
 
         do {
 	    assert(e->s1->fs);
             if(fill && x != e->p.x) {
-#ifdef DEBUG
-                fprintf(stderr, "%d) draw horizontal line from %d to %d\n", y, x, e->p.x);
-#endif
+		assert(abs(wind)==1);
 		assert(x<e->p.x);
-		assert(dir_up || dir_down);
 
                 gfxpolystroke_t*stroke = rfx_calloc(sizeof(gfxpolystroke_t));
 		stroke->next = poly->strokes;
@@ -1216,27 +1241,28 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 
 		stroke->num_points = 2;
 		stroke->points = malloc(sizeof(point_t)*2);
-		if(dir_up < 0 || dir_down > 0) {
-		    stroke->dir = DIR_UP;
-		} else {
+
+		if(wind>0) {
 		    stroke->dir = DIR_DOWN;
+		} else {
+		    stroke->dir = DIR_UP;
 		}
+#ifdef DEBUG
+                fprintf(stderr, "%d) draw horizontal line from %d to %d (dir=%s)\n", y, x, e->p.x, stroke->dir==DIR_UP?"up":"down");
+#endif
 
 		stroke->fs = fill;
 		point_t a,b;
                 a.y = b.y = y;
-		/* we draw from low x to high x so that left/right fillstyles add up
-                   (because the horizontal line's fill style controls the area *below* the line)
-		 */
-                a.x = e->p.x;
-                b.x = x;
+                a.x = x;
+                b.x = e->p.x;
 		stroke->points[0] = a;
 		stroke->points[1] = b;
 #ifdef CHECKS
 		/* the output should always be intersection free polygons, so check this horizontal
 		   line isn't puncturing any segments in the active list */
-		segment_t* start = actlist_find(actlist, b, b);
-		segment_t* s = actlist_find(actlist, a, a);
+		segment_t* start = actlist_find(actlist, a, a);
+		segment_t* s = actlist_find(actlist, b, b);
 		while(s!=start) {
 		    assert(s->a.y == y || s->b.y == y);
 		    s = s->left;
@@ -1258,14 +1284,14 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
                     e->s2 = 0;
                     hqueue_put(&hqueue, e);
                     left = actlist_left(actlist, s);
-		    dir_down += e->s1->dir==DIR_UP?1:-1;
+		    wind += e->s1->dir==DIR_DOWN?-1:1;
                     break;
                 }
                 case EVENT_END: {
                     left = actlist_left(actlist, s);
                     actlist_delete(actlist, s);
 		    advance_stroke(0, &hqueue, s->stroke, s->polygon_nr, s->stroke_pos);
-		    dir_up += e->s1->dir==DIR_UP?1:-1;
+		    wind += e->s1->dir==DIR_DOWN?1:-1;
                     break;
                 }
                 default: assert(0);
@@ -1297,11 +1323,11 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 #endif
 
 #ifdef DEBUG
-            fprintf(stderr, "%d) event=%s[%d] left:[%d] x:%d\n",
+            fprintf(stderr, "%d) event=%s[%d] left:[%d] x:%d dir:%s\n",
                     y, e->type==EVENT_START?"start":"end",
                     s->nr,
                     left?left->nr:-1,
-                    x);
+                    x, s->dir==DIR_UP?"up":"down");
 #endif
 
             if(e->type == EVENT_END)
@@ -1314,6 +1340,13 @@ static void add_horizontals(gfxpoly_t*poly, windrule_t*windrule, windcontext_t*c
 #ifdef CHECKS
 	edgestyle_t*bleeding = fill;
         assert(!bleeding);
+	segment_t*s = actlist_leftmost(actlist);
+	int dir = 0;
+	while(s) {
+	    dir += s->dir==DIR_UP?-1:1;
+	    s = actlist_right(actlist, s);
+	}
+	assert(!dir);
 #endif
     }
 

@@ -93,7 +93,7 @@ typedef struct _segment {
 
 void gfxpoly_fail(char*expr, char*file, int line, const char*function);
 
-char gfxpoly_check(gfxpoly_t*poly);
+char gfxpoly_check(gfxpoly_t*poly, char updown);
 int gfxpoly_num_segments(gfxpoly_t*poly);
 int gfxpoly_size(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);

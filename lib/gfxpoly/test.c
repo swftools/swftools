@@ -173,7 +173,7 @@ int test0(int argn, char*argv[])
     gfxline_t*box3 = gfxline_makerectangle(-100,-100,100,100);
     //gfxline_append(box2, box3);
 
-    gfxpoly_check(gfxpoly_from_stroke(box1, 2.0, gfx_capRound, gfx_joinRound, 0, 0.05));
+    gfxpoly_check(gfxpoly_from_stroke(box1, 2.0, gfx_capRound, gfx_joinRound, 0, 0.05), 1);
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
@@ -451,18 +451,19 @@ void test4(int argn, char*argv[])
 
         double zoom = 1.0;
 
-        if(!gfxpoly_check(poly1)) {
+        if(!gfxpoly_check(poly1, 0)) {
             printf("bad polygon\n");
             continue;
         }
 
         gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+	assert(gfxpoly_check(poly2, 1));
 
 	int pass;
 	for(pass=0;pass<2;pass++) {
 	    intbbox_t bbox = intbbox_from_polygon(poly1, zoom);
 	    unsigned char*bitmap1 = render_polygon(poly1, &bbox, zoom, rule, &onepolygon);
-	    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd, &onepolygon);
+	    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_circular, &onepolygon);
 	    if(!bitmap_ok(&bbox, bitmap1) || !bitmap_ok(&bbox, bitmap2)) {
 		save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
 		assert(!"error in bitmaps");
@@ -473,7 +474,7 @@ void test4(int argn, char*argv[])
 	    }
 	    free(bitmap1);
 	    free(bitmap2);
-	    
+
 	    // second pass renders the 90° rotated version
 	    rotate90(poly1);
 	    rotate90(poly2);
@@ -519,7 +520,7 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 	fprintf(stderr, "%d segments (max so far: %d/%d)\n", size, max_segments, max_any_segments);
     }
 
-    if(!gfxpoly_check(poly1)) {
+    if(!gfxpoly_check(poly1, 0)) {
         gfxpoly_destroy(poly1);
         fprintf(stderr, "bad polygon\n");
         return;
