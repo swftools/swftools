@@ -214,12 +214,26 @@ void BitmapOutputDev::flushBitmap()
 	int ymax = b->ymax;
 
 	/* clip against (-movex, -movey, -movex+width, -movey+height) */
-	if(xmin < -this->movex) xmin = -this->movex;
-	if(ymin < -this->movey) ymin = -this->movey;
-	if(xmax > -this->movex + this->width) xmax = -this->movex+this->width;
-	if(ymax > -this->movey + this->height) ymax = -this->movey+this->height;
 
-	msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d)", xmin,ymin,xmax,ymax);
+	msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d %dx%d) (clipped against %d,%d,%d,%d)", xmin,ymin,xmax,ymax, xmax-xmin, ymax-ymin,
+		-this->movex, -this->movey, -this->movex+this->width, -this->movey+this->height);
+
+	if(xmin < -this->movex) {
+	    xmin = -this->movex;
+	    if(xmax < -this->movex) continue;
+	}
+	if(ymin < -this->movey) {
+	    ymin = -this->movey;
+	    if(ymax < -this->movey) continue;
+	}
+	if(xmax >= -this->movex + this->width) {
+	    xmax = -this->movex+this->width;
+	    if(xmin >= -this->movex + this->width) continue;
+	}
+	if(ymax >= -this->movey + this->height) {
+	    ymax = -this->movey+this->height;
+	    if(ymin >= -this->movey + this->height) continue;
+	}
 	
 	if((xmax-xmin)<=0 || (ymax-ymin)<=0) // no bitmap, nothing to do
 	    continue;
