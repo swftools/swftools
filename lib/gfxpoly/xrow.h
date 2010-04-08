@@ -33,6 +33,17 @@ xrow_t* xrow_new();
    line (from right to left, using the below fillstyle).
 */
 
+/* Another approach: since we really only need to know the below *or* above fillstyles in order to
+   determine whether a horizontal line is still needed (if its edgestyle doesn't change the windstate,
+   it's not needed), we can also process horizontal lines after the start events: walk the temporary
+   end segment list and the active list interleaved for each horizontal line, insert horizontal fragments
+   whenever they seem to modify the fillstyle (e.g. apply them with dir=UP).
+   This means that "very horizontal" segments ending in a scanline that encounter hot pixels
+   on their way (and thus don't receive "their" endpoint) need to store a horizontal event. Same for
+   general segments that pass/intersect multiple hotpixels in a scanline.
+*/
+
+
 void xrow_add(xrow_t*xrow, int32_t x);
 
 void xrow_sort(xrow_t*xrow);
