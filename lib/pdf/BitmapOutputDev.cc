@@ -216,8 +216,8 @@ void BitmapOutputDev::flushBitmap()
 	/* clip against (-movex, -movey, -movex+width, -movey+height) */
 	if(xmin < -this->movex) xmin = -this->movex;
 	if(ymin < -this->movey) ymin = -this->movey;
-	if(xmax > -this->movex + width) xmax = -this->movex+this->width;
-	if(ymax > -this->movey + height) ymax = -this->movey+this->height;
+	if(xmax > -this->movex + this->width) xmax = -this->movex+this->width;
+	if(ymax > -this->movey + this->height) ymax = -this->movey+this->height;
 
 	msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d)", xmin,ymin,xmax,ymax);
 	
@@ -844,7 +844,6 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     this->width = (int)(x2-x1);
     this->height = (int)(y2-y1);
 
-    msg("<debug> startPage");
     rgbdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     boolpolydev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     booltextdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
@@ -859,6 +858,8 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     booltextbitmap = booltextdev->getBitmap();
     staletextbitmap = new SplashBitmap(booltextbitmap->getWidth(), booltextbitmap->getHeight(), 1, booltextbitmap->getMode(), 0);
     assert(staletextbitmap->getRowSize() == booltextbitmap->getRowSize());
+    
+    msg("<debug> startPage %dx%d (%dx%d)", this->width, this->height, booltextbitmap->getWidth(), booltextbitmap->getHeight());
 
     clip0bitmap = clip0dev->getBitmap();
     clip1bitmap = clip1dev->getBitmap();
