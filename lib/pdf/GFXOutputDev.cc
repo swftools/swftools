@@ -371,6 +371,11 @@ static char fc_ismatch(FcPattern*match, char*family, char*style)
 }
 #endif
 
+static inline char islowercase(char c) 
+{
+    return (c>='a' && c<='z');
+}
+
 char* fontconfig_searchForFont(char*name)
 {
 #ifdef HAVE_FONTCONFIG
@@ -468,20 +473,36 @@ char* fontconfig_searchForFont(char*name)
     }
 
     char*family = strdup(name);
-    char*style = 0;
-    char*dash = strchr(family, '-');
-    if(!dash) dash = strchr(family, ',');
+    int len = strlen(family);
 
+    char*styles[] = {"Medium", "Regular", "Bold", "Italic", "Black", "Narrow"};
+    char*style = 0;
+    int t;
+    for(t=0;t<sizeof(styles)/sizeof(styles[0]);t++) {
+	int l = strlen(styles[t]);
+	if(len>l+1 && !strcmp(family+len-l, styles[t]) && islowercase(family[len-l-1])) {
+	    style = styles[t];
+	    family[len-l]=0;
+	    break;
+	}
+    }
+    if(!style) {
+	char*dash = strchr(family, '-');
+	if(!dash) dash = strchr(family, ',');
+	if(dash) {
+	    *dash = 0;
+	    style = dash+1;
+	}
+    }
     FcPattern*pattern = 0;
-    if(dash) {
-	*dash = 0;
-	style = dash+1;
+    if(style) {
 	msg("<debug> FontConfig: Looking for font %s (family=%s style=%s)", name, family, style);
 	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, FC_STYLE, FcTypeString, style, NULL);
     } else {
 	msg("<debug> FontConfig: Looking for font %s (family=%s)", name, family);
 	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
     }
+    pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
 
     FcResult result;
     FcConfigSubstitute(0, pattern, FcMatchPattern); 
