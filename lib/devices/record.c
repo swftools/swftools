@@ -592,8 +592,10 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
     char same_matrix = (l->m00 == matrix->m00) && (l->m01 == matrix->m01) && (l->m10 == matrix->m10) && (l->m11 == matrix->m11);
     char same_color = !memcmp(color, &i->state.last_color[OP_DRAWCHAR], sizeof(gfxcolor_t));
 
+    /* FIXME
     if(same_font && same_matrix && same_color)
 	flags |= FLAG_SAME_AS_LAST;
+    */
 
     writer_writeU8(&i->w, OP_DRAWCHAR|flags);
     writer_writeU32(&i->w, glyphnr);
