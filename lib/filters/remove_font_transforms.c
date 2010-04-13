@@ -226,7 +226,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	if(count) 
 	    average_xmax /= count;
 
-	fd->dx = -total.xmin;
+	fd->dx = 0;//-total.xmin;
 
 	font->ascent = total.ymax;
 	font->descent = -total.ymin;

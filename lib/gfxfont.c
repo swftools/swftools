@@ -665,7 +665,19 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    }
 	}
 
+	/* make sure coordinates are always to the right of the origin */
+	int xshift=0;
+	if(dest->xmin < 0) {
+	    xshift = -dest->xmin;
+	    for(s=0;s<count;s++) {
+		dest->points[s].x += xshift;
+	    }
+	    dest->xmin += xshift;
+	    dest->xmax += xshift;
+	}
+
 	dest->bearing = dest->xmin;
+	dest->xmin=0;
 	dest->advance = src->advance*scale;
 
 	int u = font->glyphs[t].unicode;
