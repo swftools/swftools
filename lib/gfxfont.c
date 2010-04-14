@@ -665,6 +665,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    }
 	}
 
+	dest->bearing = dest->xmin;
 	/* make sure coordinates are always to the right of the origin */
 	int xshift=0;
 	if(dest->xmin < 0) {
@@ -676,8 +677,8 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    dest->xmax += xshift;
 	}
 
-	dest->bearing = dest->xmin;
-	dest->xmin=0;
+	//dest->xmin=0; //TODO: might be necessary for some font engines?
+
 	dest->advance = src->advance*scale;
 
 	int u = font->glyphs[t].unicode;
