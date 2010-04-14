@@ -254,9 +254,11 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     rgba_int_t*tmpline;
     int monochrome = 0;
     gfxcolor_t monochrome_colors[2];
-    
-    if(newwidth<1 || newheight<1)
-	return 0;
+   
+    if(newwidth<1)
+	newwidth=1;
+    if(newheight<1)
+	newheight=1;
 
     int width = image->width;
     int height = image->height;
