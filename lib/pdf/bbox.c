@@ -347,17 +347,26 @@ static void fix_small_boxes(context_t*context)
 	while(h) {
 	    head_t*next = h->next;
 	    if(!h->seen) {
-		if(h->bbox.xmax - h->bbox.ymin < 16
-		&& h->bbox.ymax - h->bbox.ymin < 16) {
+		if(h->bbox.xmax - h->bbox.xmin < 32
+		|| h->bbox.ymax - h->bbox.ymin < 32) {
 		    head_t*other = search_vicinity(context, h, 64, costab, sintab);
 		    if(other) {
 			merge(context, h->pos, other->pos);
 			changed = 1;
 			break;
 		    } else {
+			//printf("nothing in the vicinity of %d,%d,%d,%d\n", h->bbox);
 			h->seen = 1;
 		    }
-		}
+		} /*else {
+		    printf("area %d,%d,%d,%d is large enough (%dx%d)\n", 
+			    h->bbox.xmin,
+			    h->bbox.ymin,
+			    h->bbox.xmax,
+			    h->bbox.ymax,
+			    h->bbox.xmax - h->bbox.xmin,
+			    h->bbox.ymax - h->bbox.ymin);
+		} */
 	    }
 	    h = next;
 	}
