@@ -726,8 +726,8 @@ static table_hea_t*hea_new(ttf_t*ttf)
 	for(t=0;t<ttf->num_glyphs;t++) {
 	    if(ttf->glyphs[t].advance > hea->advanceWidthMax)
 	        hea->advanceWidthMax = ttf->glyphs[t].advance;
-	    if(ttf->glyphs[t].xmin < hea->minLeftSideBearing)
-	        hea->minLeftSideBearing = ttf->glyphs[t].xmin;
+	    if(ttf->glyphs[t].bearing < hea->minLeftSideBearing)
+	        hea->minLeftSideBearing = ttf->glyphs[t].bearing;
 	    if(ttf->glyphs[t].xmax < hea->minRightSideBearing)
 	        hea->minRightSideBearing = ttf->glyphs[t].xmax;
 	    int width = ttf->glyphs[t].xmax - ttf->glyphs[t].xmin;

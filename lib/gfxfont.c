@@ -593,7 +593,7 @@ void gfxfont_fix_unicode(gfxfont_t*font)
     }
 }
 
-ttf_t* gfxfont_to_ttf(gfxfont_t*font)
+ttf_t* gfxfont_to_ttf(gfxfont_t*font, char eot)
 {
     ttf_t*ttf = ttf_new();
     int num_glyphs = font->num_glyphs;
@@ -665,17 +665,23 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    }
 	}
 
-	dest->bearing = dest->xmin;
-	/* make sure coordinates are always to the right of the origin */
-	int xshift=0;
-	if(dest->xmin < 0) {
-	    xshift = -dest->xmin;
-	    for(s=0;s<count;s++) {
-		dest->points[s].x += xshift;
+	if(eot) {
+	    dest->bearing = dest->xmin;
+	    /* for windows font rendering, make sure coordinates are always 
+	       to the right of the origin (and use bearing to shift them "back".)
+	       Don't do this for non-windows platforms though because e.g. OS X 
+	       ignores bearing. */
+	    int xshift=0;
+	    if(dest->xmin < 0) {
+		xshift = -dest->xmin;
+		for(s=0;s<count;s++) {
+		    dest->points[s].x += xshift;
+		}
+		dest->xmin += xshift;
+		dest->xmax += xshift;
 	    }
-	    dest->xmin += xshift;
-	    dest->xmax += xshift;
 	}
+	dest->advance = src->advance*scale;
 
 	//dest->xmin=0; //TODO: might be necessary for some font engines?
 
@@ -735,14 +741,14 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 
 void gfxfont_save(gfxfont_t*font, const char*filename)
 {
-    ttf_t*ttf = gfxfont_to_ttf(font);
+    ttf_t*ttf = gfxfont_to_ttf(font, 0);
     ttf_save(ttf, filename);
     ttf_destroy(ttf);
 }
 
 void gfxfont_save_eot(gfxfont_t*font, const char*filename)
 {
-    ttf_t*ttf = gfxfont_to_ttf(font);
+    ttf_t*ttf = gfxfont_to_ttf(font, 1);
     ttf_save_eot(ttf, filename);
     ttf_destroy(ttf);
 }
