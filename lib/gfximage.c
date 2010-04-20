@@ -7,6 +7,15 @@
 #include "gfximage.h"
 #include "types.h"
 
+gfximage_t*gfximage_new(int width, int height)
+{
+    gfximage_t*i = rfx_calloc(sizeof(gfximage_t));
+    i->data = rfx_calloc(width*height*4);
+    i->width = width;
+    i->height = height;
+    return i;
+}
+
 void gfximage_save_jpeg(gfximage_t*img, const char*filename, int quality)
 {
     int x,y;
