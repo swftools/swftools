@@ -1474,6 +1474,10 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
         boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+    } else if(state->getRender()&RENDER_STROKE) {
+	// we're drawing as stroke
+	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else if(rgbbitmap != rgbdev->getBitmap()) {
 	// we're doing softmasking or transparency grouping
 	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
