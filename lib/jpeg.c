@@ -405,6 +405,27 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
     return 1;
 }
 
+void jpeg_get_size(const char *filename, int *width, int *height)
+{
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    FILE *fi;
+    *width = 0;
+    *height = 0;
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&cinfo);
+    if ((fi = fopen(filename, "rb")) == NULL) {
+	fprintf(stderr, "couldn't open %s\n", filename);
+	return;
+    }
+    jpeg_stdio_src(&cinfo, fi);
+    jpeg_read_header(&cinfo, TRUE);
+    *width = cinfo.image_width;
+    *height = cinfo.image_height;
+    jpeg_destroy_decompress(&cinfo);
+    fclose(fi);
+}
+
 #else
 
 int jpeg_save(unsigned char*data, int width, int height, int quality, const char*filename)
@@ -431,6 +452,12 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
 {
     fprintf(stderr, "jpeg_load: No JPEG support compiled in\n");
     return 0;
+}
+void jpeg_get_size(const char *fname, int *width, int *height)
+{
+    *width = 0;
+    *height = 0;
+    fprintf(stderr, "jpeg_get_size: No JPEG support compiled in\n");
 }
 
 #endif
