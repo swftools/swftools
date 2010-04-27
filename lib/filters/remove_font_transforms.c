@@ -88,9 +88,28 @@ type_t mymatrix_type = {
     equals: mymatrix_equals
 };
 
+
+typedef struct _transformedfont {
+    gfxfont_t*orig;
+    gfxfont_t*font;
+    mymatrix_t matrix;
+    int*used;
+    double dx;
+    struct _transformedfont *group_next;
+} transformedfont_t;
+
+typedef struct _fontgroup {
+    U64*bitmap; 
+    int bitmap_len;
+    transformedfont_t*fonts;
+    struct _fontgroup *next;
+} fontgroup_t;
+
 typedef struct _internal {
     dict_t*matrices;
+    fontgroup_t*groups;
     char first;
+    char config_recombine;
 } internal_t;
 
 
@@ -129,14 +148,6 @@ int matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*sc
 typedef struct _matrixdata {
     gfxfontlist_t*fonts;
 } matrixdata_t;
-
-typedef struct _transformedfont {
-    gfxfont_t*orig;
-    gfxfont_t*font;
-    mymatrix_t matrix;
-    int*used;
-    double dx;
-} transformedfont_t;
 
 static transformedfont_t* transformedfont_new(gfxfont_t*orig, mymatrix_t*m)
 {
@@ -187,95 +198,171 @@ static void glyph_transform(gfxglyph_t*g, mymatrix_t*mm)
     gfxline_transform(g->line, &m);
 }
 
+void fontgroup_add_to_bitmap(fontgroup_t*g, transformedfont_t*f)
+{
+    int t;
+    int max = 0;
+    for(t=0;t<f->orig->num_glyphs;t++) {
+	if(f->orig->glyphs[t].unicode < 0xe000 && f->orig->glyphs[t].unicode > max) {
+	    max = f->orig->glyphs[t].unicode;
+	}
+    }
+    int max64 = (max+63) >> 6;
+    if(max64 > g->bitmap_len) {
+	g->bitmap = rfx_realloc(g->bitmap, max64*sizeof(U64));
+	memset(g->bitmap+g->bitmap_len*8, 0, (max64-g->bitmap_len)*8);
+	g->bitmap_len = max64;
+    }
+    for(t=0;t<f->orig->num_glyphs;t++) {
+	int u = f->orig->glyphs[t].unicode;
+	if(u < 0xe000 && f->used[t]) {
+	    g->bitmap[u >> 6] |= (1ll<<(u&63));
+	}
+    }
+    g->bitmap[0] &= ~(1ll<<32); // map out space char
+}
+
+int fontgroup_intersect(fontgroup_t*g1, fontgroup_t*g2)
+{
+    int min = g1->bitmap_len < g2->bitmap_len? g1->bitmap_len : g2->bitmap_len;
+    int t;
+    for(t=0;t<min;t++) {
+	if(g1->bitmap[t]&g2->bitmap[t]) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+fontgroup_t* fontgroup_combine(fontgroup_t*fontgroup)
+{
+    fontgroup_t*fg = fontgroup;
+    while(fg) {
+	fontgroup_t*fg2 = fg->next;
+	fontgroup_t*old = fg;
+	while(fg2) {
+	    fontgroup_t*next = fg2->next;
+	    if(!fontgroup_intersect(fg,fg2)) {
+		printf("combine %s and %s\n", fg->fonts->orig->id, fg2->fonts->orig->id);
+		transformedfont_t*last = fg->fonts;
+		while(last->group_next) {
+		    last = last->group_next;
+		}
+		last->group_next = fg2->fonts;
+		fg2->fonts = 0;
+		old->next = next;
+		free(fg2->bitmap);
+		free(fg2);
+	    } else {
+		old = fg2;
+	    }
+	    fg2 = next;
+	}
+	fg = fg->next;
+    }
+    return fontgroup;
+}
+
 static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
+
+    fontgroup_t*fontgroup=0;
     DICT_ITERATE_DATA(i->matrices, transformedfont_t*, fd) {
-	gfxfont_t*font = fd->font = rfx_calloc(sizeof(gfxfont_t));
-	char id[80];
-	static int fontcount=0;
-	sprintf(id, "font%d", fontcount++);
-	font->id = strdup(id);
-	int t;
-	int count=0;
-	for(t=0;t<fd->orig->num_glyphs;t++) {
-	    if(fd->used[t]) 
-		count++;
-	}
-	font->num_glyphs = count;
-	font->glyphs = rfx_calloc(sizeof(gfxglyph_t)*font->num_glyphs);
-	count = 0;
-	for(t=0;t<fd->orig->num_glyphs;t++) {
-	    if(fd->used[t]) {
-		font->glyphs[count] = fd->orig->glyphs[t];
-		glyph_transform(&font->glyphs[count], &fd->matrix);
-		fd->used[t] = count + 1;
-		count++;
+	NEW(fontgroup_t,fg);
+	fg->fonts = fd;
+	fontgroup_add_to_bitmap(fg, fd);
+	fg->next = fontgroup;
+	fontgroup = fg;
+    }
+   
+    if(i->config_recombine) {
+	fontgroup = fontgroup_combine(fontgroup);
+    }
+    i->groups = fontgroup;
+
+    fontgroup_t*fg;
+    for(fg = fontgroup;fg;fg = fg->next) {
+	transformedfont_t*fd = fg->fonts;
+	while(fd) {
+	    gfxfont_t*font = fd->font = rfx_calloc(sizeof(gfxfont_t));
+	    char id[80];
+	    static int fontcount=0;
+	    sprintf(id, "font%d", fontcount++);
+	    font->id = strdup(id);
+	    int t;
+	    int count=0;
+	    for(t=0;t<fd->orig->num_glyphs;t++) {
+		if(fd->used[t]) 
+		    count++;
 	    }
-	}
-
-	/* adjust the origin so that every character is to the
-	   right of the origin */
-	gfxbbox_t total = {0,0,0,0};
-	double average_xmax = 0;
-	for(t=0;t<count;t++) {
-	    gfxline_t*line = font->glyphs[t].line;
-	    gfxbbox_t b = gfxline_getbbox(line);
-	    total = gfxbbox_expand_to_bbox(total, b);
-	}
-	if(count) 
-	    average_xmax /= count;
-
-	fd->dx = 0;//-total.xmin;
-
-	font->ascent = total.ymax;
-	font->descent = -total.ymin;
-
-	for(t=0;t<count;t++) {
-	    gfxglyph_t*g = &font->glyphs[t];
-	    gfxline_t*line = font->glyphs[t].line;
-
-	    if(fd->matrix.alpha) {
-		while(line) {
-		    line->x += fd->dx;
-		    line->sx += fd->dx;
-		    line = line->next;
+	    font->num_glyphs = count;
+	    font->glyphs = rfx_calloc(sizeof(gfxglyph_t)*font->num_glyphs);
+	    count = 0;
+	    for(t=0;t<fd->orig->num_glyphs;t++) {
+		if(fd->used[t]) {
+		    font->glyphs[count] = fd->orig->glyphs[t];
+		    glyph_transform(&font->glyphs[count], &fd->matrix);
+		    fd->used[t] = count + 1;
+		    count++;
 		}
-	    } else {
-		gfxline_free(g->line);
+	    }
+
+	    /* adjust the origin so that every character is to the
+	       right of the origin */
+	    gfxbbox_t total = {0,0,0,0};
+	    double average_xmax = 0;
+	    for(t=0;t<count;t++) {
+		gfxline_t*line = font->glyphs[t].line;
+		gfxbbox_t b = gfxline_getbbox(line);
+		total = gfxbbox_expand_to_bbox(total, b);
+	    }
+	    if(count) 
+		average_xmax /= count;
+
+	    font->ascent = total.ymax;
+	    font->descent = -total.ymin;
+
+	    if(!fd->matrix.alpha) {
 		/* for OCR: remove the outlines of characters that are only
 		   ever displayed with alpha=0 */
-		g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
-		g->line->type = gfx_moveTo;
-		g->line->x = g->advance;
+		for(t=0;t<count;t++) {
+		    gfxglyph_t*g = &font->glyphs[t];
+		    gfxline_free(g->line);
+		    g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
+		    g->line->type = gfx_moveTo;
+		    g->line->x = g->advance;
+		}
 	    }
-	}
 
-	if(fd->matrix.m00>0) {
-	    /* subset kerning table */
-	    count = 0;
-	    for(t=0;t<fd->orig->kerning_size;t++) {
-		int char1 = fd->used[fd->orig->kerning[t].c1]-1;
-		int char2 = fd->used[fd->orig->kerning[t].c2]-1;
-		if(char1>=0 && char2>=0) {
-		    count++;
+	    if(fd->matrix.m00>0) {
+		/* subset kerning table */
+		count = 0;
+		for(t=0;t<fd->orig->kerning_size;t++) {
+		    int char1 = fd->used[fd->orig->kerning[t].c1]-1;
+		    int char2 = fd->used[fd->orig->kerning[t].c2]-1;
+		    if(char1>=0 && char2>=0) {
+			count++;
+		    }
+		}
+		font->kerning = malloc(sizeof(font->kerning[0])*count);
+		font->kerning_size = count;
+		count = 0;
+		for(t=0;t<fd->orig->kerning_size;t++) {
+		    int char1 = fd->used[fd->orig->kerning[t].c1]-1;
+		    int char2 = fd->used[fd->orig->kerning[t].c2]-1;
+		    if(char1>=0 && char2>=0) {
+			font->kerning[count].c1 = char1;
+			font->kerning[count].c2 = char2;
+			font->kerning[count].advance = fd->orig->kerning[t].advance * fd->matrix.m00;
+			count++;
+		    }
 		}
 	    }
-	    font->kerning = malloc(sizeof(font->kerning[0])*count);
-	    font->kerning_size = count;
-	    count = 0;
-	    for(t=0;t<fd->orig->kerning_size;t++) {
-		int char1 = fd->used[fd->orig->kerning[t].c1]-1;
-		int char2 = fd->used[fd->orig->kerning[t].c2]-1;
-		if(char1>=0 && char2>=0) {
-		    font->kerning[count].c1 = char1;
-		    font->kerning[count].c2 = char2;
-		    font->kerning[count].advance = fd->orig->kerning[t].advance * fd->matrix.m00;
-		    count++;
-		}
-	    }
+	    gfxfont_fix_unicode(font);
+
+	    fd = fd->group_next;
 	}
-	gfxfont_fix_unicode(font);
     }
     return out->finish(out);
 }
@@ -293,8 +380,14 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
 
     if(i->first) {
 	i->first = 0;
-	DICT_ITERATE_DATA(i->matrices, transformedfont_t*, fd) {
-	    out->addfont(out, fd->font);
+	i->groups;
+	fontgroup_t*g;
+	for(g = i->groups;g;g=g->next) {
+	    transformedfont_t*fd = g->fonts;
+	    while(fd) {
+	        out->addfont(out, fd->font);
+		fd = fd->group_next;
+	    }
 	}
     }
 
@@ -346,5 +439,6 @@ void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f)
 
     i->matrices = dict_new2(&mymatrix_type);
     i->first = 1;
+    i->config_recombine = 1;
 }
 
