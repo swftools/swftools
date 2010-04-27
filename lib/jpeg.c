@@ -413,6 +413,8 @@ void jpeg_get_size(const char *filename, int *width, int *height)
     *width = 0;
     *height = 0;
     cinfo.err = jpeg_std_error(&jerr);
+    cinfo.image_width = 0;
+    cinfo.image_height = 0;
     jpeg_create_decompress(&cinfo);
     if ((fi = fopen(filename, "rb")) == NULL) {
 	fprintf(stderr, "couldn't open %s\n", filename);
