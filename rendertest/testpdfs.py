@@ -12,15 +12,15 @@ filenames = []
 directories = ["pdfs"]
 
 SWFRENDER="swfrender"
-PDFTOPPM="pdftoppm"
+PDFTOPPM="./pdftoppm"
 CONVERT="convert"
 PDF2SWF="pdf2swf"
 
-#COMPARE=["xpdf", PDF2SWF+" -s poly2bitmap"]
-#OUTPUTDIR = "results.poly2bitmap/"
+COMPARE=["xpdf", "xpdf -C"]
+OUTPUTDIR = "results.clip/"
 
-COMPARE=["xpdf", PDF2SWF+" -s convertgradients"]
-OUTPUTDIR = "results.pdf2swf/"
+#COMPARE=["xpdf", PDF2SWF+" -s convertgradients"]
+#OUTPUTDIR = "results.pdf2swf/"
 
 #COMPARE=[PDF2SWF, PDF2SWF+" --flatten"]
 #OUTPUTDIR = "results.flatten/"
@@ -90,19 +90,15 @@ class PDFPage:
         self.htmldiff = None
         self.width,self.height = width,height
 
-    def runtools(self, filename, page, file1, file2, file12):
-
-        badness = 0.0
-
-        if COMPARE[0] == "xpdf":
+    def runtool(self, cmd, filename, page, file):
+        if cmd.startswith("xpdf"):
             unlink("/tmp/test-%06d.ppm" % page)
-            error = system(PDFTOPPM + " -r 72 -f %d -l %d '%s' /tmp/test" % (page, page, filename))
-            if error and "supports 65536" in error:
-                raise TooComplexError(error)
+            args = cmd[4:]
+            error = system(PDFTOPPM + "%s -r 72 -f %d -l %d '%s' /tmp/test" % (args, page, page, filename))
             if error:
                 raise ConversionError(error)
-            unlink(file2)
-            error = system(CONVERT + " /tmp/test-%06d.ppm  %s" % (page, file2))
+            unlink(file)
+            error = system(CONVERT + " /tmp/test-%06d.ppm  %s" % (page, file))
             if error:
                 raise ConversionError(error)
             unlink("/tmp/test-%06d.ppm" % page)
@@ -115,23 +111,21 @@ class PDFPage:
                 raise TooComplexError(error)
             if error:
                 raise ConversionError(error)
-            unlink(file2)
-            error = system(SWFRENDER + " /tmp/test.swf -o %s" % file2)
+            unlink(file)
+            error = system(SWFRENDER + " /tmp/test.swf -o %s" % file)
             if error:
                 raise ConversionError(error)
             unlink("/tmp/test.swf")
         
-        unlink("/tmp/test.swf")
-        error = system(COMPARE[1]+ " -Q 300 -p%d '%s' -o /tmp/test.swf" % (page, filename))
-        if error:
-            raise ConversionError(error)
-        unlink(file1)
-        error = system(SWFRENDER + " /tmp/test.swf -o %s" % file1)
-        if error:
-            raise ConversionError(error)
-        unlink("/tmp/test.swf")
+    def runtools(self, filename, page, file1, file2, file12):
+
+        badness = 0.0
+
+        self.runtool(COMPARE[0], filename, page, file2)
+        self.runtool(COMPARE[1], filename, page, file1)
 
         unlink(file12)
+
         pic1 = Image.open(file1)
         pic1.load()
         self.width1 = pic1.size[0]
