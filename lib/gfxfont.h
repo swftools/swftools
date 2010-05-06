@@ -37,6 +37,7 @@ void gfxfont_save(gfxfont_t*font, const char*filename);
 void gfxfont_save_eot(gfxfont_t*font, const char*filename);
 void gfxfont_fix_unicode(gfxfont_t*font);
 void gfxfont_free(gfxfont_t*font);
+void gfxfont_add_unicode2glyph(gfxfont_t*font);
 
 #ifdef __cplusplus
 }

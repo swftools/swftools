@@ -557,7 +557,22 @@ void gfxfont_fix_unicode(gfxfont_t*font)
 	    max = u;
     }
     free(used);
-    
+    if(font->unicode2glyph) {
+	free(font->unicode2glyph);
+    }
+    font->unicode2glyph = 0;
+    font->max_unicode = 0;
+}
+
+void gfxfont_add_unicode2glyph(gfxfont_t*font)
+{ 
+    int t;
+    int max = 0;
+    for(t=0;t<font->num_glyphs;t++) {
+	int u = font->glyphs[t].unicode;
+	if(u > max)
+	    max = u;
+    }
     if(!font->unicode2glyph) {
 	/* (re)generate unicode2glyph-to-glyph mapping table by reverse mapping
 	   the glyph unicode2glyph's indexes into the mapping table. For collisions,
