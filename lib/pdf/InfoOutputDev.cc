@@ -544,6 +544,16 @@ void InfoOutputDev::endType3Char(GfxState *state)
     currentglyph->path->lineTo(x1,y2);
     currentglyph->path->close();
 }
+    
+void InfoOutputDev::saveState(GfxState *state)
+{
+    updateAll(state);
+}
+
+void InfoOutputDev::restoreState(GfxState *state)
+{
+    updateAll(state);
+}
 
 void InfoOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,

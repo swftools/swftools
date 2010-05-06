@@ -143,7 +143,7 @@ static int errorno = 0;
 
 //#define DEBUG 1
 
-gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
+gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, double quality)
 {
     FT_Face face;
     FT_Error error;
