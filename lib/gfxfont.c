@@ -22,6 +22,8 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <assert.h>
+#include <stdio.h>
+#include <memory.h>
 #include "../config.h"
 #include "gfxdevice.h"
 #include "gfxtools.h"
@@ -492,7 +494,7 @@ gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, 
 }
 #else
 
-gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
+gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, double quality)
 {
     fprintf(stderr, "No freetype support compiled in! Not able to load %s\n", filename);
     return 0;
