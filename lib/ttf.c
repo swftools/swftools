@@ -638,6 +638,7 @@ static table_maxp_t*maxp_new(ttf_t*ttf)
 	maxp->maxComponentPoints = 0;
 	maxp->maxComponentContours = 0;
     }
+    maxp->maxZones = 2; // we don't use the Z0 zone
     return maxp;
 }
 static table_maxp_t* maxp_parse(ttf_t*ttf, memreader_t*r)
@@ -1719,12 +1720,24 @@ void gasp_parse(memreader_t*r, ttf_t*ttf)
 	gasp->records[t].behaviour = readU16(r);
     }
 }
+
+#define GASP_SYMMETRIC_GRIDFIT 0x0008
+#define GASP_SYMMETRIC_SMOOTHING 0x0004
+#define GASP_DOGRAY 0x0002
+#define GASP_GRIDFIT 0x0001
+
 void gasp_write(ttf_t*ttf, ttf_table_t*table)
 {
     table_gasp_t*gasp = ttf->gasp;
-    writeU16(table, 0);
-    writeU16(table, gasp->num);
+    int version = 0;
     int t;
+    for(t=0;t<gasp->num;t++) {
+	if(gasp->records[t].behaviour & ~(GASP_GRIDFIT | GASP_DOGRAY)) {
+	    version = 1;
+	}
+    }
+    writeU16(table, version);
+    writeU16(table, gasp->num);
     for(t=0;t<gasp->num;t++) {
 	writeU16(table, gasp->records[t].size);
 	writeU16(table, gasp->records[t].behaviour);
