@@ -1638,15 +1638,15 @@ static table_post_t*post_new(ttf_t*ttf)
 void post_parse(memreader_t*r, ttf_t*ttf)
 {
     table_post_t*post = ttf->post = rfx_calloc(sizeof(table_post_t));
-    U16 format = readU16(r);
-    post->italic_angle = readU16(r);
+    U32 format = readU32(r);
+    post->italic_angle = readU32(r);
     post->underline_position = readU16(r);
     post->underline_thickness = readU16(r);
-    U16 is_monospaced = readU16(r);
-    readU16(r); // min mem 42
-    readU16(r);
-    readU16(r); // min mem 1
-    readU16(r);
+    U16 is_monospaced = readU32(r);
+    readU32(r); // min mem 42
+    readU32(r);
+    readU32(r); // min mem 1
+    readU32(r);
 }
 void post_write(ttf_t*ttf, ttf_table_t*table)
 {
