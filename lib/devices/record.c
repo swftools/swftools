@@ -34,6 +34,7 @@
 #include <assert.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#include "../gfxfont.h"
 #include "../types.h"
 #include "../bitio.h"
 #include "../log.h"
@@ -643,17 +644,19 @@ static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*ac
 
 /* ------------------------------- replaying --------------------------------- */
 
-static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
+static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r, gfxfontlist_t**fontlist)
 {
     internal_t*i = 0;
     if(dev) {
 	i = (internal_t*)dev->internal;
     }
+    gfxfontlist_t*_fontlist=0;
+    if(!fontlist) {
+	fontlist = &_fontlist;
+    }
 
     state_t state;
     memset(&state, 0, sizeof(state));
-
-    gfxfontlist_t* fontlist = gfxfontlist_create();
 
     while(1) {
 	unsigned char op;
@@ -777,8 +780,13 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 	    case OP_ADDFONT: {
 		msg("<trace> replay: ADDFONT out=%08x(%s)", out, out->name);
 		gfxfont_t*font = readFont(r, &state);
-		fontlist = gfxfontlist_addfont(fontlist, font);
-		out->addfont(out, font);
+		if(!gfxfontlist_hasfont(*fontlist, font)) {
+		    printf("%08x / %08x: font %s is new\n", out, *fontlist, font->id);
+		    *fontlist = gfxfontlist_addfont(*fontlist, font);
+		    out->addfont(out, font);
+		} else {
+		    gfxfont_free(font);
+		}
 		break;
 	    }
 	    case OP_DRAWCHAR: {
@@ -790,7 +798,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 		gfxcolor_t color = read_color(r, &state, op, flags);
 		gfxmatrix_t matrix = read_matrix(r, &state, op, flags);
 
-		gfxfont_t*font = id?gfxfontlist_findfont(fontlist, id):0;
+		gfxfont_t*font = id?gfxfontlist_findfont(*fontlist, id):0;
 		if(i && !font) {
 		    font = gfxfontlist_findfont(i->fontlist, id);
 		}
@@ -804,13 +812,10 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
     }
 finish:
     r->dealloc(r);
-    /* problem: if we just replayed into a device which stores the
-       font for later use (the record device itself is a nice example),
-       then we can't free it yet */
-    //gfxfontlist_free(fontlist, 1);
-    gfxfontlist_free(fontlist, 0);
+    if(_fontlist)
+	gfxfontlist_free(_fontlist, 0);
 }
-void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
+void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device, gfxfontlist_t**fontlist)
 {
     internal_result_t*i = (internal_result_t*)result->internal;
     
@@ -821,7 +826,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 	reader_init_memreader(&r, i->data, i->length);
     }
 
-    replay(0, device, &r);
+    replay(0, device, &r, fontlist);
 }
 
 static void record_result_write(gfxresult_t*r, int filedesc)
@@ -896,7 +901,7 @@ static void hexdumpMem(unsigned char*data, int len)
     }
 }
 
-void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
+void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out, gfxfontlist_t**fontlist)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(out) {
@@ -905,7 +910,7 @@ void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 	    void*data = writer_growmemwrite_memptr(&i->w, &len);
 	    reader_t r;
 	    reader_init_memreader(&r, data, len);
-	    replay(dev, out, &r);
+	    replay(dev, out, &r, fontlist);
 	    writer_growmemwrite_reset(&i->w);
 	} else {
 	    msg("<fatal> Flushing not supported for file based record device");

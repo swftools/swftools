@@ -305,7 +305,7 @@ static gfxresult_t* twopass_finish(gfxdevice_t*dev)
     }
 
     i->pass++;
-    gfxresult_record_replay(r, dev);
+    gfxresult_record_replay(r, dev, 0);
     r->destroy(r);
 
     return twopass_finish(dev);

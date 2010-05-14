@@ -202,6 +202,7 @@ private:
     virtual gfxbbox_t getBBox(GfxState*state);
 
     char config_extrafontdata;
+    char config_optimizeplaincolorfills;
 
     int layerstate;
     GBool emptypage;

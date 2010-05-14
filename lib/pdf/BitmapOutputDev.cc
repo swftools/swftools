@@ -29,6 +29,7 @@
 #include "../log.h"
 #include "../png.h"
 #include "../devices/record.h"
+#include "../gfxtools.h"
 #include "../types.h"
 #include "bbox.h"
 
@@ -80,6 +81,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->gfxdev->setDevice(this->gfxoutput);
     
     this->config_extrafontdata = 0;
+    this->config_optimizeplaincolorfills = 0;
     this->bboxpath = 0;
     //this->clipdev = 0;
     //this->clipstates = 0;
@@ -311,7 +313,16 @@ void BitmapOutputDev::flushBitmap()
 void BitmapOutputDev::flushText()
 {
     msg("<verbose> Flushing text");
-    gfxdevice_record_flush(this->gfxoutput, this->dev);
+
+    static gfxfontlist_t*output_font_list = 0;
+    static gfxdevice_t*last = 0;
+    if(last != this->dev) {
+	if(output_font_list)
+	    gfxfontlist_free(output_font_list, 0);
+	output_font_list = gfxfontlist_create();
+    }
+    gfxdevice_record_flush(this->gfxoutput, this->dev, &output_font_list);
+    last = this->dev;
     
     this->emptypage = 0;
 }
@@ -1335,11 +1346,47 @@ void BitmapOutputDev::stroke(GfxState *state)
     rgbdev->stroke(state);
     dbg_newdata("stroke");
 }
+
+extern gfxcolor_t getFillColor(GfxState * state);
+
+char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*rgbbitmap, int x1, int y1, int x2, int y2)
+{
+    int width = boolpoly->getWidth();
+    int height = boolpoly->getHeight();
+    if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
+	return 0;
+    }
+    gfxcolor_t color = getFillColor(state);
+    SplashColorPtr rgb = rgbbitmap->getDataPtr() 
+	               + (y1*width+x1)*sizeof(SplashColor);
+    int width8 = (width+7)/8;
+    unsigned char*bits = (unsigned char*)boolpoly->getDataPtr() 
+	                 + (y1*width8+x1);
+    int x,y;
+    int w = x2-x1;
+    int h = y2-y1;
+    for(y=0;y<h;y++) {
+	for(x=0;x<w;x++) {
+	    if(rgb[x*3+0] != color.r ||
+	       rgb[x*3+1] != color.g ||
+	       rgb[x*3+2] != color.b)
+		return 0;
+	}
+	rgb += width*sizeof(SplashColor);
+    }
+    return 1;
+}
+
 void BitmapOutputDev::fill(GfxState *state)
 {
     msg("<debug> fill");
     boolpolydev->fill(state);
     gfxbbox_t bbox = getBBox(state);
+    if(config_optimizeplaincolorfills) {
+	if(area_is_plain_colored(state, boolpolybitmap, rgbbitmap, bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax)) {
+	    return;
+	}
+    }
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->fill(state);
     dbg_newdata("fill");
