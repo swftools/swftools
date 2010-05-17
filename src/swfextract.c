@@ -25,6 +25,8 @@
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
 #include "../lib/log.h"
+#include "../lib/jpeg.h"
+#include "../lib/png.h"
 #ifdef HAVE_ZLIB_H
 #ifdef HAVE_LIBZ
 #include "zlib.h"
@@ -682,13 +684,23 @@ int handlejpeg(TAG*tag)
     char name[80];
     char*filename = name;
     FILE*fi;
-    
-    prepare_name(name, sizeof(name), "pic", "jpg", GET16(tag->data));
-    if(numextracts==1) {
-	filename = destfilename;
-	if(!strcmp(filename,"output.swf"))
-	    filename = "output.jpg";
+   
+    if(tag->id != ST_DEFINEBITSJPEG3) {
+	prepare_name(name, sizeof(name), "pic", "jpg", GET16(tag->data));
+	if(numextracts==1) {
+	    filename = destfilename;
+	    if(!strcmp(filename,"output.swf"))
+		filename = "output.jpg";
+	}
+    } else {
+	prepare_name(name, sizeof(name), "pic", "png", GET16(tag->data));
+	if(numextracts==1) {
+	    filename = destfilename;
+	    if(!strcmp(filename,"output.swf"))
+		filename = "output.png";
+	}
     }
+
     /* swf jpeg images have two streams, which both start with ff d8 and
        end with ff d9. The following code handles sorting the middle
        <ff d9 ff d8> bytes out, so that one stream remains */
@@ -719,18 +731,34 @@ int handlejpeg(TAG*tag)
     }
     else if(tag->id == ST_DEFINEBITSJPEG3 && tag->len>6) {
 	U32 end = GET32(&tag->data[2])+6;
-	int pos = findjpegboundary(&tag->data[6], tag->len-6);
-	if(pos<0) {
-            fi = save_fopen(filename, "wb");
-            fwrite(&tag->data[6], end-6, 1, fi);
-            fclose(fi);
-        } else {
-            pos+=6;
-            fi = save_fopen(filename, "wb");
-            fwrite(&tag->data[6], pos-6, 1, fi);
-            fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
-            fclose(fi);
-        }
+	int pos = findjpegboundary(&tag->data[6], end);
+	if(end >= tag->len) {
+	    msg("<error> zlib data out of bounds in definebitsjpeg3");
+	    return 0;
+	}
+        if(pos) {
+	    /* TODO: do we actually need this? */
+	    memmove(&tag->data[pos], &tag->data[pos+4], end-(pos+4));
+	}
+	unsigned char*image;
+	int width=0, height=0;
+	jpeg_load_from_mem(&tag->data[6], end-6, &image, &width, &height);
+
+	uLongf datalen = width*height;
+	Bytef *data = malloc(datalen);
+
+	int error = uncompress(data, &datalen, &tag->data[end], (uLong)(tag->len - end));
+	if(error != Z_OK) {
+	  fprintf(stderr, "Zlib error %d\n", error);
+	  return 0;
+	}
+	int t, size = width*height;
+	for(t=0;t<size;t++) {
+	    image[t*4+0] = data[t];
+	}
+	free(data);
+	writePNG(filename, image, width, height);
+	free(image);
     }
     else {
 	int id = GET16(tag->data);

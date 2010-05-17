@@ -288,12 +288,11 @@ void mem_term_source (j_decompress_ptr cinfo)
     //printf("term %d\n", size - mgr->bytes_in_buffer);
 }
 
-int jpeg_load_from_mem(unsigned char*_data, int _size, unsigned char*dest, int width, int height)
+int jpeg_load_from_mem(unsigned char*_data, int _size, unsigned char**dest, int*width, int*height)
 {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
     struct jpeg_source_mgr mgr;
-    int y,x;
 
     data = _data;
     size = _size;
@@ -312,12 +311,27 @@ int jpeg_load_from_mem(unsigned char*_data, int _size, unsigned char*dest, int w
     cinfo.src = &mgr;
 
     jpeg_read_header(&cinfo, TRUE);
+    cinfo.out_color_space == JCS_RGB;
     jpeg_start_decompress(&cinfo);
+  
+    *width = cinfo.output_width;
+    *height = cinfo.output_height;
+    *dest = malloc(cinfo.output_width * cinfo.output_height * 4); 
 
-    for(y=0;y<height;y++) {
-	unsigned char*j = &dest[width*y*3];
-	jpeg_read_scanlines(&cinfo,&j,1);
+    unsigned char*scanline = malloc(cinfo.output_width * 4);
+    int y;
+    for(y=0;y<cinfo.output_height;y++) {
+	unsigned char*to = &(*dest)[cinfo.output_width*y*4];
+	jpeg_read_scanlines(&cinfo,&scanline,1);
+	int x;
+	for(x=0;x<cinfo.output_width;x++) {
+	    to[x*4 + 0] = 255;
+	    to[x*4 + 1] = scanline[x*3 + 0];
+	    to[x*4 + 2] = scanline[x*3 + 1];
+	    to[x*4 + 3] = scanline[x*3 + 2];
+	}
     }
+    free(scanline);
 
     jpeg_finish_decompress(&cinfo);
     jpeg_destroy_decompress(&cinfo);

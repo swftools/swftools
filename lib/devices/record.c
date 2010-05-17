@@ -781,7 +781,6 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r, gfxfontli
 		msg("<trace> replay: ADDFONT out=%08x(%s)", out, out->name);
 		gfxfont_t*font = readFont(r, &state);
 		if(!gfxfontlist_hasfont(*fontlist, font)) {
-		    printf("%08x / %08x: font %s is new\n", out, *fontlist, font->id);
 		    *fontlist = gfxfontlist_addfont(*fontlist, font);
 		    out->addfont(out, font);
 		} else {
