@@ -81,6 +81,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->gfxdev->setDevice(this->gfxoutput);
     
     this->config_extrafontdata = 0;
+    this->config_skewedtobitmap = 0;
     this->config_optimizeplaincolorfills = 0;
     this->bboxpath = 0;
     //this->clipdev = 0;

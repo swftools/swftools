@@ -186,6 +186,10 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 
     delete i->doc; i->doc=0;
     free(i->pages); i->pages = 0;
+   
+    if(i->pagemap) {
+	free(i->pagemap);
+    }
 
     i->docinfo.free();
 
@@ -195,6 +199,10 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
     
     if(i->info) {
 	delete i->info;i->info=0;
+    }
+    if(i->parameters) {
+	gfxparams_free(i->parameters);
+	i->parameters=0;
     }
 
     free(gfx->internal);gfx->internal=0;

@@ -118,6 +118,7 @@ static void head_delete(context_t*context, head_t*h)
 	assert(!h->prev);
 	context->heads = h->next;
     }
+    free(h);
 }
 
 #define POINTS_TO_HEAD(ptr) (((head_t*)(ptr))->magic==HEAD_MAGIC)

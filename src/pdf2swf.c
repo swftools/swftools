@@ -260,7 +260,7 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "s"))
     {
-	char*s = strdup(val);
+	char*s = val;
 	char*c = strchr(s, '=');
 	if(c && *c && c[1])  {
 	    *c = 0;

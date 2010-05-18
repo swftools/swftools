@@ -453,6 +453,17 @@ static gfxfont_t*readFont(reader_t*r, state_t*state)
 
 /* ----------------- reading/writing of primitives with caching -------------- */
 
+void state_clear(state_t*state)
+{
+    int t;
+    for(t=0;t<sizeof(state->last_string)/sizeof(state->last_string[0]);t++) {
+	if(state->last_string[t]) {
+	    free(state->last_string[t]);
+	    state->last_string[t] = 0;
+	}
+    }
+}
+
 static char* read_string(reader_t*r, state_t*state, U8 id, U8 flags)
 {
     assert(id>=0 && id<16);
@@ -461,6 +472,9 @@ static char* read_string(reader_t*r, state_t*state, U8 id, U8 flags)
 	return strdup(state->last_string[id]);
     }
     char*s = reader_readString(r);
+    if(state->last_string[id]) {
+	free(state->last_string[id]);
+    }
     state->last_string[id] = strdup(s);
     return s;
 }
@@ -609,7 +623,11 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
 	    writer_writeString(&i->w, font_id);
 	dumpColor(&i->w, &i->state, color);
 	dumpMatrix(&i->w, &i->state, matrix);
+
+	if(i->state.last_string[OP_DRAWCHAR])
+	    free(i->state.last_string[OP_DRAWCHAR]);
 	i->state.last_string[OP_DRAWCHAR] = strdup(font_id);
+
 	i->state.last_color[OP_DRAWCHAR] = *color;
 	i->state.last_matrix[OP_DRAWCHAR] = *matrix;
     } else {
@@ -810,6 +828,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r, gfxfontli
 	}
     }
 finish:
+    state_clear(&state);
     r->dealloc(r);
     if(_fontlist)
 	gfxfontlist_free(_fontlist, 0);
@@ -926,6 +945,8 @@ static gfxresult_t* record_finish(struct _gfxdevice*dev)
     if(i->cliplevel) {
 	msg("<error> Warning: unclosed cliplevels");
     }
+
+    state_clear(&i->state);
 
 #ifdef STATS
     int total = i->w.pos;
