@@ -188,6 +188,7 @@ public:
 
     
 private:
+    void flushEverything();
     void clearClips();
     void clearBoolPolyDev();
     void clearBoolTextDev();

@@ -914,13 +914,7 @@ void BitmapOutputDev::finishPage()
     msg("<verbose> finishPage (BitmapOutputDev)");
     gfxdev->endPage();
    
-    if(layerstate == STATE_BITMAP_IS_ABOVE) {
-	this->flushText();
-	this->flushBitmap();
-    } else {
-	this->flushBitmap();
-	this->flushText();
-    }
+    flushEverything();
 
     /* splash will now destroy alpha, and paint the 
        background color into the "holes" in the bitmap */
@@ -1785,7 +1779,18 @@ void BitmapOutputDev::drawForm(Ref id)
 void BitmapOutputDev::processLink(Link *link, Catalog *catalog)
 {
     msg("<debug> processLink");
+    flushEverything();
     gfxdev->processLink(link, catalog);
+}
+void BitmapOutputDev::flushEverything()
+{
+    if(layerstate == STATE_BITMAP_IS_ABOVE) {
+	this->flushText();
+	this->flushBitmap();
+    } else {
+	this->flushBitmap();
+	this->flushText();
+    }
 }
 
 void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,
