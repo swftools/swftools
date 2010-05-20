@@ -46,7 +46,7 @@
 #include "record.h"
 
 //#define STATS
-#define COMPRESS_IMAGES
+//#define COMPRESS_IMAGES
 //#define FILTER_IMAGES
 
 typedef struct _state {

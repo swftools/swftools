@@ -35,6 +35,7 @@ ${name}/src/gif2swf.c \
 ${name}/src/wav2swf.c \
 ${name}/src/pdf2swf.c \
 ${name}/src/pdf2pdf.c \
+${name}/lib/pdf/pdf2jpeg.c \
 ${name}/src/swfc.c \
 ${name}/src/swfc-feedback.c \
 ${name}/src/swfc-history.c \
@@ -154,6 +155,8 @@ ${name}/lib/wav.h \
 ${name}/lib/mp3.h \
 ${name}/lib/xml.h \
 ${name}/lib/xml.c \
+${name}/lib/ttf.h \
+${name}/lib/ttf.c \
 ${name}/lib/modules/swfdraw.c \
 ${name}/lib/modules/swfaction.c \
 ${name}/lib/as3/assets.c \
@@ -224,6 +227,8 @@ ${name}/lib/gfxsource.h \
 ${name}/lib/gfxtools.h \
 ${name}/lib/gfxpoly.h \
 ${name}/lib/gfxtools.c \
+${name}/lib/gfxfilter.h \
+${name}/lib/gfxfilter.c \
 ${name}/lib/gfxpoly.c \
 ${name}/lib/gfxpoly/active.c \
 ${name}/lib/gfxpoly/active.h \
@@ -268,6 +273,10 @@ ${name}/lib/devices/bbox.c \
 ${name}/lib/devices/bbox.h \
 ${name}/lib/devices/ops.c \
 ${name}/lib/devices/ops.h \
+${name}/lib/filters/alpha.c \
+${name}/lib/filters/one_big_font.c \
+${name}/lib/filters/vectors_to_glyphs.c \
+${name}/lib/filters/remove_font_transforms.c \
 ${name}/lib/pdf/GFXOutputDev.h \
 ${name}/lib/pdf/GFXOutputDev.cc \
 ${name}/lib/pdf/BitmapOutputDev.h \
