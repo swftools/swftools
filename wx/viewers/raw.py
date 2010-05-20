@@ -28,7 +28,8 @@ order = 0
 type = "core"
 name = u"No Viewer"
 desc = (u'The SWF will be in "raw" format, with each page a seperate frame. '
-        u"Use this if you want to add a viewer yourself afterwards.")
+        u"Use this if you want to add a viewer yourself afterwards or "
+        u"if you will use the `One Page Per File`.")
 
 swf_options = [
     Choose("flashversion", u"Flash version:",
@@ -43,6 +44,7 @@ viewer_options = []
 
 from gui.plugin import Plugin
 class Raw(Plugin):
+    one_page_per_file = True
     def __init__(self, swf, filename):
         for opt in swf_options:
             swf.setparameter(opt.name, str(opt.value))
@@ -50,7 +52,7 @@ class Raw(Plugin):
 def init(swf, filename):
     return Raw(swf, filename)
 
-from wx.lib.embeddedimage import PyEmbeddedImage
+from lib.embeddedimage import PyEmbeddedImage
 preview = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAGYAAABmCAIAAAC2vXM1AAAAAXNSR0IArs4c6QAADGNJREFU"
     "eNrtXX1MFEcU36/74LwDvByNnIqaFL9ORU2MEUNtE6AVIxWjFuN30ESNTWtiIhpBTVDSNk2j"

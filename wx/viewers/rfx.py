@@ -128,7 +128,7 @@ class Rfx(Plugin):
 def init(swf, filename):
     return Rfx(swf, filename)
 
-from wx.lib.embeddedimage import PyEmbeddedImage
+from lib.embeddedimage import PyEmbeddedImage
 
 preview = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAGYAAABmCAIAAAC2vXM1AAAAAXNSR0IArs4c6QAAIABJREFU"

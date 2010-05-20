@@ -26,7 +26,7 @@ import os
 import wx
 import operator
 import imp
-from wx.lib.wordwrap import wordwrap
+from lib.wordwrap import wordwrap
 from gui.boldstatictext import BoldStaticText
 import viewers
 import gui.fields
@@ -55,7 +55,7 @@ class Viewers:
 class ViewerBook(wx.Listbook):
     def __init__(self, parent):
         wx.Listbook.__init__(self, parent, wx.ID_ANY, style=
-                            wx.BK_DEFAULT
+                            wx.LB_DEFAULT
                             )
 
         self.__mod = []
@@ -77,10 +77,6 @@ class ViewerBook(wx.Listbook):
             win = self.makePanel(mod)
             self.AddPage(win, mod, imageId=idx)
 
-        # A hack to avoid having the scrollbar be on bottom
-        # the first time the control is created
-        self.ListView.Select(self.ListView.GetItemCount()-1)
-        self.ListView.Select(0)
 
     def makePanel(self, mod):
         p = wx.Panel(self)

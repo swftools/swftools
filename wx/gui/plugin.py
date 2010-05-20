@@ -29,6 +29,8 @@ from wx.lib.pubsub import Publisher
 from subprocess import Popen, PIPE
 
 class Plugin:
+    one_page_per_file = False
+
     def before_render(self):
         pass
 
@@ -44,11 +46,16 @@ class Plugin:
 
     def __find_swfcombine(self):
         found = False
-        prog = "swfcombine.exe" if "wxMSW" in wx.PlatformInfo else "swfcombine"
-        basedir = os.path.dirname(__file__)
+        if "wxMSW" in wx.PlatformInfo:
+            prog = "swfcombine.exe"
+        else:
+            prog = "swfcombine"
+        #basedir = os.path.dirname(__file__)
+        basedir = GPDF2SWF_BASEDIR
+        #print 'basedir', basedir
 
         opj = os.path.join
-        locations = [opj(basedir, prog)]
+        locations = [os.path.normpath(opj(basedir, '..', prog))]
         if "wxMSW" in wx.PlatformInfo:
             locations.extend([
                               opj("c:", "swftools", prog),
@@ -56,16 +63,20 @@ class Plugin:
                              ])
         else:
             locations.extend([
-                              opj(os.sep, "usr", "local", "bin", prog),
-                              opj(os.sep, "usr", "bin", prog),
+                              opj("/usr", "local", "bin", prog),
+                              opj("/usr", "bin", prog),
+                              opj(basedir, '..', 'src', prog),
                              ])
+        #print locations
 
         exe = prog
         for e in locations:
+            #print e
             if os.path.isfile(e):
                 exe = e
                 found = True
                 break
+        #print exe, found
         return exe, found
 
     def swfcombine(self, *args):
@@ -88,7 +99,17 @@ class Plugin:
         cmd = [exe,]
         cmd.extend(args)
 
-        output = Popen(cmd, stdout=PIPE).communicate()[0]
+        if "wxMSW" in wx.PlatformInfo:
+            try:
+                import win32process
+                # To avoid an ugly "DOS Window" to show up
+                flags = win32process.CREATE_NO_WINDOW
+            except ImportError:
+                flags = 0
+        else:
+            flags = 0
+        output = Popen(cmd, stdin=PIPE, stdout=PIPE,
+                       stderr=PIPE, creationflags=flags).communicate()[0]
 
         # Check the process output
         if output:

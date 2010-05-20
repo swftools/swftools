@@ -26,30 +26,20 @@ from __future__ import division
 import os
 import wx
 from wx.lib.pubsub import Publisher
-from wx.lib.embeddedimage import PyEmbeddedImage
+from lib.embeddedimage import PyEmbeddedImage
 import thread
 import time
+import lib.images as images
 
 ICON_SIZE = 64
 
 ID_INVERT_SELECTION = wx.NewId()
 ID_SELECT_ODD = wx.NewId()
 ID_SELECT_EVEN = wx.NewId()
+ID_ONE_PAGE_PER_FILE = wx.NewId()
 
-# TODO: move into images.py
-blank = PyEmbeddedImage(
-    "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAAXNSR0IArs4c6QAAAAZiS0dE"
-    "AP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9kHDAscKjCK/4UAAABo"
-    "SURBVHja7dABAcBAEAIgXf/Ofo8dRKDblqPa5stxAgQIECBAgAABAgQIECBAgAABAgQIECBA"
-    "gAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIECBAgAABAgQIEPALTbLLAQ8OIAV9"
-    "8WNeKwAAAABJRU5ErkJggg==")
-getblankData = blank.GetData
-getblankImage = blank.GetImage
-getblankBitmap = blank.GetBitmap
-
-stop_width=8
-stop_height=8
-stop_data="""\xd5\x07\x07\xd5\x08\x08\xd5\x09\x09\xd4\x0a\x0a\xd4\x0a\x0a\xd5\x09\x09\xd5\x08\x08\xd5\x07\x07\xd5\x08\x08\xd4\x12\x12\xd4<<\xd1--\xd1,-\xd4;;\xd5\x12\x12\xd6\x08\x08\xd5\x0a\x0a\xd2@@\xd4\xc6\xc7\xd5kk\xd2gi\xd2\xc4\xc6\xd4<<\xd6\x0a\x0a\xd4\x0c\x0c\xcb66\xd6gi\xe3\xeb\xed\xe1\xeb\xed\xd4bc\xd3++\xd5\x0c\x0c\xd4\x0b\x0b\xd0--\xd3hi\xe2\xeb\xed\xe2\xed\xee\xd5cd\xd3++\xd5\x0c\x0c\xd5\x09\x09\xd4:;\xd3\xc5\xc7\xd3ij\xd3jj\xd3\xc5\xc7\xd4<<\xd6\x0a\x0a\xd5\x08\x08\xd4\x12\x12\xd5<=\xd2..\xd1,,\xd4;;\xd5\x12\x12\xd6\x08\x08\xd5\x07\x07\xd6\x08\x08\xd6\x0a\x0a\xd5\x0b\x0b\xd4\x0b\x0b\xd5\x09\x09\xd5\x08\x08\xd5\x07\x07"""
+ID_DOC_INFO = wx.NewId()
+ID_PREVIEW_TYPE = wx.NewId()
 
 
 class _AppendThumbnailThread:
@@ -74,22 +64,20 @@ class _AppendThumbnailThread:
             if pos == 0:
                 width, height = thumb.width, thumb.height
             else:
-                if abs(width - thumb.width) > 2 or \
-                   abs(height - thumb.height) > 2:
-                       different_sizes = True
+                if not different_sizes:
+                    if abs(width - thumb.width) > 2 or \
+                       abs(height - thumb.height) > 2:
+                           different_sizes = True
+                           wx.CallAfter(Publisher.sendMessage, "DIFF_SIZES")
 
             wx.CallAfter(self.__win.AppendThumbnail, pos,
-                         thumb.asImage(ICON_SIZE, ICON_SIZE))
+                         thumb.asImage(ICON_SIZE, ICON_SIZE), thumb)
             wx.CallAfter(Publisher.sendMessage, "THUMBNAIL_ADDED",
                                                 {'pagenr':pos+1,})
-            time.sleep(.05)
+            time.sleep(.01)
             if not self.__keep_running:
                 break
 
-        else:
-            if different_sizes:
-                wx.CallAfter(Publisher.sendMessage, "DIFF_SIZES")
-                time.sleep(.10)
         wx.CallAfter(Publisher.sendMessage, "THUMBNAIL_DONE")
         time.sleep(.10)
 
@@ -123,6 +111,10 @@ class PagePreviewWindow(wx.ScrolledWindow):
     def DisplayPage(self, page):
         thread.start_new_thread(self.__DisplayPageThread, (page,))
 
+    def Clear(self):
+        self.__buffer = wx.EmptyBitmap(1, 1)
+        self.Refresh()
+
     def __OnPaint(self, event):
         dc = wx.BufferedPaintDC(self, self.__buffer, wx.BUFFER_VIRTUAL_AREA)
 
@@ -132,7 +124,10 @@ class PagePreviewWindow(wx.ScrolledWindow):
         dc = wx.BufferedDC(None, self.__buffer)
         dc.Clear()
         dc.DrawRectangle(0, 0, w+2, h+2)
-        dc.DrawBitmap(wx.BitmapFromBuffer(w, h, page), 1, 1, True)
+        #dc.DrawBitmap(wx.BitmapFromBuffer(w, h, page), 1, 1, True)
+        dc.DrawBitmap(wx.BitmapFromImage(
+                       wx.ImageFromData(w, h, page)), 1, 1, True)
+
         self.Refresh()
 
     def __DisplayPageThread(self, page):
@@ -149,19 +144,20 @@ class PageListCtrl(wx.ListView):
         self.Bind(wx.EVT_CONTEXT_MENU, self.OnContextMenu)
 
     def OnContextMenu(self, event):
-        menu = wx.Menu()
-        menu.Append(wx.ID_SELECTALL, u"Select All\tCTRL-A")
-        menu.AppendSeparator()
-        menu.Append(wx.ID_SAVE, u"Save SWF (all pages)\tCTRL-W")
-        menu.Append(wx.ID_SAVEAS, u"Save SWF (selected pages)\tCTRL-S")
-        self.PopupMenu(menu)
-        menu.Destroy()
+        if self.GetItemCount():
+            menu = wx.Menu()
+            menu.Append(wx.ID_SELECTALL, u"Select All\tCTRL-A")
+            menu.AppendSeparator()
+            menu.Append(wx.ID_SAVE, u"Save SWF (all pages)\tCTRL-W")
+            menu.Append(wx.ID_SAVEAS, u"Save SWF (selected pages)\tCTRL-S")
+            self.PopupMenu(menu)
+            menu.Destroy()
 
     def DisplayEmptyThumbnails(self, pages):
         self.DeleteAllItems()
         self.imglist = wx.ImageList(ICON_SIZE, ICON_SIZE, mask=True)
         self.AssignImageList(self.imglist, wx.IMAGE_LIST_NORMAL)
-        bmp = getblankBitmap()
+        bmp = images.getblankBitmap()
         for pos in range(pages):
             self.imglist.Add(bmp)
             self.InsertImageStringItem(pos, u"Page %s" % (pos+1), pos)
@@ -171,12 +167,17 @@ class PageListCtrl(wx.ListView):
         t.Start()
         return t
 
-    def AppendThumbnail(self, pos, thumb):
-        bmp = wx.BitmapFromBuffer(ICON_SIZE, ICON_SIZE, thumb)
+    def AppendThumbnail(self, pos, thumb, page):
+        #bmp = wx.BitmapFromBuffer(ICON_SIZE, ICON_SIZE, thumb)
+        bmp = wx.BitmapFromImage(
+                       wx.ImageFromData(ICON_SIZE, ICON_SIZE,
+                                        thumb))
         self.imglist.Replace(pos, bmp)
+        self.SetItemText(pos, u"Page %s\n(%sx%s)" % (pos+1,
+                                   page.width, page.height))
         if pos == 0:
             wx.CallAfter(self.Select, 0)
-        self.Refresh()
+        self.RefreshItem(pos)
 
 
 class StatusBar(wx.StatusBar):
@@ -189,7 +190,7 @@ class StatusBar(wx.StatusBar):
 
         self.gauge = wx.Gauge(self)
 
-        bmp = wx.BitmapFromImage(wx.ImageFromData(stop_width,stop_height,stop_data))
+        bmp = images.getstopBitmap()
         self.btn_cancel = wx.BitmapButton(self, bitmap=bmp,
                                        style = wx.NO_BORDER)
         self.gauge.Hide()
@@ -230,7 +231,7 @@ class PdfFrame(wx.Frame):
     def __init__(self):
         wx.Frame.__init__(self, None, size=(750,550), title=u"gpdf2swf")
 
-        icon = self.__MakeIcon(os.path.join("images", "pdf2swf_gui.ico"))
+        icon = self.__MakeIcon()
         self.SetIcon(icon)
         self.__CreateMenu()
         self.__CreateToolbar()
@@ -247,9 +248,8 @@ class PdfFrame(wx.Frame):
                                sashPosition=ICON_SIZE*2)
         hsplit.SetMinimumPaneSize(ICON_SIZE*2)
 
-    def __MakeIcon(self, filename):
-        # TODO: Probably include the icon on a .py file
-        img = wx.Bitmap(filename).ConvertToImage()
+    def __MakeIcon(self):
+        img = images.getgpdf2swfImage()
         if "wxMSW" in wx.PlatformInfo:
             img = img.Scale(16, 16)
         #elif "wxGTK" in wx.PlatformInfo:
@@ -262,19 +262,26 @@ class PdfFrame(wx.Frame):
     def __CreateMenu(self):
         menubar = wx.MenuBar()
 
+        menu_recent = wx.Menu()
+        menu_save = wx.Menu()
+        menu_save.AppendCheckItem(ID_ONE_PAGE_PER_FILE, u"One Page Per File")
+        menu_save.AppendSeparator()
+        menu_save.Append(wx.ID_SAVE, u"All Pages\tCTRL-W",
+                                u"Save all pages")
+        menu_save.Append(wx.ID_SAVEAS, u"Selected Pages\tCTRL-S",
+                                  u"Save selected pages")
+
         menu = wx.Menu()
         menu.Append(wx.ID_OPEN, u"Open PDF\tCTRL-O", u"Open a PDF document")
+        menu.AppendMenu(wx.ID_ANY, u"Save SWF", menu_save)
         menu.AppendSeparator()
-        menu.Append(wx.ID_SAVE, u"Save SWF (all pages)\tCTRL-W",
-                                u"Save all pages")
-        menu.Append(wx.ID_SAVEAS, u"Save SWF (selected pages)\tCTRL-S",
-                                  u"Save selected pages")
+        menu.AppendMenu(wx.ID_ANY, u"Recent", menu_recent)
         menu.AppendSeparator()
         menu.Append(wx.ID_EXIT, u"Exit\tCTRL-Q")
         menubar.Append(menu, u"&File")
 
         self.filehistory = wx.FileHistory()
-        self.filehistory.UseMenu(menu)
+        self.filehistory.UseMenu(menu_recent)
 
         menu = wx.Menu()
         menu.Append(wx.ID_SELECTALL, u"Select All\tCTRL-A",
@@ -295,6 +302,8 @@ class PdfFrame(wx.Frame):
         menu.Append(wx.ID_ZOOM_OUT, u"Zoom Out\tCTRL--")
         menu.Append(wx.ID_ZOOM_100, u"Normal Size\tCTRL-0")
         menu.Append(wx.ID_ZOOM_FIT, u"Fit\tCTRL-1")
+        menu.AppendSeparator()
+        menu.Append(ID_DOC_INFO, u"Document Info\tCTRL-I")
         menubar.Append(menu, u"&View")
 
         menu = wx.Menu()
@@ -315,9 +324,31 @@ class PdfFrame(wx.Frame):
                                    wxart(wx.ART_FILE_SAVE,
                                          wx.ART_TOOLBAR, tsize),
                                    u"Save SWF (all pages)")
+        self.toolbar.AddSeparator()
+
         self.toolbar.AddSimpleTool(wx.ID_PREFERENCES,
                                    wxart(wx.ART_LIST_VIEW,
                                          wx.ART_TOOLBAR, tsize),
                                    u"Options")
+        self.toolbar.AddSeparator()
+
+        self.toolbar.AddSimpleTool(ID_DOC_INFO,
+                                   wxart(wx.ART_TIP,
+                                         wx.ART_TOOLBAR, tsize),
+                                   u"Document Info")
+
+        self.toolbar.AddSeparator()
+
+        self.toolbar_preview_type = wx.Choice(
+                self.toolbar, ID_PREVIEW_TYPE,
+                choices=["everything to bitmaps",
+                         "fonts to fonts, everything else to bitmaps",
+                         "polygons to polygons and fonts to fonts"],
+                size=(350,-1), style=wx.CB_DROPDOWN
+                )
+        # I'm not sure about the utility of this, so Show False
+        self.toolbar_preview_type.Show(False)
+        self.toolbar.AddControl(self.toolbar_preview_type)
+
         self.toolbar.Realize()
 

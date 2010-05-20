@@ -26,7 +26,7 @@ from __future__ import division
 import os
 
 import wx
-from wx.lib.wordwrap import wordwrap
+from lib.wordwrap import wordwrap
 
 from gui.options import Quality, ViewerBook
 
@@ -51,11 +51,13 @@ class OptionsDialog(wx.Dialog):
         p.AddPage(self.__viewers, u"Viewer")
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        btnsizer = wx.BoxSizer(wx.HORIZONTAL)
+        btnsizer = wx.StdDialogButtonSizer()
 
-        btn = wx.Button(self, wx.ID_CLOSE)
-        self.SetAffirmativeId(wx.ID_CLOSE)
-        btnsizer.Add(btn)
+        btn = wx.Button(self, wx.ID_OK)
+        btn.SetDefault()
+        btnsizer.AddButton(btn)
+        btnsizer.Realize()
+
 
         sizer.Add(p, 0, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
         sizer.Add(btnsizer, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
@@ -80,44 +82,52 @@ class OptionsDialog(wx.Dialog):
     viewers = property(__get_viewers_options)
 
 
+from gui.info import InfoList
+class InfoDialog(wx.Dialog):
+    def __init__(self, parent):
+        wx.Dialog.__init__(self, parent,
+                           style=wx.DEFAULT_DIALOG_STYLE
+                                |wx.RESIZE_BORDER
+                          )
+
+        app_name = wx.GetApp().GetAppName()
+        self.SetTitle(u"Document info - %s" % app_name)
+
+        self.info = InfoList(self)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.info, 1, wx.EXPAND, 0)
+
+
+        btnsizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        btn = wx.Button(self, wx.ID_OK)
+        btn.SetDefault()
+        #self.SetAffirmativeId(wx.ID_CLOSE)
+        btnsizer.Add(btn)
+        sizer.Add(btnsizer, 0, wx.ALIGN_RIGHT|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5)
+
+        self.SetSizer(sizer)
+
+
 class AboutDialog:
     def __init__(self, parent):
-        info = wx.AboutDialogInfo()
-        # no need to get app name
-        #info.Name = wx.GetApp().GetAppName()
-        info.Version = u"0.9.0"
-        info.Copyright = (u"Copyright (c) 2008,2009 "
-                          u"Matthias Kramm <kramm@quiss.org>")
-        info.Description = u"graphical user interface for pdf2swf"
-        info.Developers = [
-                           u"Matthias Kramm <kramm@quiss.org>",
-                           u"Ricardo Pedroso <rmdpedroso@gmail.com>",
-                          ]
+        appname = wx.GetApp().GetAppName()
+        version = u"0.9.0"
+        copyright = (u"Copyright (c) 2008,2009,2010\n"
+                     u"Matthias Kramm <kramm@quiss.org>")
+        description = u"A graphical user interface for pdf2swf"
+        developers = (u"Developers:\nMatthias Kramm <kramm@quiss.org>\n"
+                      u"Ricardo Pedroso <rmdpedroso@gmail.com>")
 
-        if 'wxGTK' in wx.PlatformInfo:
-            info.WebSite = (u"http://www.swftools.org/", u"swftools home page")
-            licenseText = [
-                u"%(name)s is free software; you can redistribute "
-                u"it and/or modify it under the terms of the GNU General "
-                u"Public License as published by the Free Software "
-                u"Foundation; either version 2 of the License, or (at "
-                u"your option) any later version."
-            ]
-            licenseText.append(
-                u"%(name)s is distributed in the hope that it will "
-                u"be useful, but WITHOUT ANY WARRANTY; without even the "
-                u"implied warranty of MERCHANTABILITY or FITNESS FOR A "
-                u"PARTICULAR PURPOSE. See the GNU General Public License "
-                u"for more details."
-            )
-            licenseText.append(
-                u"You should have received a copy of the GNU General "
-                u"Public License along with %(name)s; if not, "
-                u"write to the Free Software Foundation, Inc., 51 "
-                u"Franklin St, Fifth Floor, Boston, MA  02110-1301 USA"
-            )
-            lic = (os.linesep*2).join(licenseText) % {'name': info.Name}
-            info.License = wordwrap(lic, 350, wx.ClientDC(parent))
 
-        wx.AboutBox(info)
+        message = ("%(appname)s %(version)s\n\n"
+                   "%(description)s\n\n"
+                   "%(developers)s\n\n"
+                   "%(copyright)s" % locals())
+        caption = "About %s" % appname
+
+        #wx.MessageBox(message, caption)
+
+        wx.MessageDialog(parent, message, caption, style=wx.OK | wx.CENTRE).ShowModal()
 
