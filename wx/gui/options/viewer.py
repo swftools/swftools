@@ -47,8 +47,11 @@ class Viewers:
 
     def import_viewers(self):
         for file in self.viewers:
-            _temp = imp.load_source("viewers.%s" % file, os.path.join(os.getcwdu(), "viewers/%s.py" % file))
-            self.modules.append(_temp)
+            try:
+                _temp = imp.load_source("viewers.%s" % file, os.path.join(os.getcwdu(), "viewers/%s.py" % file))
+                self.modules.append(_temp)
+            except:
+                print "Could not load %s" % file
 
 
 

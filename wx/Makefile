@@ -13,5 +13,6 @@ pdf2swf_gui.exe: gpdf2swf.py gui/*.py viewers/*.py
 	ln -f /xpython/xpython.exe ./gpdf2swf.exe
 	#ln -f gpdf2swf.exe ../win32_gui/
 	ln -f gpdf2swf.exe ../win32/
+	cp -R viewers/* ../win32/viewers/
 
 .PHONY: exe
