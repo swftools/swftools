@@ -25,33 +25,52 @@
 import os
 import wx
 import operator
-import imp
+#import imp
 from lib.wordwrap import wordwrap
 from gui.boldstatictext import BoldStaticText
 import viewers
 import gui.fields
 
+import viewers.raw
+import viewers.simple
+import viewers.rfx
+import viewers.flexpaper
+import viewers.technoargia
+
 class Viewers:
     def __init__(self):
-        self.viewers = []
-        self.modules = []
-        self.list_viewers()
-        self.import_viewers()
+        self.viewers = [
+            'raw',
+            'simple',
+            'rfx',
+            'flexpaper',
+            'technoargia',
+        ]
+        self.modules = [
+            viewers.raw,
+            viewers.simple,
+            viewers.rfx,
+            viewers.flexpaper,
+            viewers.technoargia,
+        ]
+ 
+        #self.list_viewers()
+        #self.import_viewers()
 
-    def list_viewers(self):
-        for file in os.listdir('viewers'):
-            if (file.startswith('.') or file.startswith('_')
-                or file.endswith(".pyc") or not file.endswith('.py')):
-                continue
-            self.viewers.append(os.path.splitext(file)[0])
+    #def list_viewers(self):
+    #    for file in os.listdir('viewers'):
+    #        if (file.startswith('.') or file.startswith('_')
+    #            or file.endswith(".pyc") or not file.endswith('.py')):
+    #            continue
+    #        self.viewers.append(os.path.splitext(file)[0])
 
-    def import_viewers(self):
-        for file in self.viewers:
-            try:
-                _temp = imp.load_source("viewers.%s" % file, os.path.join(os.getcwdu(), "viewers/%s.py" % file))
-                self.modules.append(_temp)
-            except:
-                print "Could not load %s" % file
+    #def import_viewers(self):
+    #    for file in self.viewers:
+    #        try:
+    #            _temp = imp.load_source("viewers.%s" % file, os.path.join(os.getcwdu(), "viewers/%s.py" % file))
+    #            self.modules.append(_temp)
+    #        except:
+    #            print "Could not load %s" % file
 
 
 
