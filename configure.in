@@ -395,7 +395,9 @@ if test "x$RUBY_OK" '!=' "xyes";then
     # fail silently- the most users won't have any need for the
     # ruby interface anyway
 else
-    rubygfx="lib/ruby/Makefile"
+    if test -f "lib/ruby/Makefile.in";then
+	rubygfx="lib/ruby/Makefile"
+    fi
 fi
 
 # ------------------------------------------------------------------
