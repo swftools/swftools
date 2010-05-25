@@ -22,6 +22,8 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <assert.h>
+#include <stdio.h>
+#include <memory.h>
 #include "../config.h"
 #include "gfxdevice.h"
 #include "gfxtools.h"
@@ -143,7 +145,7 @@ static int errorno = 0;
 
 //#define DEBUG 1
 
-gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
+gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, double quality)
 {
     FT_Face face;
     FT_Error error;
@@ -492,7 +494,7 @@ gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quali
 }
 #else
 
-gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality)
+gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, double quality)
 {
     fprintf(stderr, "No freetype support compiled in! Not able to load %s\n", filename);
     return 0;
@@ -557,7 +559,22 @@ void gfxfont_fix_unicode(gfxfont_t*font)
 	    max = u;
     }
     free(used);
-    
+    if(font->unicode2glyph) {
+	free(font->unicode2glyph);
+    }
+    font->unicode2glyph = 0;
+    font->max_unicode = 0;
+}
+
+void gfxfont_add_unicode2glyph(gfxfont_t*font)
+{ 
+    int t;
+    int max = 0;
+    for(t=0;t<font->num_glyphs;t++) {
+	int u = font->glyphs[t].unicode;
+	if(u > max)
+	    max = u;
+    }
     if(!font->unicode2glyph) {
 	/* (re)generate unicode2glyph-to-glyph mapping table by reverse mapping
 	   the glyph unicode2glyph's indexes into the mapping table. For collisions,
@@ -593,7 +610,7 @@ void gfxfont_fix_unicode(gfxfont_t*font)
     }
 }
 
-ttf_t* gfxfont_to_ttf(gfxfont_t*font)
+ttf_t* gfxfont_to_ttf(gfxfont_t*font, char eot)
 {
     ttf_t*ttf = ttf_new();
     int num_glyphs = font->num_glyphs;
@@ -665,7 +682,26 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 	    }
 	}
 
-	dest->bearing = dest->xmin;
+	if(eot) {
+	    dest->bearing = dest->xmin;
+	    /* for windows font rendering, make sure coordinates are always 
+	       to the right of the origin (and use bearing to shift them "back".)
+	       Don't do this for non-windows platforms though because e.g. OS X 
+	       ignores bearing. */
+	    int xshift=0;
+	    if(dest->xmin < 0) {
+		xshift = -dest->xmin;
+		for(s=0;s<count;s++) {
+		    dest->points[s].x += xshift;
+		}
+		dest->xmin += xshift;
+		dest->xmax += xshift;
+	    }
+	}
+	dest->advance = src->advance*scale;
+
+	//dest->xmin=0; //TODO: might be necessary for some font engines?
+
 	dest->advance = src->advance*scale;
 
 	int u = font->glyphs[t].unicode;
@@ -722,14 +758,14 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font)
 
 void gfxfont_save(gfxfont_t*font, const char*filename)
 {
-    ttf_t*ttf = gfxfont_to_ttf(font);
+    ttf_t*ttf = gfxfont_to_ttf(font, 0);
     ttf_save(ttf, filename);
     ttf_destroy(ttf);
 }
 
 void gfxfont_save_eot(gfxfont_t*font, const char*filename)
 {
-    ttf_t*ttf = gfxfont_to_ttf(font);
+    ttf_t*ttf = gfxfont_to_ttf(font, 1);
     ttf_save_eot(ttf, filename);
     ttf_destroy(ttf);
 }

@@ -122,6 +122,9 @@ class InfoOutputDev: public OutputDev
     virtual void drawLink(Link *link, Catalog *catalog);
     virtual double getMaximumFontSize(char*id);
     virtual void updateFont(GfxState *state);
+  
+    virtual void saveState(GfxState *state);
+    virtual void restoreState(GfxState *state);
 
     virtual GBool beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen);
     virtual void type3D0(GfxState *state, double wx, double wy);

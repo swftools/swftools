@@ -1,0 +1,5 @@
+#!/bin/sh
+rm xpdf-changes.patch
+touch xpdf-changes.patch
+for f in xpdf/*.orig;do diff -u $f ${f%.orig} >> xpdf-changes.patch;done
+

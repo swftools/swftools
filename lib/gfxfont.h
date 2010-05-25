@@ -32,11 +32,12 @@ extern "C" {
 
 /* The quality parameter is given by 1 divided by the zoom factor at which the font
    still looks good. 1=normal, 0.5=double resolution etc. */
-gfxfont_t* gfxfont_load(char*id, char*filename, unsigned int flags, double quality);
+gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, double quality);
 void gfxfont_save(gfxfont_t*font, const char*filename);
 void gfxfont_save_eot(gfxfont_t*font, const char*filename);
 void gfxfont_fix_unicode(gfxfont_t*font);
 void gfxfont_free(gfxfont_t*font);
+void gfxfont_add_unicode2glyph(gfxfont_t*font);
 
 #ifdef __cplusplus
 }

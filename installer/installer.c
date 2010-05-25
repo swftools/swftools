@@ -558,7 +558,7 @@ static HRESULT (WINAPI *f_SHGetSpecialFolderPath)(HWND hwnd, LPTSTR lpszPath, in
 
 BOOL CALLBACK PropertySheetFunc4(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     if(message == WM_INITDIALOG) {
-	pdf2swf_dir = concatPaths(install_path, "gpdf2swf");
+	pdf2swf_dir = install_path; //concatPaths(install_path, "gpdf2swf");
 	pdf2swf_path = concatPaths(pdf2swf_dir, "gpdf2swf.exe");
 	FILE*fi = fopen(pdf2swf_path, "rb");
 	if(fi) {

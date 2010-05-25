@@ -29,6 +29,7 @@
 #include "../log.h"
 #include "../png.h"
 #include "../devices/record.h"
+#include "../gfxtools.h"
 #include "../types.h"
 #include "bbox.h"
 
@@ -80,6 +81,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->gfxdev->setDevice(this->gfxoutput);
     
     this->config_extrafontdata = 0;
+    this->config_optimizeplaincolorfills = 0;
     this->bboxpath = 0;
     //this->clipdev = 0;
     //this->clipstates = 0;
@@ -214,12 +216,26 @@ void BitmapOutputDev::flushBitmap()
 	int ymax = b->ymax;
 
 	/* clip against (-movex, -movey, -movex+width, -movey+height) */
-	if(xmin < -this->movex) xmin = -this->movex;
-	if(ymin < -this->movey) ymin = -this->movey;
-	if(xmax > -this->movex + width) xmax = -this->movex+this->width;
-	if(ymax > -this->movey + height) ymax = -this->movey+this->height;
 
-	msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d)", xmin,ymin,xmax,ymax);
+	msg("<verbose> Flushing bitmap (bbox: %d,%d,%d,%d %dx%d) (clipped against %d,%d,%d,%d)", xmin,ymin,xmax,ymax, xmax-xmin, ymax-ymin,
+		-this->movex, -this->movey, -this->movex+this->width, -this->movey+this->height);
+
+	if(xmin < -this->movex) {
+	    xmin = -this->movex;
+	    if(xmax < -this->movex) continue;
+	}
+	if(ymin < -this->movey) {
+	    ymin = -this->movey;
+	    if(ymax < -this->movey) continue;
+	}
+	if(xmax >= -this->movex + this->width) {
+	    xmax = -this->movex+this->width;
+	    if(xmin >= -this->movex + this->width) continue;
+	}
+	if(ymax >= -this->movey + this->height) {
+	    ymax = -this->movey+this->height;
+	    if(ymin >= -this->movey + this->height) continue;
+	}
 	
 	if((xmax-xmin)<=0 || (ymax-ymin)<=0) // no bitmap, nothing to do
 	    continue;
@@ -297,7 +313,16 @@ void BitmapOutputDev::flushBitmap()
 void BitmapOutputDev::flushText()
 {
     msg("<verbose> Flushing text");
-    gfxdevice_record_flush(this->gfxoutput, this->dev);
+
+    static gfxfontlist_t*output_font_list = 0;
+    static gfxdevice_t*last = 0;
+    if(last != this->dev) {
+	if(output_font_list)
+	    gfxfontlist_free(output_font_list, 0);
+	output_font_list = gfxfontlist_create();
+    }
+    gfxdevice_record_flush(this->gfxoutput, this->dev, &output_font_list);
+    last = this->dev;
     
     this->emptypage = 0;
 }
@@ -468,13 +493,35 @@ static void update_bitmap(SplashBitmap*bitmap, SplashBitmap*update, int x1, int 
 	    u += width8;
 	}
     } else {
-	int x,y;
-	for(y=0;y<yspan;y++) {
-	    for(x=0;x<xspan;x++) {
-		b[x] |= u[x];
+	if(((ptroff_t)b&7)==((ptroff_t)u&7)) {
+	    int x,y;
+	    for(y=0;y<yspan;y++) {
+		Guchar*e1 = b+xspan-8;
+		Guchar*e2 = b+xspan;
+		while(((ptroff_t)b&7) && b<e1) {
+		    *b |= *u;
+		    b++;u++;
+		}
+		while(b<e1) {
+		    *(long long*)b |= *(long long*)u;
+		    b+=8;u+=8;
+		}
+		while(b<e2) {
+		    *b |= *u;
+		    b++;u++;
+		}
+		b += width8-xspan;
+		u += width8-xspan;
 	    }
-	    b += width8;
-	    u += width8;
+	} else {
+	    int x,y;
+	    for(y=0;y<yspan;y++) {
+		for(x=0;x<xspan;x++) {
+		    b[x] |= u[x];
+		}
+		b += width8;
+		u += width8;
+	    }
 	}
     }
 }
@@ -822,7 +869,6 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     this->width = (int)(x2-x1);
     this->height = (int)(y2-y1);
 
-    msg("<debug> startPage");
     rgbdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     boolpolydev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
     booltextdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
@@ -837,6 +883,8 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     booltextbitmap = booltextdev->getBitmap();
     staletextbitmap = new SplashBitmap(booltextbitmap->getWidth(), booltextbitmap->getHeight(), 1, booltextbitmap->getMode(), 0);
     assert(staletextbitmap->getRowSize() == booltextbitmap->getRowSize());
+    
+    msg("<debug> startPage %dx%d (%dx%d)", this->width, this->height, booltextbitmap->getWidth(), booltextbitmap->getHeight());
 
     clip0bitmap = clip0dev->getBitmap();
     clip1bitmap = clip1dev->getBitmap();
@@ -866,13 +914,7 @@ void BitmapOutputDev::finishPage()
     msg("<verbose> finishPage (BitmapOutputDev)");
     gfxdev->endPage();
    
-    if(layerstate == STATE_BITMAP_IS_ABOVE) {
-	this->flushText();
-	this->flushBitmap();
-    } else {
-	this->flushBitmap();
-	this->flushText();
-    }
+    flushEverything();
 
     /* splash will now destroy alpha, and paint the 
        background color into the "holes" in the bitmap */
@@ -1298,11 +1340,47 @@ void BitmapOutputDev::stroke(GfxState *state)
     rgbdev->stroke(state);
     dbg_newdata("stroke");
 }
+
+extern gfxcolor_t getFillColor(GfxState * state);
+
+char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*rgbbitmap, int x1, int y1, int x2, int y2)
+{
+    int width = boolpoly->getWidth();
+    int height = boolpoly->getHeight();
+    if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
+	return 0;
+    }
+    gfxcolor_t color = getFillColor(state);
+    SplashColorPtr rgb = rgbbitmap->getDataPtr() 
+	               + (y1*width+x1)*sizeof(SplashColor);
+    int width8 = (width+7)/8;
+    unsigned char*bits = (unsigned char*)boolpoly->getDataPtr() 
+	                 + (y1*width8+x1);
+    int x,y;
+    int w = x2-x1;
+    int h = y2-y1;
+    for(y=0;y<h;y++) {
+	for(x=0;x<w;x++) {
+	    if(rgb[x*3+0] != color.r ||
+	       rgb[x*3+1] != color.g ||
+	       rgb[x*3+2] != color.b)
+		return 0;
+	}
+	rgb += width*sizeof(SplashColor);
+    }
+    return 1;
+}
+
 void BitmapOutputDev::fill(GfxState *state)
 {
     msg("<debug> fill");
     boolpolydev->fill(state);
     gfxbbox_t bbox = getBBox(state);
+    if(config_optimizeplaincolorfills) {
+	if(area_is_plain_colored(state, boolpolybitmap, rgbbitmap, bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax)) {
+	    return;
+	}
+    }
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
     rgbdev->fill(state);
     dbg_newdata("fill");
@@ -1437,6 +1515,10 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
         boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+    } else if(state->getRender()&RENDER_STROKE) {
+	// we're drawing as stroke
+	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else if(rgbbitmap != rgbdev->getBitmap()) {
 	// we're doing softmasking or transparency grouping
 	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
@@ -1697,7 +1779,18 @@ void BitmapOutputDev::drawForm(Ref id)
 void BitmapOutputDev::processLink(Link *link, Catalog *catalog)
 {
     msg("<debug> processLink");
+    flushEverything();
     gfxdev->processLink(link, catalog);
+}
+void BitmapOutputDev::flushEverything()
+{
+    if(layerstate == STATE_BITMAP_IS_ABOVE) {
+	this->flushText();
+	this->flushBitmap();
+    } else {
+	this->flushBitmap();
+	this->flushText();
+    }
 }
 
 void BitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,

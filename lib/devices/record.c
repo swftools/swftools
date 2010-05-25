@@ -34,6 +34,7 @@
 #include <assert.h>
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
+#include "../gfxfont.h"
 #include "../types.h"
 #include "../bitio.h"
 #include "../log.h"
@@ -45,7 +46,7 @@
 #include "record.h"
 
 //#define STATS
-#define COMPRESS_IMAGES
+//#define COMPRESS_IMAGES
 //#define FILTER_IMAGES
 
 typedef struct _state {
@@ -452,6 +453,17 @@ static gfxfont_t*readFont(reader_t*r, state_t*state)
 
 /* ----------------- reading/writing of primitives with caching -------------- */
 
+void state_clear(state_t*state)
+{
+    int t;
+    for(t=0;t<sizeof(state->last_string)/sizeof(state->last_string[0]);t++) {
+	if(state->last_string[t]) {
+	    free(state->last_string[t]);
+	    state->last_string[t] = 0;
+	}
+    }
+}
+
 static char* read_string(reader_t*r, state_t*state, U8 id, U8 flags)
 {
     assert(id>=0 && id<16);
@@ -460,6 +472,9 @@ static char* read_string(reader_t*r, state_t*state, U8 id, U8 flags)
 	return strdup(state->last_string[id]);
     }
     char*s = reader_readString(r);
+    if(state->last_string[id]) {
+	free(state->last_string[id]);
+    }
     state->last_string[id] = strdup(s);
     return s;
 }
@@ -592,8 +607,10 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
     char same_matrix = (l->m00 == matrix->m00) && (l->m01 == matrix->m01) && (l->m10 == matrix->m10) && (l->m11 == matrix->m11);
     char same_color = !memcmp(color, &i->state.last_color[OP_DRAWCHAR], sizeof(gfxcolor_t));
 
+    /* FIXME
     if(same_font && same_matrix && same_color)
 	flags |= FLAG_SAME_AS_LAST;
+    */
 
     writer_writeU8(&i->w, OP_DRAWCHAR|flags);
     writer_writeU32(&i->w, glyphnr);
@@ -606,7 +623,11 @@ static void record_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, 
 	    writer_writeString(&i->w, font_id);
 	dumpColor(&i->w, &i->state, color);
 	dumpMatrix(&i->w, &i->state, matrix);
+
+	if(i->state.last_string[OP_DRAWCHAR])
+	    free(i->state.last_string[OP_DRAWCHAR]);
 	i->state.last_string[OP_DRAWCHAR] = strdup(font_id);
+
 	i->state.last_color[OP_DRAWCHAR] = *color;
 	i->state.last_matrix[OP_DRAWCHAR] = *matrix;
     } else {
@@ -641,17 +662,19 @@ static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*ac
 
 /* ------------------------------- replaying --------------------------------- */
 
-static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
+static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r, gfxfontlist_t**fontlist)
 {
     internal_t*i = 0;
     if(dev) {
 	i = (internal_t*)dev->internal;
     }
+    gfxfontlist_t*_fontlist=0;
+    if(!fontlist) {
+	fontlist = &_fontlist;
+    }
 
     state_t state;
     memset(&state, 0, sizeof(state));
-
-    gfxfontlist_t* fontlist = gfxfontlist_create();
 
     while(1) {
 	unsigned char op;
@@ -775,8 +798,12 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 	    case OP_ADDFONT: {
 		msg("<trace> replay: ADDFONT out=%08x(%s)", out, out->name);
 		gfxfont_t*font = readFont(r, &state);
-		fontlist = gfxfontlist_addfont(fontlist, font);
-		out->addfont(out, font);
+		if(!gfxfontlist_hasfont(*fontlist, font)) {
+		    *fontlist = gfxfontlist_addfont(*fontlist, font);
+		    out->addfont(out, font);
+		} else {
+		    gfxfont_free(font);
+		}
 		break;
 	    }
 	    case OP_DRAWCHAR: {
@@ -788,7 +815,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 		gfxcolor_t color = read_color(r, &state, op, flags);
 		gfxmatrix_t matrix = read_matrix(r, &state, op, flags);
 
-		gfxfont_t*font = id?gfxfontlist_findfont(fontlist, id):0;
+		gfxfont_t*font = id?gfxfontlist_findfont(*fontlist, id):0;
 		if(i && !font) {
 		    font = gfxfontlist_findfont(i->fontlist, id);
 		}
@@ -801,14 +828,12 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r)
 	}
     }
 finish:
+    state_clear(&state);
     r->dealloc(r);
-    /* problem: if we just replayed into a device which stores the
-       font for later use (the record device itself is a nice example),
-       then we can't free it yet */
-    //gfxfontlist_free(fontlist, 1);
-    gfxfontlist_free(fontlist, 0);
+    if(_fontlist)
+	gfxfontlist_free(_fontlist, 0);
 }
-void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
+void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device, gfxfontlist_t**fontlist)
 {
     internal_result_t*i = (internal_result_t*)result->internal;
     
@@ -819,7 +844,7 @@ void gfxresult_record_replay(gfxresult_t*result, gfxdevice_t*device)
 	reader_init_memreader(&r, i->data, i->length);
     }
 
-    replay(0, device, &r);
+    replay(0, device, &r, fontlist);
 }
 
 static void record_result_write(gfxresult_t*r, int filedesc)
@@ -894,7 +919,7 @@ static void hexdumpMem(unsigned char*data, int len)
     }
 }
 
-void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
+void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out, gfxfontlist_t**fontlist)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(out) {
@@ -903,7 +928,7 @@ void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out)
 	    void*data = writer_growmemwrite_memptr(&i->w, &len);
 	    reader_t r;
 	    reader_init_memreader(&r, data, len);
-	    replay(dev, out, &r);
+	    replay(dev, out, &r, fontlist);
 	    writer_growmemwrite_reset(&i->w);
 	} else {
 	    msg("<fatal> Flushing not supported for file based record device");
@@ -920,6 +945,8 @@ static gfxresult_t* record_finish(struct _gfxdevice*dev)
     if(i->cliplevel) {
 	msg("<error> Warning: unclosed cliplevels");
     }
+
+    state_clear(&i->state);
 
 #ifdef STATS
     int total = i->w.pos;

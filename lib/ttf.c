@@ -638,6 +638,7 @@ static table_maxp_t*maxp_new(ttf_t*ttf)
 	maxp->maxComponentPoints = 0;
 	maxp->maxComponentContours = 0;
     }
+    maxp->maxZones = 2; // we don't use the Z0 zone
     return maxp;
 }
 static table_maxp_t* maxp_parse(ttf_t*ttf, memreader_t*r)
@@ -726,8 +727,8 @@ static table_hea_t*hea_new(ttf_t*ttf)
 	for(t=0;t<ttf->num_glyphs;t++) {
 	    if(ttf->glyphs[t].advance > hea->advanceWidthMax)
 	        hea->advanceWidthMax = ttf->glyphs[t].advance;
-	    if(ttf->glyphs[t].xmin < hea->minLeftSideBearing)
-	        hea->minLeftSideBearing = ttf->glyphs[t].xmin;
+	    if(ttf->glyphs[t].bearing < hea->minLeftSideBearing)
+	        hea->minLeftSideBearing = ttf->glyphs[t].bearing;
 	    if(ttf->glyphs[t].xmax < hea->minRightSideBearing)
 	        hea->minRightSideBearing = ttf->glyphs[t].xmax;
 	    int width = ttf->glyphs[t].xmax - ttf->glyphs[t].xmin;
@@ -1637,15 +1638,15 @@ static table_post_t*post_new(ttf_t*ttf)
 void post_parse(memreader_t*r, ttf_t*ttf)
 {
     table_post_t*post = ttf->post = rfx_calloc(sizeof(table_post_t));
-    U16 format = readU16(r);
-    post->italic_angle = readU16(r);
+    U32 format = readU32(r);
+    post->italic_angle = readU32(r);
     post->underline_position = readU16(r);
     post->underline_thickness = readU16(r);
-    U16 is_monospaced = readU16(r);
-    readU16(r); // min mem 42
-    readU16(r);
-    readU16(r); // min mem 1
-    readU16(r);
+    U16 is_monospaced = readU32(r);
+    readU32(r); // min mem 42
+    readU32(r);
+    readU32(r); // min mem 1
+    readU32(r);
 }
 void post_write(ttf_t*ttf, ttf_table_t*table)
 {
@@ -1719,12 +1720,24 @@ void gasp_parse(memreader_t*r, ttf_t*ttf)
 	gasp->records[t].behaviour = readU16(r);
     }
 }
+
+#define GASP_SYMMETRIC_GRIDFIT 0x0008
+#define GASP_SYMMETRIC_SMOOTHING 0x0004
+#define GASP_DOGRAY 0x0002
+#define GASP_GRIDFIT 0x0001
+
 void gasp_write(ttf_t*ttf, ttf_table_t*table)
 {
     table_gasp_t*gasp = ttf->gasp;
-    writeU16(table, 0);
-    writeU16(table, gasp->num);
+    int version = 0;
     int t;
+    for(t=0;t<gasp->num;t++) {
+	if(gasp->records[t].behaviour & ~(GASP_GRIDFIT | GASP_DOGRAY)) {
+	    version = 1;
+	}
+    }
+    writeU16(table, version);
+    writeU16(table, gasp->num);
     for(t=0;t<gasp->num;t++) {
 	writeU16(table, gasp->records[t].size);
 	writeU16(table, gasp->records[t].behaviour);

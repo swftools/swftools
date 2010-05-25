@@ -3,6 +3,7 @@
 all: clear  test.o
 clean: all
 install:
+uninstall:
 
 CC=@echo "*******************************************************";\
     echo "Your make is broken- try to get yourself a working one.";\

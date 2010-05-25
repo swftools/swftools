@@ -64,6 +64,10 @@ static void restore_matrix(internal_t*i)
     if(i->has_matrix) {
 	PDF_restore(i->p);
 	i->has_matrix=0;
+	i->m00 = 0;
+	i->m01 = 0;
+	i->m10 = 0;
+	i->m11 = 0;
     }
 }
 static void set_matrix(internal_t*i, double m00, double m01, double m10, double m11)

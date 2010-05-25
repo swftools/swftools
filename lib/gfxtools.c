@@ -1054,6 +1054,7 @@ gfxline_t* gfxline_restitch(gfxline_t*line)
 		gfxpoint_t xy = {line->x, line->y};
 		dict_put(rev, &xy, prev);
 		line->next = 0;
+		prev=0;
 	    }
 	}
 	line = next;

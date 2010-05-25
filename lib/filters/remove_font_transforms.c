@@ -95,10 +95,10 @@ typedef struct _internal {
 
 
 #ifdef __GNUC__
-void __attribute__((noinline)) 
+int __attribute__((noinline)) 
      matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix, unsigned char alpha)
 #else
-void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix, unsigned char alpha)
+int matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*scalematrix, unsigned char alpha)
 #endif
 {
     double l1 = sqrt(in->m00 * in->m00 + in->m01 * in->m01);
@@ -106,7 +106,7 @@ void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*s
     double l = (l1+l2)/2.0;
     if(l < 1e-10) {
 	memset(out, 0, sizeof(*out));
-	return;
+	return 0;
     }
     out->m00 = in->m00 / l;
     out->m10 = in->m10 / l;
@@ -123,6 +123,7 @@ void matrix_convert(gfxmatrix_t*in, const char*id, mymatrix_t*out, gfxmatrix_t*s
 	scalematrix->tx = in->tx;
 	scalematrix->ty = in->ty;
     }
+    return 1;
 }
 
 typedef struct _matrixdata {
@@ -160,7 +161,8 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     mymatrix_t m;
     if(!font->id) 
 	msg("<error> Font has no ID");
-    matrix_convert(matrix, font->id?font->id:"unknown", &m, 0, color->a);
+    if(!matrix_convert(matrix, font->id?font->id:"unknown", &m, 0, color->a))
+	return;
     transformedfont_t*fd = dict_lookup(i->matrices, &m);
     if(!fd) {
 	fd = transformedfont_new(font, &m);
@@ -224,7 +226,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	if(count) 
 	    average_xmax /= count;
 
-	fd->dx = -total.xmin;
+	fd->dx = 0;//-total.xmin;
 
 	font->ascent = total.ymax;
 	font->descent = -total.ymin;

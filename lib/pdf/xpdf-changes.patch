@@ -1,12 +1,98 @@
-Index: Gfx.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Gfx.cc,v
-retrieving revision 1.9
-retrieving revision 1.10
-diff -u -r1.9 -r1.10
---- Gfx.cc	3 Dec 2005 10:11:33 -0000	1.9
-+++ Gfx.cc	3 Dec 2005 10:30:41 -0000	1.10
-@@ -439,7 +439,11 @@
+--- xpdf/Catalog.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Catalog.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -193,7 +193,7 @@
+   if (!kids.isArray()) {
+     error(-1, "Kids object (page %d) is wrong type (%s)",
+ 	  start+1, kids.getTypeName());
+-    goto err1;
++    return start;
+   }
+   for (i = 0; i < kids.arrayGetLength(); ++i) {
+     kids.arrayGetNF(i, &kidRef);
+--- xpdf/CharCodeToUnicode.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/CharCodeToUnicode.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -208,13 +208,13 @@
+ 				   int nBits) {
+   PSTokenizer *pst;
+   char tok1[256], tok2[256], tok3[256];
+-  int nDigits, n1, n2, n3;
++  int maxCode, n1, n2, n3;
+   CharCode i;
+   CharCode code1, code2;
+   GString *name;
+   FILE *f;
+ 
+-  nDigits = nBits / 4;
++  maxCode = (nBits == 8) ? 0xff : (nBits == 16) ? 0xffff : 0xffffffff;
+   pst = new PSTokenizer(getCharFunc, data);
+   pst->getToken(tok1, sizeof(tok1), &n1);
+   while (pst->getToken(tok2, sizeof(tok2), &n2)) {
+@@ -241,9 +241,9 @@
+ 	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
+ 	  break;
+ 	}
+-	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
++	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
+ 	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
+-	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
++	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap.");
+ 	  continue;
+ 	}
+ 	tok1[n1 - 1] = tok2[n2 - 1] = '\0';
+@@ -251,6 +251,9 @@
+ 	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
+ 	  continue;
+ 	}
++        if (code1 > maxCode) {
++          error(-1, "Invalid entry in bfchar block in ToUnicode CMap");
++        }
+ 	addMapping(code1, tok2 + 1, n2 - 2, 0);
+       }
+       pst->getToken(tok1, sizeof(tok1), &n1);
+@@ -266,8 +269,8 @@
+ 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
+ 	  break;
+ 	}
+-	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
+-	      n2 == 2 + nDigits && tok2[0] == '<' && tok2[n2 - 1] == '>')) {
++	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
++	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
+ 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
+ 	  continue;
+ 	}
+@@ -277,6 +280,10 @@
+ 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
+ 	  continue;
+ 	}
++        if (code1 > maxCode || code2 > maxCode) {
++	    error(-1, "Invalid entry in bfrange block in ToUnicode CMap");
++	}
++
+ 	if (!strcmp(tok3, "[")) {
+ 	  i = 0;
+ 	  while (pst->getToken(tok1, sizeof(tok1), &n1) &&
+--- xpdf/CoreOutputDev.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/CoreOutputDev.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -57,5 +57,5 @@
+ 
+ void CoreOutputDev::clear() {
+   startDoc(NULL);
+-  startPage(0, NULL);
++  startPage(0, NULL, 0,0,0,0);
+ }
+--- xpdf/Decrypt.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Decrypt.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -596,6 +596,7 @@
+   s->bufIdx = 0;
+   if (last) {
+     n = s->buf[15];
++    if(!n || n>16) n=16;
+     for (i = 15; i >= n; --i) {
+       s->buf[i] = s->buf[i-n];
+     }
+--- xpdf/Gfx.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Gfx.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -454,7 +454,11 @@
    fontChanged = gFalse;
    clip = clipNone;
    ignoreUndef = 0;
@@ -19,35 +105,112 @@ diff -u -r1.9 -r1.10
    out->setDefaultCTM(state->getCTM());
    out->updateAll(state);
    for (i = 0; i < 6; ++i) {
-@@ -450,7 +450,8 @@
+@@ -465,6 +469,7 @@
    abortCheckCbkData = abortCheckCbkDataA;
  
    // set crop box
--  if (cropBox) {
 +#ifdef XPDFEXE
-+  if (cropBox) {
+   if (cropBox) {
      state->moveTo(cropBox->x1, cropBox->y1);
      state->lineTo(cropBox->x2, cropBox->y1);
-     state->lineTo(cropBox->x2, cropBox->y2);
-@@ -459,7 +460,8 @@
-     state->clip();
+@@ -475,6 +480,7 @@
      out->clip(state);
      state->clearPath();
--  }
-+  }
+   }
 +#endif
  }
  
  Gfx::Gfx(XRef *xrefA, OutputDev *outA, Dict *resDict,
-Index: GfxFont.h
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GfxFont.h,v
-retrieving revision 1.6
-retrieving revision 1.7
-diff -u -r1.6 -r1.7
---- GfxFont.h	3 Dec 2005 10:11:33 -0000	1.6
-+++ GfxFont.h	3 Dec 2005 10:30:41 -0000	1.7
-@@ -207,7 +207,7 @@
+@@ -3182,8 +3188,11 @@
+ 			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
+ 			    &dx, &dy, &originX, &originY);
+       dx = dx * state->getFontSize() + state->getCharSpace();
+-      if (n == 1 && *p == ' ') {
+-	dx += state->getWordSpace();
++      if (n == 1 && (*p == ' ' || *p == 0)) {
++        double w=state->getWordSpace();
++        if (w==0 && dx==0)
++          w=state->getFontSize()/3; // workaround for zero word space
++        dx += w;
+       }
+       dx *= state->getHorizScaling();
+       dy *= state->getFontSize();
+@@ -3476,11 +3485,13 @@
+       }
+     }
+     if (!obj1.isNull()) {
+-      colorSpace = GfxColorSpace::parse(&obj1);
++      colorSpace = GfxColorSpace::parse(&obj1, csMode);
+     } else if (csMode == streamCSDeviceGray) {
+       colorSpace = new GfxDeviceGrayColorSpace();
+     } else if (csMode == streamCSDeviceRGB) {
+       colorSpace = new GfxDeviceRGBColorSpace();
++    } else if (csMode == streamCSDeviceRGBX) {
++      colorSpace = new GfxDeviceRGBXColorSpace();
+     } else if (csMode == streamCSDeviceCMYK) {
+       colorSpace = new GfxDeviceCMYKColorSpace();
+     } else {
+@@ -3824,6 +3835,7 @@
+     out->beginTransparencyGroup(state, bbox, blendingColorSpace,
+ 				isolated, knockout, softMask);
+   }
++  GfxState*old_state = state;
+ 
+   // set new base matrix
+   for (i = 0; i < 6; ++i) {
+@@ -3835,6 +3847,9 @@
+   display(str, gFalse);
+ 
+   if (softMask || transpGroup) {
++    // restore graphics state
++    while(state != old_state)
++	restoreState();
+     out->endTransparencyGroup(state);
+   }
+ 
+--- xpdf/GfxFont.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/GfxFont.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -919,6 +919,10 @@
+   return 1;
+ }
+ 
++CharCodeToUnicode* Gfx8BitFont::getCTU() {
++    return ctu;
++}
++
+ CharCodeToUnicode *Gfx8BitFont::getToUnicode() {
+   ctu->incRefCnt();
+   return ctu;
+@@ -1411,6 +1415,10 @@
+   }
+ }
+ 
++CharCodeToUnicode* GfxCIDFont::getCTU() {
++    return ctu;
++}
++
+ int GfxCIDFont::getNextChar(char *s, int len, CharCode *code,
+ 			    Unicode *u, int uSize, int *uLen,
+ 			    double *dx, double *dy, double *ox, double *oy) {
+--- xpdf/GfxFont.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/GfxFont.h	2010-05-18 11:22:18.000000000 -0700
+@@ -164,6 +164,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy) = 0;
++  virtual CharCodeToUnicode* getCTU() = 0;
+ 
+ protected:
+ 
+@@ -204,6 +205,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy);
++  virtual CharCodeToUnicode* getCTU();
+ 
+   // Return the encoding.
+   char **getEncoding() { return enc; }
+@@ -212,7 +214,7 @@
    CharCodeToUnicode *getToUnicode();
  
    // Return the character name associated with <code>.
@@ -56,14 +219,16 @@ diff -u -r1.6 -r1.7
  
    // Returns true if the PDF font specified an encoding.
    GBool getHasEncoding() { return hasEncoding; }
-Index: GfxState.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GfxState.cc,v
-retrieving revision 1.10
-retrieving revision 1.12
-diff -u -r1.10 -r1.12
---- GfxState.cc	3 Dec 2005 10:11:33 -0000	1.10
-+++ GfxState.cc	3 Dec 2005 12:41:32 -0000	1.12
+@@ -266,6 +268,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy);
++  virtual CharCodeToUnicode* getCTU();
+ 
+   // Return the writing mode (0=horizontal, 1=vertical).
+   virtual int getWMode();
+--- xpdf/GfxState.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/GfxState.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -21,6 +21,7 @@
  #include "Array.h"
  #include "Page.h"
@@ -72,7 +237,58 @@ diff -u -r1.10 -r1.12
  
  //------------------------------------------------------------------------
  
-@@ -468,6 +469,18 @@
+@@ -92,7 +93,7 @@
+ GfxColorSpace::~GfxColorSpace() {
+ }
+ 
+-GfxColorSpace *GfxColorSpace::parse(Object *csObj) {
++GfxColorSpace *GfxColorSpace::parse(Object *csObj, StreamColorSpaceMode csMode) {
+   GfxColorSpace *cs;
+   Object obj1;
+ 
+@@ -101,7 +102,10 @@
+     if (csObj->isName("DeviceGray") || csObj->isName("G")) {
+       cs = new GfxDeviceGrayColorSpace();
+     } else if (csObj->isName("DeviceRGB") || csObj->isName("RGB")) {
+-      cs = new GfxDeviceRGBColorSpace();
++      if(csMode == streamCSDeviceRGBX)
++	cs = new GfxDeviceRGBXColorSpace();
++      else
++	cs = new GfxDeviceRGBColorSpace();
+     } else if (csObj->isName("DeviceCMYK") || csObj->isName("CMYK")) {
+       cs = new GfxDeviceCMYKColorSpace();
+     } else if (csObj->isName("Pattern")) {
+@@ -114,7 +118,10 @@
+     if (obj1.isName("DeviceGray") || obj1.isName("G")) {
+       cs = new GfxDeviceGrayColorSpace();
+     } else if (obj1.isName("DeviceRGB") || obj1.isName("RGB")) {
+-      cs = new GfxDeviceRGBColorSpace();
++      if(csMode == streamCSDeviceRGBX)
++        cs = new GfxDeviceRGBColorSpace();
++      else
++	cs = new GfxDeviceRGBColorSpace();
+     } else if (obj1.isName("DeviceCMYK") || obj1.isName("CMYK")) {
+       cs = new GfxDeviceCMYKColorSpace();
+     } else if (obj1.isName("CalGray")) {
+@@ -333,6 +340,17 @@
+ }
+ 
+ //------------------------------------------------------------------------
++// GfxDeviceRGBXColorSpace
++//------------------------------------------------------------------------
++
++GfxDeviceRGBXColorSpace::GfxDeviceRGBXColorSpace() {
++}
++
++GfxColorSpace *GfxDeviceRGBXColorSpace::copy() {
++  return new GfxDeviceRGBXColorSpace();
++}
++
++//------------------------------------------------------------------------
+ // GfxCalRGBColorSpace
+ //------------------------------------------------------------------------
+ 
+@@ -490,6 +508,18 @@
  				- 0.11 * color->c[2] + 0.5));
  }
  
@@ -91,7 +307,7 @@ diff -u -r1.10 -r1.12
  void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
    double c, m, y, k, c1, m1, y1, k1, r, g, b, x;
  
-@@ -3099,6 +3112,7 @@
+@@ -3187,6 +3217,7 @@
    GfxIndexedColorSpace *indexedCS;
    GfxSeparationColorSpace *sepCS;
    int maxPixel, indexHigh;
@@ -99,15 +315,15 @@ diff -u -r1.10 -r1.12
    Guchar *lookup2;
    Function *sepFunc;
    Object obj;
-@@ -3111,6 +3125,7 @@
+@@ -3199,6 +3230,7 @@
    // bits per component and color space
    bits = bitsA;
    maxPixel = (1 << bits) - 1;
 +  maxPixelForAlloc = (1 << (bits>8?bits:8));
    colorSpace = colorSpaceA;
  
-   // get decode map
-@@ -3163,7 +3178,7 @@
+   // initialize
+@@ -3253,7 +3285,7 @@
      lookup2 = indexedCS->getLookup();
      colorSpace2->getDefaultRanges(x, y, indexHigh);
      for (k = 0; k < nComps2; ++k) {
@@ -116,7 +332,7 @@ diff -u -r1.10 -r1.12
  					   sizeof(GfxColorComp));
        for (i = 0; i <= maxPixel; ++i) {
  	j = (int)(decodeLow[0] + (i * decodeRange[0]) / maxPixel + 0.5);
-@@ -3182,7 +3197,7 @@
+@@ -3272,7 +3304,7 @@
      nComps2 = colorSpace2->getNComps();
      sepFunc = sepCS->getFunc();
      for (k = 0; k < nComps2; ++k) {
@@ -125,7 +341,7 @@ diff -u -r1.10 -r1.12
  					   sizeof(GfxColorComp));
        for (i = 0; i <= maxPixel; ++i) {
  	x[0] = decodeLow[0] + (i * decodeRange[0]) / maxPixel;
-@@ -3192,7 +3207,7 @@
+@@ -3282,7 +3314,7 @@
      }
    } else {
      for (k = 0; k < nComps; ++k) {
@@ -134,7 +350,7 @@ diff -u -r1.10 -r1.12
  					   sizeof(GfxColorComp));
        for (i = 0; i <= maxPixel; ++i) {
  	lookup[k][i] = dblToCol(decodeLow[k] +
-@@ -3754,7 +3769,10 @@
+@@ -3754,7 +3786,10 @@
  }
  
  void GfxState::setPath(GfxPath *pathA) {
@@ -144,18 +360,43 @@ diff -u -r1.10 -r1.12
 +  }
    path = pathA;
  }
-
-Index: GlobalParams.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.cc,v
-retrieving revision 1.4
-retrieving revision 1.7
-diff -u -r1.4 -r1.7
---- GlobalParams.cc	3 Dec 2005 10:11:33 -0000	1.4
-+++ GlobalParams.cc	18 Dec 2005 08:31:22 -0000	1.7
-@@ -498,6 +498,29 @@
+ 
+--- xpdf/GfxState.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/GfxState.h	2010-05-18 11:22:18.000000000 -0700
+@@ -138,7 +138,7 @@
+   virtual GfxColorSpaceMode getMode() = 0;
+ 
+   // Construct a color space.  Returns NULL if unsuccessful.
+-  static GfxColorSpace *parse(Object *csObj);
++  static GfxColorSpace *parse(Object *csObj, StreamColorSpaceMode csMode = streamCSNone);
+ 
+   // Convert to gray, RGB, or CMYK.
+   virtual void getGray(GfxColor *color, GfxGray *gray) = 0;
+@@ -252,6 +252,19 @@
+ };
+ 
+ //------------------------------------------------------------------------
++// GfxDeviceRGBXColorSpace
++//------------------------------------------------------------------------
++
++class GfxDeviceRGBXColorSpace: public GfxDeviceRGBColorSpace {
++public:
++
++  GfxDeviceRGBXColorSpace();
++  virtual GfxColorSpace *copy();
++  virtual int getNComps() { return 4; }
++private:
++};
++
++//------------------------------------------------------------------------
+ // GfxCalRGBColorSpace
+ //------------------------------------------------------------------------
+ 
+--- xpdf/GlobalParams.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/GlobalParams.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -914,6 +914,29 @@
+   int line;
    char buf[512];
-   FILE *f2;
  
 +  /* extract path */
 +  if(fileName) {
@@ -182,8 +423,8 @@ diff -u -r1.4 -r1.7
 +  
    line = 1;
    while (getLine(buf, sizeof(buf) - 1, f)) {
- 
-@@ -1142,6 +1165,42 @@
+     parseLine(buf, fileName, line);
+@@ -1114,6 +1137,42 @@
    deleteGList(tokens, GString);
  }
  
@@ -226,7 +467,7 @@ diff -u -r1.4 -r1.7
  void GlobalParams::parseNameToUnicode(GList *tokens, GString *fileName,
  					 int line) {
    GString *name;
-@@ -1156,10 +1215,10 @@
+@@ -1128,10 +1187,10 @@
  	  fileName->getCString(), line);
      return;
    }
@@ -240,7 +481,7 @@ diff -u -r1.4 -r1.7
      return;
    }
    line2 = 1;
-@@ -705,10 +754,12 @@
+@@ -1160,10 +1219,12 @@
    }
    collection = (GString *)tokens->get(1);
    name = (GString *)tokens->get(2);
@@ -254,7 +495,7 @@ diff -u -r1.4 -r1.7
  }
  
  void GlobalParams::parseUnicodeToUnicode(GList *tokens, GString *fileName,
-@@ -725,7 +776,8 @@
+@@ -1180,7 +1241,8 @@
    if ((old = (GString *)unicodeToUnicodes->remove(font))) {
      delete old;
    }
@@ -264,7 +505,7 @@ diff -u -r1.4 -r1.7
  }
  
  void GlobalParams::parseUnicodeMap(GList *tokens, GString *fileName,
-@@ -742,7 +794,8 @@
+@@ -1197,7 +1259,8 @@
    if ((old = (GString *)unicodeMaps->remove(encodingName))) {
      delete old;
    }
@@ -274,7 +515,7 @@ diff -u -r1.4 -r1.7
  }
  
  void GlobalParams::parseCMapDir(GList *tokens, GString *fileName, int line) {
-@@ -760,23 +813,30 @@
+@@ -1215,23 +1278,30 @@
      list = new GList();
      cMapDirs->add(collection->copy(), list);
    }
@@ -307,7 +548,7 @@ diff -u -r1.4 -r1.7
  
    if (tokens->getLength() < 2) {
      goto err1;
-@@ -788,13 +848,15 @@
+@@ -1243,13 +1313,15 @@
      if (tokens->getLength() != 3) {
        goto err2;
      }
@@ -325,14 +566,111 @@ diff -u -r1.4 -r1.7
      break;
    }
  
-Index: Lexer.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Lexer.cc,v
-retrieving revision 1.4
-retrieving revision 1.5
-diff -u -r1.4 -r1.5
---- Lexer.cc	3 Dec 2005 10:11:33 -0000	1.4
-+++ Lexer.cc	14 Mar 2006 12:43:23 -0000	1.5
+--- xpdf/GlobalParams.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/GlobalParams.h	2010-05-18 11:22:18.000000000 -0700
+@@ -196,7 +196,7 @@
+   // file.
+   GlobalParams(char *cfgFileName);
+ 
+-  ~GlobalParams();
++  virtual ~GlobalParams();
+ 
+   void setBaseDir(char *dir);
+   void setupBaseFonts(char *dir);
+@@ -213,8 +213,8 @@
+   FILE *getUnicodeMapFile(GString *encodingName);
+   FILE *findCMapFile(GString *collection, GString *cMapName);
+   FILE *findToUnicodeFile(GString *name);
+-  DisplayFontParam *getDisplayFont(GString *fontName);
+-  DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
++  virtual DisplayFontParam *getDisplayFont(GString *fontName);
++  virtual DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
+   GString *getPSFile();
+   int getPSPaperWidth();
+   int getPSPaperHeight();
+@@ -316,7 +316,7 @@
+ private:
+ 
+   void createDefaultKeyBindings();
+-  void parseFile(GString *fileName, FILE *f);
++public: void parseFile(GString *fileName, FILE *f); private:
+   void parseNameToUnicode(GList *tokens, GString *fileName, int line);
+   void parseCIDToUnicode(GList *tokens, GString *fileName, int line);
+   void parseUnicodeToUnicode(GList *tokens, GString *fileName, int line);
+@@ -358,6 +358,10 @@
+   GBool loadPlugin(char *type, char *name);
+ #endif
+ 
++  //----- config file base path
++
++  GString*path;
++
+   //----- static tables
+ 
+   NameToCharCode *		// mapping from char name to
+--- xpdf/JBIG2Stream.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/JBIG2Stream.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -1514,11 +1514,14 @@
+   }
+ 
+   // compute symbol code length
+-  symCodeLen = 1;
+-  i = (numInputSyms + numNewSyms) >> 1;
+-  while (i) {
+-    ++symCodeLen;
+-    i >>= 1;
++  symCodeLen = 0;
++  i = 1;
++  while (i < numInputSyms + numNewSyms) {
++   ++symCodeLen;
++   i <<= 1;
++  }
++  if (huff && symCodeLen == 0) {
++   symCodeLen = 1;
+   }
+ 
+   // get the input symbol bitmaps
+@@ -1921,6 +1924,9 @@
+     ++symCodeLen;
+     i <<= 1;
+   }
++  if (huff && symCodeLen == 0) {
++    symCodeLen = 1;
++  }
+ 
+   // get the symbol bitmaps
+   syms = (JBIG2Bitmap **)gmallocn(numSyms, sizeof(JBIG2Bitmap *));
+--- xpdf/JPXStream.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/JPXStream.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -450,6 +450,7 @@
+   GBool haveBPC, haveCSMode;
+ 
+   csPrec = 0; // make gcc happy
++  Guint num_components = 0;
+   haveBPC = haveCSMode = gFalse;
+   str->reset();
+   if (str->lookChar() == 0xff) {
+@@ -463,7 +464,7 @@
+ 	cover(1);
+ 	if (readULong(&dummy) &&
+ 	    readULong(&dummy) &&
+-	    readUWord(&dummy) &&
++	    readUWord(&num_components) &&
+ 	    readUByte(&bpc1) &&
+ 	    readUByte(&dummy) &&
+ 	    readUByte(&dummy) &&
+@@ -519,6 +520,9 @@
+       }
+     }
+   }
++  if(*csMode == streamCSDeviceRGB && num_components == 4) {
++    *csMode = streamCSDeviceRGBX;
++  }
+   str->close();
+ }
+ 
+--- xpdf/Lexer.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Lexer.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -74,6 +74,7 @@
      curStr.streamReset();
    }
@@ -402,14 +740,8 @@ diff -u -r1.4 -r1.5
    return obj;
  }
  
-Index: Link.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Link.cc,v
-retrieving revision 1.5
-retrieving revision 1.6
-diff -u -r1.5 -r1.6
---- Link.cc	3 Dec 2005 10:11:33 -0000	1.5
-+++ Link.cc	26 Mar 2006 08:26:59 -0000	1.6
+--- xpdf/Link.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Link.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -430,10 +430,9 @@
        delete dest;
        dest = NULL;
@@ -434,252 +766,8 @@ diff -u -r1.5 -r1.6
    }
  }
  
-Index: OutputDev.h
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/OutputDev.h,v
-retrieving revision 1.7
-retrieving revision 1.9
-diff -u -r1.7 -r1.9
---- OutputDev.h	3 Dec 2005 10:11:33 -0000	1.7
-+++ OutputDev.h	3 Dec 2005 10:31:47 -0000	1.9
-@@ -74,7 +74,7 @@
-   virtual void setDefaultCTM(double *ctm);
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state) {}
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {}
- 
-   // End a page.
-   virtual void endPage() {}
-Index: Stream.cc
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/Stream.cc,v
-retrieving revision 1.7
-retrieving revision 1.8
-diff -u -r1.7 -r1.8
---- Stream.cc	3 Dec 2005 10:11:33 -0000	1.7
-+++ Stream.cc	3 Dec 2005 10:30:41 -0000	1.8
-@@ -17,6 +17,8 @@
- #include <stddef.h>
- #ifndef WIN32
- #include <unistd.h>
-+#else
-+extern "C" int unlink(char *filename);
- #endif
- #include <string.h>
- #include <ctype.h>
-Index: gfile.h
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/gfile.h,v
-retrieving revision 1.9
-retrieving revision 1.10
-diff -u -r1.9 -r1.10
---- gfile.h	3 Dec 2005 10:11:33 -0000	1.9
-+++ gfile.h	3 Dec 2005 10:30:41 -0000	1.10
-@@ -58,6 +58,9 @@
- // Get current directory.
- extern GString *getCurrentDir();
- 
-+/* create a temporary filename */
-+char* mktmpname(char*ptr);
-+
- // Append a file name to a path string.  <path> may be an empty
- // string, denoting the current directory).  Returns <path>.
- extern GString *appendToPath(GString *path, char *fileName);
-Index: GlobalParams.h
-===================================================================
-RCS file: /home/kramm/cvs/swftools.cache.cvsroot/swftools.cache/pdf2swf/xpdf/GlobalParams.h,v
-retrieving revision 1.5
-retrieving revision 1.6
-diff -u -r1.5 -r1.6
---- GlobalParams.h	2006-10-10 19:54:29.000000000 +0200
-+++ GlobalParams.h	2006-11-12 11:19:40.000000000 +0100
-@@ -213,8 +213,8 @@
-   FILE *getUnicodeMapFile(GString *encodingName);
-   FILE *findCMapFile(GString *collection, GString *cMapName);
-   FILE *findToUnicodeFile(GString *name);
--  DisplayFontParam *getDisplayFont(GString *fontName);
--  DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
-+  virtual DisplayFontParam *getDisplayFont(GString *fontName);
-+  virtual DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
-   GString *getPSFile();
-   int getPSPaperWidth();
-   int getPSPaperHeight();
-@@ -218,1 +218,1 @@
--  void parseFile(GString *fileName, FILE *f);
-+public: void parseFile(GString *fileName, FILE *f); private:
-@@ -246,6 +246,10 @@
-   GBool loadPlugin(char *type, char *name);
- #endif
- 
-+  //----- config file base path
-+
-+  GString*path;
-+
-   //----- static tables
- 
-   NameToCharCode *		// mapping from char name to
---- SplashOutputDev.h	2006-11-12 12:07:22.000000000 +0100
-+++ SplashOutputDev.h	2006-11-12 12:08:48.000000000 +0100
-@@ -70,7 +70,7 @@
-   //----- initialization and control
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state);
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
- 
-   // End a page.
-   virtual void endPage();
---- TextOutputDev.cc	2006-11-12 12:22:53.000000000 +0100
-+++ TextOutputDev.cc	2006-11-12 12:25:03.000000000 +0100
-@@ -3805,7 +3805,7 @@
-   }
- }
- 
--void TextOutputDev::startPage(int pageNum, GfxState *state) {
-+void TextOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
-   text->startPage(state);
- }
- 
---- CoreOutputDev.cc	2006-11-12 12:21:59.000000000 +0100
-+++ CoreOutputDev.cc	2006-11-12 12:23:29.000000000 +0100
-@@ -57,5 +57,5 @@
- 
- void CoreOutputDev::clear() {
-   startDoc(NULL);
--  startPage(0, NULL);
-+  startPage(0, NULL, 0,0,0,0);
- }
---- SplashFTFontEngine.cc	2006-11-19 22:30:44.000000000 +0100
-+++ SplashFTFontEngine.cc	2006-11-19 22:30:56.000000000 +0100
-@@ -13,9 +13,7 @@
- #endif
- 
- #include <stdio.h>
--#ifndef WIN32
- #  include <unistd.h>
--#endif
- #include "gmem.h"
- #include "GString.h"
- #include "gfile.h"
---- SplashOutputDev.cc	2007-09-09 12:29:45.000000000 +0200
-+++ SplashOutputDev.cc	2007-09-09 12:30:02.000000000 +0200
-@@ -13,6 +13,7 @@
- #endif
- 
- #include <string.h>
-+#include <unistd.h>
- #include <math.h>
- #include "gfile.h"
- #include "GlobalParams.h"
-@@ -702,7 +703,7 @@
-   nT3Fonts = 0;
- }
- 
--void SplashOutputDev::startPage(int pageNum, GfxState *state) {
-+void SplashOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
-   int w, h;
-   double *ctm;
-   SplashCoord mat[6];
-@@ -2646,9 +2647,9 @@
- 
-   softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
- 			      1, splashModeMono8, gFalse);
--  memset(softMask->getDataPtr(), 0,
--	 softMask->getRowSize() * softMask->getHeight());
-+  memset(softMask->getDataPtr(), 0x00, softMask->getRowSize()*softMask->getHeight());
-   p = softMask->getDataPtr() + ty * softMask->getRowSize() + tx;
-+  if (tx<softMask->getWidth() && ty<softMask->getHeight())
-   for (y = 0; y < tBitmap->getHeight(); ++y) {
-     for (x = 0; x < tBitmap->getWidth(); ++x) {
-       tBitmap->getPixel(x, y, color);
---- SplashFontFile.cc	2007-09-09 12:33:00.000000000 +0200
-+++ SplashFontFile.cc	2007-09-09 12:33:07.000000000 +0200
-@@ -11,9 +11,7 @@
- #endif
- 
- #include <stdio.h>
--#ifndef WIN32
--#  include <unistd.h>
--#endif
-+#include <unistd.h>
- #include "GString.h"
- #include "SplashFontFile.h"
- #include "SplashFontFileID.h"
---- xpdf/SplashFont.h.orig	2008-09-09 21:31:01.000000000 +0200
-+++ xpdf/SplashFont.h	2008-10-05 17:36:44.000000000 +0200
-@@ -73,6 +73,9 @@
-   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
- 			  SplashGlyphBitmap *bitmap) = 0;
- 
-+  // return the number of characters in this font
-+  virtual int getNumChars() = 0;
-+
-   // Return the path for a glyph.
-   virtual SplashPath *getGlyphPath(int c) = 0;
- 
-@@ -83,6 +86,9 @@
-   void getBBox(int *xMinA, int *yMinA, int *xMaxA, int *yMaxA)
-     { *xMinA = xMin; *yMinA = yMin; *xMaxA = xMax; *yMaxA = yMax; }
- 
-+  double ascender;
-+  double descender;
-+  double last_advance; //set after getGlyphPath()
- protected:
- 
-   SplashFontFile *fontFile;
---- orig/GfxFont.h	2007-07-28 00:11:06.000000000 +0200
-+++ GfxFont.h	2007-09-09 18:31:31.000000000 +0200
-@@ -164,6 +164,7 @@
-   virtual int getNextChar(char *s, int len, CharCode *code,
- 			  Unicode *u, int uSize, int *uLen,
- 			  double *dx, double *dy, double *ox, double *oy) = 0;
-+  virtual CharCodeToUnicode* getCTU() = 0;
- 
- protected:
- 
-@@ -204,6 +205,7 @@
-   virtual int getNextChar(char *s, int len, CharCode *code,
- 			  Unicode *u, int uSize, int *uLen,
- 			  double *dx, double *dy, double *ox, double *oy);
-+  virtual CharCodeToUnicode* getCTU();
- 
-   // Return the encoding.
-   char **getEncoding() { return enc; }
-@@ -266,6 +268,7 @@
-   virtual int getNextChar(char *s, int len, CharCode *code,
- 			  Unicode *u, int uSize, int *uLen,
- 			  double *dx, double *dy, double *ox, double *oy);
-+  virtual CharCodeToUnicode* getCTU();
- 
-   // Return the writing mode (0=horizontal, 1=vertical).
-   virtual int getWMode();
---- orig/GfxFont.cc	2007-07-28 00:11:06.000000000 +0200
-+++ GfxFont.cc	2007-09-09 18:33:37.000000000 +0200
-@@ -925,6 +925,10 @@
-   return 1;
- }
- 
-+CharCodeToUnicode* Gfx8BitFont::getCTU() {
-+    return ctu;
-+}
-+
- CharCodeToUnicode *Gfx8BitFont::getToUnicode() {
-   ctu->incRefCnt();
-   return ctu;
-@@ -1417,6 +1421,10 @@
-   }
- }
- 
-+CharCodeToUnicode* GfxCIDFont::getCTU() {
-+    return ctu;
-+}
-+
- int GfxCIDFont::getNextChar(char *s, int len, CharCode *code,
- 			    Unicode *u, int uSize, int *uLen,
- 			    double *dx, double *dy, double *ox, double *oy) {
---- OutputDev.h	Sat Jul 28 00:11:08 2007
-+++ OutputDev.h	Sun Sep  9 13:50:40 2007
+--- xpdf/OutputDev.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/OutputDev.h	2010-05-18 11:22:18.000000000 -0700
 @@ -17,6 +17,7 @@
  
  #include "gtypes.h"
@@ -687,70 +775,18 @@ diff -u -r1.5 -r1.6
 +#include "Object.h"
  
  class GString;
- class Gfx;
---- SplashOutputDev.h	2007-10-20 13:17:02.000000000 +0200
-+++ SplashOutputDev.h	2007-10-20 13:17:23.000000000 +0200
-@@ -206,6 +206,7 @@
-   virtual void setVectorAntialias(GBool vaa);
- #endif
+ class GfxState;
+@@ -94,7 +95,7 @@
+     { return gTrue; }
  
-+  void doUpdateFont(GfxState *state);
- private:
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state) {}
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {}
  
-   void setupScreenParams(double hDPI, double vDPI);
-@@ -215,7 +216,6 @@
-   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
- #endif
-   SplashPath *convertPath(GfxState *state, GfxPath *path);
--  void doUpdateFont(GfxState *state);
-   void drawType3Glyph(T3FontCache *t3Font,
- 		      T3FontCacheTag *tag, Guchar *data);
-   static GBool imageMaskSrc(void *data, SplashColorPtr line);
---- xpdf/GlobalParams.h 2007-10-20 13:18:03.000000000 +0200
-+++ xpdf/GlobalParams.h	2007-10-20 13:25:52.000000000 +0200
-@@ -196,7 +196,7 @@
-   // file.
-   GlobalParams(char *cfgFileName);
- 
--  ~GlobalParams();
-+  virtual ~GlobalParams();
- 
-   void setBaseDir(char *dir);
-   void setupBaseFonts(char *dir);
---- xpdf/SplashOutputDev.h.orig	2007-10-21 17:43:29.000000000 +0200
-+++ xpdf/SplashOutputDev.h	2007-11-19 10:07:27.000000000 +0100
-@@ -197,6 +197,8 @@
- #endif
- 
-   void doUpdateFont(GfxState *state);
-+  
-+  SplashPath *convertPath(GfxState *state, GfxPath *path);
- private:
- 
-   void setupScreenParams(double hDPI, double vDPI);
-@@ -205,7 +207,6 @@
- #else
-   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
- #endif
--  SplashPath *convertPath(GfxState *state, GfxPath *path);
-   void drawType3Glyph(T3FontCache *t3Font,
- 		      T3FontCacheTag *tag, Guchar *data);
-   static GBool imageMaskSrc(void *data, SplashColorPtr line);
---- xpdf/SplashFont.cc.orig	2008-09-09 21:31:01.000000000 +0200
-+++ xpdf/SplashFont.cc	2008-10-05 17:37:08.000000000 +0200
-@@ -48,6 +48,10 @@
-   cacheTags = NULL;
- 
-   xMin = yMin = xMax = yMax = 0;
-+
-+  last_advance = -1;
-+  ascender = -1;
-+  descender = -1;
- }
- 
- void SplashFont::initCache() {
---- xpdf/SplashFTFont.cc.orig	2009-03-08 17:19:08.000000000 +0100
-+++ xpdf/SplashFTFont.cc	2009-03-15 19:18:11.000000000 +0100
+   // End a page.
+   virtual void endPage() {}
+--- xpdf/SplashFTFont.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashFTFont.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -46,6 +46,7 @@
    int x, y;
  
@@ -819,8 +855,8 @@ diff -u -r1.5 -r1.6
    if (path.needClose) {
      path.path->close();
    }
---- xpdf/SplashFTFont.h.orig	2008-09-09 21:31:01.000000000 +0200
-+++ xpdf/SplashFTFont.h	2008-10-04 17:39:57.000000000 +0200
+--- xpdf/SplashFTFont.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashFTFont.h	2010-05-18 11:22:18.000000000 -0700
 @@ -42,6 +42,9 @@
    virtual GBool makeGlyph(int c, int xFrac, int yFrac,
  			  SplashGlyphBitmap *bitmap);
@@ -831,8 +867,129 @@ diff -u -r1.5 -r1.6
    // Return the path for a glyph.
    virtual SplashPath *getGlyphPath(int c);
  
---- xpdf/SplashScreen.cc.orig	2008-10-06 17:59:44.000000000 +0200
-+++ xpdf/SplashScreen.cc	2008-10-06 18:20:09.000000000 +0200
+--- xpdf/SplashFTFontEngine.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashFTFontEngine.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -13,9 +13,7 @@
+ #endif
+ 
+ #include <stdio.h>
+-#ifndef WIN32
+ #  include <unistd.h>
+-#endif
+ #include "gmem.h"
+ #include "GString.h"
+ #include "gfile.h"
+--- xpdf/SplashFont.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashFont.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -48,6 +48,10 @@
+   cacheTags = NULL;
+ 
+   xMin = yMin = xMax = yMax = 0;
++
++  last_advance = -1;
++  ascender = -1;
++  descender = -1;
+ }
+ 
+ void SplashFont::initCache() {
+--- xpdf/SplashFont.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashFont.h	2010-05-18 11:22:18.000000000 -0700
+@@ -73,6 +73,9 @@
+   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
+ 			  SplashGlyphBitmap *bitmap) = 0;
+ 
++  // return the number of characters in this font
++  virtual int getNumChars() = 0;
++
+   // Return the path for a glyph.
+   virtual SplashPath *getGlyphPath(int c) = 0;
+ 
+@@ -83,6 +86,9 @@
+   void getBBox(int *xMinA, int *yMinA, int *xMaxA, int *yMaxA)
+     { *xMinA = xMin; *yMinA = yMin; *xMaxA = xMax; *yMaxA = yMax; }
+ 
++  double ascender;
++  double descender;
++  double last_advance; //set after getGlyphPath()
+ protected:
+ 
+   SplashFontFile *fontFile;
+--- xpdf/SplashFontFile.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashFontFile.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -11,9 +11,7 @@
+ #endif
+ 
+ #include <stdio.h>
+-#ifndef WIN32
+-#  include <unistd.h>
+-#endif
++#include <unistd.h>
+ #include "GString.h"
+ #include "SplashFontFile.h"
+ #include "SplashFontFileID.h"
+--- xpdf/SplashOutputDev.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashOutputDev.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -13,6 +13,7 @@
+ #endif
+ 
+ #include <string.h>
++#include <unistd.h>
+ #include <math.h>
+ #include "gfile.h"
+ #include "GlobalParams.h"
+@@ -702,7 +703,7 @@
+   nT3Fonts = 0;
+ }
+ 
+-void SplashOutputDev::startPage(int pageNum, GfxState *state) {
++void SplashOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
+   int w, h;
+   double *ctm;
+   SplashCoord mat[6];
+@@ -2646,9 +2647,9 @@
+ 
+   softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
+ 			      1, splashModeMono8, gFalse);
+-  memset(softMask->getDataPtr(), 0,
+-	 softMask->getRowSize() * softMask->getHeight());
++  memset(softMask->getDataPtr(), 0x00, softMask->getRowSize()*softMask->getHeight());
+   p = softMask->getDataPtr() + ty * softMask->getRowSize() + tx;
++  if (tx<softMask->getWidth() && ty<softMask->getHeight())
+   for (y = 0; y < tBitmap->getHeight(); ++y) {
+     for (x = 0; x < tBitmap->getWidth(); ++x) {
+       tBitmap->getPixel(x, y, color);
+--- xpdf/SplashOutputDev.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashOutputDev.h	2010-05-18 11:22:18.000000000 -0700
+@@ -70,7 +70,7 @@
+   //----- initialization and control
+ 
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state);
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+ 
+   // End a page.
+   virtual void endPage();
+@@ -196,6 +196,9 @@
+   virtual void setVectorAntialias(GBool vaa);
+ #endif
+ 
++  void doUpdateFont(GfxState *state);
++  
++  SplashPath *convertPath(GfxState *state, GfxPath *path);
+ private:
+ 
+   void setupScreenParams(double hDPI, double vDPI);
+@@ -204,8 +207,6 @@
+ #else
+   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
+ #endif
+-  SplashPath *convertPath(GfxState *state, GfxPath *path);
+-  void doUpdateFont(GfxState *state);
+   void drawType3Glyph(T3FontCache *t3Font,
+ 		      T3FontCacheTag *tag, Guchar *data);
+   static GBool imageMaskSrc(void *data, SplashColorPtr line);
+--- xpdf/SplashScreen.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashScreen.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -363,6 +363,8 @@
  int SplashScreen::test(int x, int y, Guchar value) {
    int xx, yy;
@@ -842,8 +999,89 @@ diff -u -r1.5 -r1.6
    if (value < minVal) {
      return 0;
    }
---- xpdf/gfile.cc.orig	2007-02-27 23:05:51.000000000 +0100
-+++ xpdf/gfile.cc	2008-10-12 15:15:22.000000000 +0200
+--- xpdf/SplashXPathScanner.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/SplashXPathScanner.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -394,10 +394,10 @@
+ 	  *p++ &= mask;
+ 	  xx = (xx & ~7) + 8;
+ 	}
+-	for (; xx + 7 <= xx0; xx += 8) {
++	for (; xx + 7 < xx0; xx += 8) {
+ 	  *p++ = 0x00;
+ 	}
+-	if (xx <= xx0) {
++	if (xx < xx0) {
+ 	  *p &= 0xff >> (xx0 & 7);
+ 	}
+       }
+@@ -417,10 +417,10 @@
+ 	*p++ &= mask;
+ 	xx = (xx & ~7) + 8;
+       }
+-      for (; xx + 7 <= xx0; xx += 8) {
++      for (; xx + 7 < xx0; xx += 8) {
+ 	*p++ = 0x00;
+       }
+-      if (xx <= xx0) {
++      if (xx < xx0) {
+ 	*p &= 0xff >> (xx0 & 7);
+       }
+     }
+--- xpdf/Stream.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Stream.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -18,6 +18,8 @@
+ #include <limits.h>
+ #ifndef WIN32
+ #include <unistd.h>
++#else
++extern "C" int unlink(char *filename);
+ #endif
+ #include <string.h>
+ #include <ctype.h>
+--- xpdf/Stream.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/Stream.h	2010-05-18 11:22:18.000000000 -0700
+@@ -41,7 +41,8 @@
+   streamCSNone,
+   streamCSDeviceGray,
+   streamCSDeviceRGB,
+-  streamCSDeviceCMYK
++  streamCSDeviceCMYK,
++  streamCSDeviceRGBX
+ };
+ 
+ //------------------------------------------------------------------------
+--- xpdf/TextOutputDev.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/TextOutputDev.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -3877,7 +3877,7 @@
+   }
+ }
+ 
+-void TextOutputDev::startPage(int pageNum, GfxState *state) {
++void TextOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
+   text->startPage(state);
+ }
+ 
+--- xpdf/TextOutputDev.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/TextOutputDev.h	2010-05-18 11:22:18.000000000 -0700
+@@ -170,6 +170,7 @@
+   friend class TextFlow;
+   friend class TextWordList;
+   friend class TextPage;
++  friend class XMLOutputDev;
+ };
+ 
+ //------------------------------------------------------------------------
+@@ -578,7 +579,7 @@
+   //----- initialization and control
+ 
+   // Start a page.
+-  virtual void startPage(int pageNum, GfxState *state);
++  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+ 
+   // End a page.
+   virtual void endPage();
+--- xpdf/gfile.cc.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/gfile.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -439,6 +439,52 @@
  #endif
  }
@@ -951,218 +1189,15 @@ diff -u -r1.5 -r1.6
        return gFalse;
      }
      *name = new GString(s);
---- xpdf/Gfx.cc.orig	2009-03-08 17:10:40.000000000 +0100
-+++ xpdf/Gfx.cc	2009-03-08 17:18:23.000000000 +0100
-@@ -3188,8 +3188,11 @@
- 			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
- 			    &dx, &dy, &originX, &originY);
-       dx = dx * state->getFontSize() + state->getCharSpace();
--      if (n == 1 && *p == ' ') {
--	dx += state->getWordSpace();
-+      if (n == 1 && (*p == ' ' || *p == 0)) {
-+        double w=state->getWordSpace();
-+        if (w==0 && dx==0)
-+          w=state->getFontSize()/3; // workaround for zero word space
-+        dx += w;
-       }
-       dx *= state->getHorizScaling();
-       dy *= state->getFontSize();
-@@ -3824,6 +3833,7 @@
-     out->beginTransparencyGroup(state, bbox, blendingColorSpace,
- 				isolated, knockout, softMask);
-   }
-+  GfxState*old_state = state;
+--- xpdf/gfile.h.orig	2010-05-18 11:22:18.000000000 -0700
++++ xpdf/gfile.h	2010-05-18 11:22:18.000000000 -0700
+@@ -58,6 +58,9 @@
+ // Get current directory.
+ extern GString *getCurrentDir();
  
-   // set new base matrix
-   for (i = 0; i < 6; ++i) {
-@@ -3835,6 +3845,9 @@
-   display(str, gFalse);
- 
-   if (softMask || transpGroup) {
-+    // restore graphics state
-+    while(state != old_state)
-+	restoreState();
-     out->endTransparencyGroup(state);
-   }
- 
---- TextOutputDev.h.orig	2009-10-07 17:00:29.000000000 -0700
-+++ TextOutputDev.h	2009-10-07 17:01:50.000000000 -0700
-@@ -170,6 +170,7 @@
-   friend class TextFlow;
-   friend class TextWordList;
-   friend class TextPage;
-+  friend class XMLOutputDev;
- };
- 
- //------------------------------------------------------------------------
-@@ -578,7 +579,7 @@
-   //----- initialization and control
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state);
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
- 
-   // End a page.
-   virtual void endPage();
---- xpdf/JBIG2Stream.cc.orig	2010-01-08 17:17:18.000000000 -0800
-+++ xpdf/JBIG2Stream.cc	2010-01-21 15:28:26.000000000 -0800
-@@ -1514,11 +1514,14 @@
-   }
- 
-   // compute symbol code length
--  symCodeLen = 1;
--  i = (numInputSyms + numNewSyms) >> 1;
--  while (i) {
--    ++symCodeLen;
--    i >>= 1;
-+  symCodeLen = 0;
-+  i = 1;
-+  while (i < numInputSyms + numNewSyms) {
-+   ++symCodeLen;
-+   i <<= 1;
-+  }
-+  if (huff && symCodeLen == 0) {
-+   symCodeLen = 1;
-   }
- 
-   // get the input symbol bitmaps
-@@ -1921,6 +1924,9 @@
-     ++symCodeLen;
-     i <<= 1;
-   }
-+  if (huff && symCodeLen == 0) {
-+    symCodeLen = 1;
-+  }
- 
-   // get the symbol bitmaps
-   syms = (JBIG2Bitmap **)gmallocn(numSyms, sizeof(JBIG2Bitmap *));
---- xpdf/SplashXPathScanner.cc.orig	2010-01-21 16:00:38.000000000 -0800
-+++ xpdf/SplashXPathScanner.cc	2010-01-21 16:10:31.000000000 -0800
-@@ -394,10 +394,10 @@
- 	  *p++ &= mask;
- 	  xx = (xx & ~7) + 8;
- 	}
--	for (; xx + 7 <= xx0; xx += 8) {
-+	for (; xx + 7 < xx0; xx += 8) {
- 	  *p++ = 0x00;
- 	}
--	if (xx <= xx0) {
-+	if (xx < xx0) {
- 	  *p &= 0xff >> (xx0 & 7);
- 	}
-       }
-@@ -417,10 +417,10 @@
- 	*p++ &= mask;
- 	xx = (xx & ~7) + 8;
-       }
--      for (; xx + 7 <= xx0; xx += 8) {
-+      for (; xx + 7 < xx0; xx += 8) {
- 	*p++ = 0x00;
-       }
--      if (xx <= xx0) {
-+      if (xx < xx0) {
- 	*p &= 0xff >> (xx0 & 7);
-       }
-     }
---- xpdf/CharCodeToUnicode.cc.orig	2010-01-25 12:43:00.000000000 -0800
-+++ xpdf/CharCodeToUnicode.cc	2010-01-28 14:14:53.000000000 -0800
-@@ -208,13 +208,13 @@
- 				   int nBits) {
-   PSTokenizer *pst;
-   char tok1[256], tok2[256], tok3[256];
--  int nDigits, n1, n2, n3;
-+  int maxCode, n1, n2, n3;
-   CharCode i;
-   CharCode code1, code2;
-   GString *name;
-   FILE *f;
- 
--  nDigits = nBits / 4;
-+  maxCode = (nBits == 8) ? 0xff : (nBits == 16) ? 0xffff : 0xffffffff;
-   pst = new PSTokenizer(getCharFunc, data);
-   pst->getToken(tok1, sizeof(tok1), &n1);
-   while (pst->getToken(tok2, sizeof(tok2), &n2)) {
-@@ -241,9 +241,9 @@
- 	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
- 	  break;
- 	}
--	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
-+	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
- 	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
--	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
-+	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap.");
- 	  continue;
- 	}
- 	tok1[n1 - 1] = tok2[n2 - 1] = '\0';
-@@ -251,6 +251,9 @@
- 	  error(-1, "Illegal entry in bfchar block in ToUnicode CMap");
- 	  continue;
- 	}
-+        if (code1 > maxCode) {
-+          error(-1, "Invalid entry in bfchar block in ToUnicode CMap");
-+        }
- 	addMapping(code1, tok2 + 1, n2 - 2, 0);
-       }
-       pst->getToken(tok1, sizeof(tok1), &n1);
-@@ -266,8 +269,8 @@
- 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
- 	  break;
- 	}
--	if (!(n1 == 2 + nDigits && tok1[0] == '<' && tok1[n1 - 1] == '>' &&
--	      n2 == 2 + nDigits && tok2[0] == '<' && tok2[n2 - 1] == '>')) {
-+	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
-+	      tok2[0] == '<' && tok2[n2 - 1] == '>')) {
- 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
- 	  continue;
- 	}
-@@ -277,6 +280,10 @@
- 	  error(-1, "Illegal entry in bfrange block in ToUnicode CMap");
- 	  continue;
- 	}
-+        if (code1 > maxCode || code2 > maxCode) {
-+	    error(-1, "Invalid entry in bfrange block in ToUnicode CMap");
-+	}
++/* create a temporary filename */
++char* mktmpname(char*ptr);
 +
- 	if (!strcmp(tok3, "[")) {
- 	  i = 0;
- 	  while (pst->getToken(tok1, sizeof(tok1), &n1) &&
---- xpdf/Decrypt.cc.orig	2010-01-28 14:19:51.000000000 -0800
-+++ xpdf/Decrypt.cc	2010-02-02 16:04:53.000000000 -0800
-@@ -596,6 +596,7 @@
-   s->bufIdx = 0;
-   if (last) {
-     n = s->buf[15];
-+    if(!n || n>16) n=16;
-     for (i = 15; i >= n; --i) {
-       s->buf[i] = s->buf[i-n];
-     }
---- xpdf/Catalog.cc.orig	2010-02-02 16:17:24.000000000 -0800
-+++ xpdf/Catalog.cc	2010-02-02 16:18:48.000000000 -0800
-@@ -193,7 +193,7 @@
-   if (!kids.isArray()) {
-     error(-1, "Kids object (page %d) is wrong type (%s)",
- 	  start+1, kids.getTypeName());
--    goto err1;
-+    return start;
-   }
-   for (i = 0; i < kids.arrayGetLength(); ++i) {
-     kids.arrayGetNF(i, &kidRef);
---- xpdf/SplashOutputDev.cc.orig	2010-03-25 14:06:37.000000000 -0700
-+++ xpdf/SplashOutputDev.cc	2010-03-25 14:07:23.000000000 -0700
-@@ -13,6 +13,7 @@
-@@ -509,7 +510,14 @@
-   glyphY = glyphYA;
-   glyphW = glyphWA;
-   glyphH = glyphHA;
--  validBBox = validBBoxA;
-+
-+  if(glyphW<=0 || glyphH<=0 || (double)glyphH*(double)glyphW>536870912) {
-+    glyphW = glyphH = 128;
-+    validBBox = gFalse;
-+  } else {
-+    validBBox = validBBoxA;
-+  }
-+
-   if (aa) {
-     glyphSize = glyphW * glyphH;
-   } else {
+ // Append a file name to a path string.  <path> may be an empty
+ // string, denoting the current directory).  Returns <path>.
+ extern GString *appendToPath(GString *path, char *fileName);

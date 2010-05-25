@@ -105,6 +105,7 @@ struct fontentry {
     char*pfb;
     int pfblen;
     char*fullfilename;
+    DisplayFontParam *dfp;
 } pdf2t1map[] ={
 {"Times-Roman",           "n021003l", n021003l_afm, n021003l_afm_len, n021003l_pfb, n021003l_pfb_len},
 {"Times-Italic",          "n021023l", n021023l_afm, n021023l_afm_len, n021023l_pfb, n021023l_pfb_len},
@@ -371,6 +372,11 @@ static char fc_ismatch(FcPattern*match, char*family, char*style)
 }
 #endif
 
+static inline char islowercase(char c) 
+{
+    return (c>='a' && c<='z');
+}
+
 char* fontconfig_searchForFont(char*name)
 {
 #ifdef HAVE_FONTCONFIG
@@ -468,20 +474,36 @@ char* fontconfig_searchForFont(char*name)
     }
 
     char*family = strdup(name);
-    char*style = 0;
-    char*dash = strchr(family, '-');
-    if(!dash) dash = strchr(family, ',');
+    int len = strlen(family);
 
+    char*styles[] = {"Medium", "Regular", "Bold", "Italic", "Black", "Narrow"};
+    char*style = 0;
+    int t;
+    for(t=0;t<sizeof(styles)/sizeof(styles[0]);t++) {
+	int l = strlen(styles[t]);
+	if(len>l+1 && !strcmp(family+len-l, styles[t]) && islowercase(family[len-l-1])) {
+	    style = styles[t];
+	    family[len-l]=0;
+	    break;
+	}
+    }
+    if(!style) {
+	char*dash = strchr(family, '-');
+	if(!dash) dash = strchr(family, ',');
+	if(dash) {
+	    *dash = 0;
+	    style = dash+1;
+	}
+    }
     FcPattern*pattern = 0;
-    if(dash) {
-	*dash = 0;
-	style = dash+1;
+    if(style) {
 	msg("<debug> FontConfig: Looking for font %s (family=%s style=%s)", name, family, style);
 	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, FC_STYLE, FcTypeString, style, NULL);
     } else {
 	msg("<debug> FontConfig: Looking for font %s (family=%s)", name, family);
 	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
     }
+    pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
 
     FcResult result;
     FcConfigSubstitute(0, pattern, FcMatchPattern); 
@@ -543,10 +565,11 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 		} else {
 		    msg("<verbose> Storing standard PDF font %s at %s", name, pdf2t1map[t].fullfilename);
 		}
+		DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
+		dfp->t1.fileName = new GString(pdf2t1map[t].fullfilename);
+		pdf2t1map[t].dfp = dfp;
 	    }
-	    DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
-	    dfp->t1.fileName = new GString(pdf2t1map[t].fullfilename);
-	    return dfp;
+	    return pdf2t1map[t].dfp;
 	}
     }
     
@@ -2731,7 +2754,7 @@ void GFXOutputDev::paintTransparencyGroup(GfxState *state, double *bbox)
 	gfxdevice_t ops;
 	dbg("this->device=%p, this->device->name=%s\n", this->device, this->device->name);
 	gfxdevice_ops_init(&ops, this->device, alpha);
-	gfxresult_record_replay(grouprecording, &ops);
+	gfxresult_record_replay(grouprecording, &ops, 0);
 	ops.finish(&ops);
     }
     grouprecording->destroy(grouprecording);
@@ -2803,15 +2826,15 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     /* get outline of all objects below the soft mask */
     gfxdevice_t uniondev;
     gfxdevice_union_init(&uniondev, 0);
-    gfxresult_record_replay(below, &uniondev);
+    gfxresult_record_replay(below, &uniondev, 0);
     gfxline_t*belowoutline = gfxdevice_union_getunion(&uniondev);
     uniondev.finish(&uniondev);
     gfxbbox_t bbox = gfxline_getbbox(belowoutline);
     gfxline_free(belowoutline);belowoutline=0;
 #if 0 
     this->device->startclip(this->device, belowoutline);
-    gfxresult_record_replay(below, this->device);
-    gfxresult_record_replay(mask, this->device);
+    gfxresult_record_replay(below, this->device, 0);
+    gfxresult_record_replay(mask, this->device, 0);
     this->device->endclip(this->device);
 #endif
     
@@ -2826,7 +2849,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     }
     belowrender.setparameter(&belowrender, "antialize", "2");
     belowrender.startpage(&belowrender, width, height);
-    gfxresult_record_replay(below, &belowrender);
+    gfxresult_record_replay(below, &belowrender, 0);
     belowrender.endpage(&belowrender);
     gfxresult_t* belowresult = belowrender.finish(&belowrender);
     gfximage_t* belowimg = (gfximage_t*)belowresult->get(belowresult,"page0");
@@ -2835,7 +2858,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     gfxdevice_t maskrender;
     gfxdevice_render_init(&maskrender);
     maskrender.startpage(&maskrender, width, height);
-    gfxresult_record_replay(mask, &maskrender);
+    gfxresult_record_replay(mask, &maskrender, 0);
     maskrender.endpage(&maskrender);
     gfxresult_t* maskresult = maskrender.finish(&maskrender);
     gfximage_t* maskimg = (gfximage_t*)maskresult->get(maskresult,"page0");

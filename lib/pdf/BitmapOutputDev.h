@@ -188,6 +188,7 @@ public:
 
     
 private:
+    void flushEverything();
     void clearClips();
     void clearBoolPolyDev();
     void clearBoolTextDev();
@@ -202,6 +203,7 @@ private:
     virtual gfxbbox_t getBBox(GfxState*state);
 
     char config_extrafontdata;
+    char config_optimizeplaincolorfills;
 
     int layerstate;
     GBool emptypage;

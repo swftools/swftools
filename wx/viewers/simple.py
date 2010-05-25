@@ -52,7 +52,7 @@ def init(swf, filename):
     return Simple(swf, filename)
 
 
-from wx.lib.embeddedimage import PyEmbeddedImage
+from lib.embeddedimage import PyEmbeddedImage
 preview = PyEmbeddedImage(
     "iVBORw0KGgoAAAANSUhEUgAAAGYAAABmCAIAAAC2vXM1AAAAAXNSR0IArs4c6QAAF8NJREFU"
     "eNrtXWtQW+eZPhIS6ILu0kEIJCQQNwlZmJu5mVBsAnaMY7tpkmnjZHLpTtvZTNptt+5sZ6ed"

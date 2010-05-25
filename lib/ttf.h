@@ -140,7 +140,7 @@ typedef struct _table_head {
 } table_head_t;
 
 typedef struct _table_post {
-    U16 italic_angle;
+    U32 italic_angle;
     U16 underline_position;
     U16 underline_thickness;
 } table_post_t;

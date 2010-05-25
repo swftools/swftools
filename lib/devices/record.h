@@ -23,6 +23,7 @@
 #define __record_h__
 
 #include "../gfxdevice.h"
+#include "../gfxtools.h"
 
 
 #ifdef __cplusplus
@@ -33,9 +34,9 @@ void gfxdevice_record_init(gfxdevice_t*, char use_tempfile);
 
 gfxdevice_t* gfxdevice_record_new(char*filename);
 
-void gfxdevice_record_flush(gfxdevice_t*, gfxdevice_t*);
+void gfxdevice_record_flush(gfxdevice_t*, gfxdevice_t*, gfxfontlist_t**);
 
-void gfxresult_record_replay(gfxresult_t*, gfxdevice_t*);
+void gfxresult_record_replay(gfxresult_t*, gfxdevice_t*, gfxfontlist_t**);
 
 #ifdef __cplusplus
 }
