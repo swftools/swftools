@@ -47,6 +47,21 @@ void xrow_sort(xrow_t*r)
     r->num = pos;
 }
 
+char xrow_contains(xrow_t*r, int32_t x)
+{
+    int min, max, i, l;
+    
+    for(min=0, max=r->num, i=r->num/2, l=r->num; i != l; l=i, i=(min+max)/2) {
+        if(x < r->x[i]) max=i;
+        else min=i;
+    }
+    
+    if(i >= r->num)
+	return 0;
+
+    return r->x[i] == x;
+}
+
 void xrow_reset(xrow_t*r)
 {
     r->num = 0;

@@ -7,6 +7,8 @@
    the the (original) segment's y2 is larger than its y1 */
 typedef enum {DIR_UP, DIR_DOWN, DIR_UNKNOWN} segment_dir_t;
 
+#define DIR_INVERT(d) ((d)^=(DIR_UP^DIR_DOWN))
+
 typedef struct _edgestyle {
     void*internal;
 } edgestyle_t;
