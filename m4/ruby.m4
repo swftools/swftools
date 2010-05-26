@@ -64,6 +64,7 @@ int Init_foobar()
 {
     foobar = rb_define_module("foobar");
     rb_define_module_function(foobar, "set_foo", foobar_set_foo, 2);
+    return 0;
 }
 int main() {return 0;}
 EOF

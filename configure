@@ -2452,7 +2452,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2010-02-06-1900
+VERSION=2010-05-20-1815
 
 # ------------------------------------------------------------------
 
@@ -6694,6 +6694,7 @@ int Init_foobar()
 {
     foobar = rb_define_module("foobar");
     rb_define_module_function(foobar, "set_foo", foobar_set_foo, 2);
+    return 0;
 }
 int main() {return 0;}
 EOF
@@ -6729,7 +6730,9 @@ if test "x$RUBY_OK" '!=' "xyes";then
     # fail silently- the most users won't have any need for the
     # ruby interface anyway
 else
-    rubygfx="lib/ruby/Makefile"
+    if test -f "lib/ruby/Makefile.in";then
+	rubygfx="lib/ruby/Makefile"
+    fi
 fi
 
 # ------------------------------------------------------------------
