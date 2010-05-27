@@ -3,6 +3,7 @@
 #include <memory.h>
 #include "../mem.h"
 #include "xrow.h"
+#include "poly.h"
 
 xrow_t* xrow_new()
 {
@@ -47,19 +48,31 @@ void xrow_sort(xrow_t*r)
     r->num = pos;
 }
 
-char xrow_contains(xrow_t*r, int32_t x)
+int xrow_find(xrow_t*r, int32_t x)
 {
     int min, max, i, l;
-    
+
     for(min=0, max=r->num, i=r->num/2, l=r->num; i != l; l=i, i=(min+max)/2) {
         if(x < r->x[i]) max=i;
         else min=i;
     }
-    
-    if(i >= r->num)
-	return 0;
 
-    return r->x[i] == x;
+#ifdef CHECKS
+    int t;
+    for(t=0;t<r->num;t++) {
+	if(x < r->x[t]) 
+	    break;
+    }
+    assert(max == t);
+#endif
+
+    return max;
+}
+
+char xrow_contains(xrow_t*r, int32_t x)
+{
+    int pos = xrow_find(r,x) - 1;
+    return (pos>=0 && r->x[pos]==x);
 }
 
 void xrow_reset(xrow_t*r)
@@ -67,14 +80,14 @@ void xrow_reset(xrow_t*r)
     r->num = 0;
 }
 
-void xrow_dump(xrow_t*xrow)
+void xrow_dump(xrow_t*xrow, double gridsize)
 {
     fprintf(stderr, "x: ");
     int t;
     for(t=0;t<xrow->num;t++) {
         if(t)
             fprintf(stderr, ", ");
-        fprintf(stderr, "%d", xrow->x[t]);
+        fprintf(stderr, "%.2f", xrow->x[t] * gridsize);
     }
     fprintf(stderr, "\n");
 }

@@ -166,14 +166,33 @@ int test_speed()
     gfxline_free(b);
 }
 
+int testbox(int argn, char*argv[])
+{
+    gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
+    gfxline_t*box2 = gfxline_makerectangle(-50,-50,150,150);
+    gfxpoly_t*poly1 = gfxpoly_from_fill(box1, 0.05);
+    gfxpoly_t*poly2 = gfxpoly_from_fill(box2, 0.05);
+    gfxline_free(box1);
+    gfxline_free(box2);
+    
+    gfxpoly_t*poly12 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
+    gfxpoly_dump(poly12);
+    assert(gfxpoly_check(poly12, 0));
+    gfxpoly_destroy(poly12);
+}
+
+int teststroke(int argn, char*argv[])
+{
+    gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
+    assert(gfxpoly_check(gfxpoly_from_stroke(box1, 2.0, gfx_capRound, gfx_joinRound, 0, 0.05), 1));
+}
+
 int test0(int argn, char*argv[])
 {
     gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
     gfxline_t*box2 = gfxline_makerectangle(-100,-100,100,100);
     gfxline_t*box3 = gfxline_makerectangle(-100,-100,100,100);
     //gfxline_append(box2, box3);
-
-    assert(gfxpoly_check(gfxpoly_from_stroke(box1, 2.0, gfx_capRound, gfx_joinRound, 0, 0.05), 1));
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
@@ -647,6 +666,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test0(argn, argv);
+    teststroke(argn, argv);
 }
 
