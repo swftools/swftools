@@ -30,6 +30,7 @@ from lib.wordwrap import wordwrap
 from gui.boldstatictext import BoldStaticText
 import viewers
 import gui.fields
+import gui.plugin
 
 import viewers.raw
 import viewers.simple
