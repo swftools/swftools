@@ -167,19 +167,29 @@ static void compactmoveto(polywriter_t*w, int32_t x, int32_t y)
     }
     data->last = p;
 }
+
+static inline int direction(point_t p1, point_t p2)
+{
+    int diff = p1.y - p2.y;
+    if(diff) return diff;
+    return p1.x - p2.x;
+}
+
 static void compactlineto(polywriter_t*w, int32_t x, int32_t y)
 {
     compactpoly_t*data = (compactpoly_t*)w->internal;
     point_t p;
     p.x = x;
     p.y = y;
-    if(p.x == data->last.x && p.y == data->last.y)
-	return;
 
-    if((p.y < data->last.y && data->dir != DIR_UP) ||
-       (p.y > data->last.y && data->dir != DIR_DOWN) || data->new) {
+    int diff = direction(p, data->last);
+    if(!diff)
+	return;
+    segment_dir_t dir = diff<0?DIR_UP:DIR_DOWN;
+
+    if(dir!=data->dir || data->new) {
 	finish_segment(data);
-	data->dir = p.y > data->last.y ? DIR_DOWN : DIR_UP;
+	data->dir = dir;
 	data->points[0] = data->last;
 	data->num_points = 1;
     }

@@ -239,8 +239,8 @@ char gfxpoly_check(gfxpoly_t*poly, char updown)
 	DICT_ITERATE_ITEMS(d2, point_t*, p2, void*, c2) {
 	    int count = (ptroff_t)c2;
 	    if(count!=0) {
-		if(count>0) fprintf(stderr, "Error: Point (%d,%d) has %d more incoming than outgoing segments\n", p2->x, p2->y, count);
-		if(count<0) fprintf(stderr, "Error: Point (%d,%d) has %d more outgoing than incoming segments\n", p2->x, p2->y, -count);
+		if(count>0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more incoming than outgoing segments\n", p2->x * poly->gridsize, p2->y * poly->gridsize, count);
+		if(count<0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more outgoing than incoming segments\n", p2->x * poly->gridsize, p2->y * poly->gridsize, -count);
 		dict_destroy(d2);
 		return 0;
 	    }
@@ -382,6 +382,8 @@ static void segment_dump(segment_t*s)
 
 static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_t y2, int polygon_nr, segment_dir_t dir)
 {
+    static int segment_count=0;
+    s->nr = segment_count++;
     s->dir = dir;
     if(y1!=y2) {
 	assert(y1<y2);
@@ -390,13 +392,16 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
 	   "up/down" for horizontal segments is handled by "rotating"
            them 90° counterclockwise in screen coordinates (tilt your head to
            the right). In other words, the "normal" direction (what's positive dy for
-	   vertical segments) is positive dx for horizontal segments.
+	   vertical segments) is positive dx for horizontal segments ("down" is right).
 	 */
         if(x1>x2) {
             s->dir = DIR_INVERT(s->dir);
             int32_t x = x1;x1=x2;x2=x;
             int32_t y = y1;y1=y2;y2=y;
         }
+	fprintf(stderr, "Scheduling horizontal segment [%d] (%.2f,%.2f) -> (%.2f,%.2f) %s\n",
+		segment_count,
+		x1 * 0.05, y1 * 0.05, x2 * 0.05, y2 * 0.05, s->dir==DIR_UP?"up":"down");
     }
     s->a.x = x1;
     s->a.y = y1;
@@ -411,8 +416,6 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
 
     s->pos = s->a;
     s->polygon_nr = polygon_nr;
-    static int segment_count=0;
-    s->nr = segment_count++;
 
 #ifdef CHECKS
     /* notice: on some systems (with some compilers), for the line 
@@ -1091,8 +1094,9 @@ static void intersect_with_horizontal(status_t*status, segment_t*h)
     segment_t* left = actlist_find(status->actlist, h->a, h->a);
     segment_t* right = actlist_find(status->actlist, h->b, h->b);
 
-    /* not strictly necessary, also done by the event */
+    /* h->a.x is not strictly necessary, as it's also done by the event */
     xrow_add(status->xrow, h->a.x);
+    xrow_add(status->xrow, h->b.x);
 
     if(!right) {
         assert(!left);
@@ -1189,9 +1193,10 @@ static void process_horizontals(status_t*status)
 	    segment_t* left = actlist_find(status->actlist, p1, p2);
 	    assert(!left || left->fs_out_ok);
 #ifdef DEBUG
-	    fprintf(stderr, "  fragment %.2f..%.2f\n", 
+	    fprintf(stderr, "  fragment %.2f..%.2f edge=%08x\n", 
 		    x * status->gridsize,
-		    next_x * status->gridsize);
+		    next_x * status->gridsize,
+		    h->fs);
 	    if(left) {
 		fprintf(stderr, "    segment [%d] (%.2f,%.2f -> %.2f,%2f, at %.2f,%.2f) is to the left\n", 
 			SEGNR(left), 
@@ -1217,10 +1222,14 @@ static void process_horizontals(status_t*status)
 #ifdef DEBUG
 		fprintf(stderr, "    ...storing\n");
 #endif
-		append_stroke(status, p1, p2, h->dir, fs);
+		append_stroke(status, p1, p2, DIR_INVERT(h->dir), fs);
 	    } else {
 #ifdef DEBUG
-		fprintf(stderr, "    ...ignoring\n");
+		fprintf(stderr, "    ...ignoring (below: (wind_nr=%d, filled=%d), above: (wind_nr=%d, filled=%d) %s\n",
+			below.wind_nr, below.is_filled,
+			above.wind_nr, above.is_filled, 
+			h->dir==DIR_UP?"up":"down"
+			);
 #endif
 	    }
 	    x = next_x;
@@ -1362,6 +1371,8 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
     status_t status;
     memset(&status, 0, sizeof(status_t));
     status.gridsize = poly1->gridsize;
+    
+    gfxpoly_dump(poly1);
 
     queue_init(&status.queue);
     gfxpoly_enqueue(poly1, &status.queue, 0, /*polygon nr*/0);

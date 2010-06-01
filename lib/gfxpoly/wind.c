@@ -35,9 +35,6 @@ windrule_t windrule_evenodd = {
 
 // -------------------- circular ----------------------
 
-edgestyle_t edgestyle_down;
-edgestyle_t edgestyle_up;
-
 windstate_t circular_start(windcontext_t*context)
 {
     return windstate_nonfilled;
