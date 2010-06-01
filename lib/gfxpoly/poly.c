@@ -234,18 +234,20 @@ char gfxpoly_check(gfxpoly_t*poly, char updown)
 	    return 0;
         }
     }
-    dict_destroy(d1);
     if(updown) {
 	DICT_ITERATE_ITEMS(d2, point_t*, p2, void*, c2) {
 	    int count = (ptroff_t)c2;
+	    assert(dict_contains(d1, p2));
+	    int ocount = (ptroff_t)dict_lookup(d1, p2);
 	    if(count!=0) {
-		if(count>0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more incoming than outgoing segments\n", p2->x * poly->gridsize, p2->y * poly->gridsize, count);
-		if(count<0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more outgoing than incoming segments\n", p2->x * poly->gridsize, p2->y * poly->gridsize, -count);
+		if(count>0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more incoming than outgoing segments (%d incoming, %d outgoing)\n", p2->x * poly->gridsize, p2->y * poly->gridsize, count, (ocount+count)/2, (ocount-count)/2);
+		if(count<0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more outgoing than incoming segments (%d incoming, %d outgoing)\n", p2->x * poly->gridsize, p2->y * poly->gridsize, -count, (ocount+count)/2, (ocount-count)/2);
 		dict_destroy(d2);
 		return 0;
 	    }
 	}
     }
+    dict_destroy(d1);
     dict_destroy(d2);
     return 1;
 }
@@ -1218,20 +1220,19 @@ static void process_horizontals(status_t*status)
 	    windstate_t below = left?left->wind:status->windrule->start(status->context);
 	    windstate_t above = status->windrule->add(status->context, below, h->fs, h->dir, h->polygon_nr);
 	    edgestyle_t*fs = status->windrule->diff(&above, &below);
+		
+	    segment_dir_t dir = above.is_filled?DIR_DOWN:DIR_UP;
 	    if(fs) {
-#ifdef DEBUG
-		fprintf(stderr, "    ...storing\n");
-#endif
-		append_stroke(status, p1, p2, DIR_INVERT(h->dir), fs);
-	    } else {
-#ifdef DEBUG
-		fprintf(stderr, "    ...ignoring (below: (wind_nr=%d, filled=%d), above: (wind_nr=%d, filled=%d) %s\n",
-			below.wind_nr, below.is_filled,
-			above.wind_nr, above.is_filled, 
-			h->dir==DIR_UP?"up":"down"
-			);
-#endif
+		//append_stroke(status, p1, p2, DIR_INVERT(h->dir), fs);
+		append_stroke(status, p1, p2, dir, fs);
 	    }
+#ifdef DEBUG
+	    fprintf(stderr, "    ...%s (below: (wind_nr=%d, filled=%d), above: (wind_nr=%d, filled=%d) %s\n",
+		    fs?"storing":"ignoring",
+		    below.wind_nr, below.is_filled,
+		    above.wind_nr, above.is_filled, 
+		    dir==DIR_UP?"up":"down");
+#endif
 	    x = next_x;
 	}
     }
