@@ -143,6 +143,17 @@ class Pdf2Swf:
         self.view.statusbar.btn_cancel.Bind(wx.EVT_BUTTON,
                                             self.OnThumbnailCancel)
 
+        # Don't know where the problem is (python/xpython or wxwidgets/wxpython)
+        # but I found that this hack was necessary to avoid the app enter in a
+        # idle state. We must, for example, move the mouse inside the app
+        # for threads continue their job.
+        # There is no need for this when freezing with other utils, like
+        # py2exe, pyinstaller, cxfreeze
+        if "wxMSW" in wx.PlatformInfo:
+            self.timer = wx.Timer(self.view)
+            self.view.Bind(wx.EVT_TIMER, lambda evt: None)
+            self.timer.Start(50)
+
     def OnFilesDroped(self, evt):
         dlg = wx.MessageDialog(self.view,
                       u"You must drop only one file.",

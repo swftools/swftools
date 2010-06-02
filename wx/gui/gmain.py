@@ -344,7 +344,7 @@ class PdfFrame(wx.Frame):
                 choices=["everything to bitmaps",
                          "fonts to fonts, everything else to bitmaps",
                          "polygons to polygons and fonts to fonts"],
-                size=(350,-1), style=wx.CB_DROPDOWN
+                size=(350,-1)
                 )
         # I'm not sure about the utility of this, so Show False
         self.toolbar_preview_type.Show(False)

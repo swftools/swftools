@@ -112,7 +112,7 @@ viewer_options = [
 html_template = open('viewers/flexpaper/FlexPaperViewer.html').read()
 
 from gui.plugin import Plugin
-import os
+import os, sys
 
 class FlexPaper(Plugin):
     def __init__(self, swf, filename):
@@ -138,16 +138,14 @@ class FlexPaper(Plugin):
 
         htmlfilename = self._swap_extension(self.__filename, "html")
         f = open(htmlfilename, "wb")
-        try:
-            f.write(html_template % template_vars)
-        except Exception, e:
-            print e
+        f.write(html_template % template_vars)
         f.close()
 
 
         import shutil
         opj = os.path.join
-        src = opj(os.path.dirname(__file__), 'flexpaper')
+        basedir = GPDF2SWF_BASEDIR
+        src = opj(basedir, 'viewers', 'flexpaper')
         dst = os.path.dirname(self.__filename)
         shutil.copy(opj(src, 'FlexPaperViewer.swf'), dst)
 

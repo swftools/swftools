@@ -26,40 +26,47 @@ from __future__ import division
 import __builtin__
 import os
 import sys
-import imp
+#import imp
 
-def main_is_frozen():
-    return (hasattr(sys, "frozen") or # new py2exe
-            hasattr(sys, "importers") # old py2exe
-            or imp.is_frozen("__main__")) # tools/freeze
-
-#if not main_is_frozen():
-#    try:
-#        import wxversion
-#        wxversion.select("2.6")
-#    except:
-#        wxversion.select("2.8")
-
-def get_main_dir():
-    if main_is_frozen():
-        return os.path.dirname(sys.executable)
-    return os.path.dirname(os.path.abspath(__file__))
-__builtin__.get_main_dir = get_main_dir
-__builtin__.GPDF2SWF_BASEDIR = get_main_dir()
-
-pyver = "".join(map(str, sys.version_info[0:2]))
-#print >>sys.stderr, pyver
-if main_is_frozen():
-    sys.path.insert(0, os.path.join("..", "python%s" % pyver))
-else:
-    sys.path.insert(0, os.path.join("..", "lib", "python"))
-    sys.path.insert(1, os.path.join("..", "python%s" % pyver))
+#def main_is_frozen():
+#    return (hasattr(sys, "frozen") or # new py2exe
+#            hasattr(sys, "importers") # old py2exe
+#            or imp.is_frozen("__main__")) # tools/freeze
+#
+##if not main_is_frozen():
+##    try:
+##        import wxversion
+##        wxversion.select("2.6")
+##    except:
+##        wxversion.select("2.8")
+#
+#def get_main_dir():
+#    if main_is_frozen():
+#        return os.path.dirname(sys.executable)
+#    return os.path.dirname(os.path.abspath(__file__))
+#__builtin__.get_main_dir = get_main_dir
+#__builtin__.GPDF2SWF_BASEDIR = get_main_dir()
+#
+#pyver = "".join(map(str, sys.version_info[0:2]))
+##print >>sys.stderr, pyver
+#if main_is_frozen():
+#    sys.path.insert(0, os.path.join("..", "python%s" % pyver))
+#else:
+#    sys.path.insert(0, os.path.join("..", "lib", "python"))
+#    sys.path.insert(1, os.path.join("..", "python%s" % pyver))
 
 import wx
 #print >>sys.stderr, wx.VERSION
 from lib.app import Pdf2Swf
 
+__builtin__.GPDF2SWF_BASEDIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+
 if __name__ == "__main__":
+    #print "sys.argv[0]", sys.argv[0]
+    #print "abspath sys.argv[0]",
+    #print "sys.executable", sys.executable
+    #print "abspath sys.executable", os.path.abspath(sys.executable)
+    #print "GPDF2SWF_BASEDIR", GPDF2SWF_BASEDIR
     app = wx.App(False)
     app.SetAppName(u"gpdf2swf")
     Pdf2Swf()

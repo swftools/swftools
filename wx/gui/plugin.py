@@ -55,7 +55,10 @@ class Plugin:
         #print 'basedir', basedir
 
         opj = os.path.join
-        locations = [os.path.normpath(opj(basedir, '..', prog))]
+        locations = [
+                     os.path.normpath(opj(basedir, prog)),
+                     os.path.normpath(opj(basedir, "..", "src", prog)),
+                    ]
         if "wxMSW" in wx.PlatformInfo:
             try:
                 system_drive = os.environ['SYSTEMDRIVE']
@@ -69,7 +72,6 @@ class Plugin:
                               opj("c:", os.sep, "swftools", prog),
                               opj("c:", os.sep, "Program Files", "SWFTools", prog),
                               opj(system_drive, os.sep, program_files, "SWFTools", prog),
-                              opj(basedir, prog),
                              ])
         else:
             locations.extend([

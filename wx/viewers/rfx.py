@@ -71,7 +71,7 @@ html_template = """<html>
 """
 
 from gui.plugin import Plugin
-import os
+import os, sys
 
 class Rfx(Plugin):
     def __init__(self, swf, filename):
@@ -86,7 +86,10 @@ class Rfx(Plugin):
             setattr(self, "_%s" % opt.name, opt.value)
 
     def after_save(self, page):
-        viewerfilename = self._swap_extension(__file__, "swf", self._flashversion)
+        basedir = GPDF2SWF_BASEDIR
+        viewerfilename = os.path.join(basedir,
+                                      "viewers",
+                                      "rfx%s.swf" % self._flashversion)
 
         self.swfcombine(
                u"%s" % viewerfilename,
