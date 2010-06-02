@@ -6,7 +6,7 @@
 #include "../types.h"
 #include "wind.h"
 
-#define DEBUG
+//#define DEBUG
 #define CHECKS
 
 /* features */

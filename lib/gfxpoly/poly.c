@@ -133,6 +133,8 @@ typedef struct _horizontal {
     edgestyle_t*fs;
     segment_dir_t dir;
     int polygon_nr;
+    int xpos;
+    int pos;
 } horizontal_t;
 
 typedef struct _horizdata {
@@ -184,7 +186,6 @@ int gfxpoly_size(gfxpoly_t*poly)
 
 char gfxpoly_check(gfxpoly_t*poly, char updown)
 {
-    current_polygon = poly;
     dict_t*d1 = dict_new2(&point_type);
     dict_t*d2 = dict_new2(&point_type);
     int s,t;
@@ -242,6 +243,21 @@ char gfxpoly_check(gfxpoly_t*poly, char updown)
 	    if(count!=0) {
 		if(count>0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more incoming than outgoing segments (%d incoming, %d outgoing)\n", p2->x * poly->gridsize, p2->y * poly->gridsize, count, (ocount+count)/2, (ocount-count)/2);
 		if(count<0) fprintf(stderr, "Error: Point (%.2f,%.2f) has %d more outgoing than incoming segments (%d incoming, %d outgoing)\n", p2->x * poly->gridsize, p2->y * poly->gridsize, -count, (ocount+count)/2, (ocount-count)/2);
+		gfxpolystroke_t*stroke = poly->strokes;
+		for(;stroke;stroke=stroke->next) {
+		    for(s=0;s<stroke->num_points-1;s++) {
+			point_t a = stroke->points[s];
+			point_t b = stroke->points[s+1];
+			if(a.x == p2->x && a.y == p2->y ||
+			   b.x == p2->x && b.y == p2->y) {
+			    fprintf(stderr, "%.2f,%.2f -> %.2f,%.2f\n", 
+				    a.x * poly->gridsize, 
+				    a.y * poly->gridsize, 
+				    b.x * poly->gridsize, 
+				    b.y * poly->gridsize);
+			}
+		    }
+		}
 		dict_destroy(d2);
 		return 0;
 	    }
@@ -401,9 +417,11 @@ static void segment_init(segment_t*s, int32_t x1, int32_t y1, int32_t x2, int32_
             int32_t x = x1;x1=x2;x2=x;
             int32_t y = y1;y1=y2;y2=y;
         }
+#ifdef DEBUG
 	fprintf(stderr, "Scheduling horizontal segment [%d] (%.2f,%.2f) -> (%.2f,%.2f) %s\n",
 		segment_count,
 		x1 * 0.05, y1 * 0.05, x2 * 0.05, y2 * 0.05, s->dir==DIR_UP?"up":"down");
+#endif
     }
     s->a.x = x1;
     s->a.y = y1;
@@ -804,12 +822,14 @@ static void insert_point_into_segment(status_t*status, segment_t*s, point_t p)
     if(s->pos.y != p.y) {
 	/* non horizontal line- copy to output */
 	if(s->fs_out) {
-#ifdef DEBUG
-	    fprintf(stderr, "[%d] receives next point (%.2f,%.2f)->(%.2f,%.2f) (drawing)\n", s->nr,
-		    s->pos.x * status->gridsize, s->pos.y * status->gridsize, 
-		    p.x * status->gridsize, p.y * status->gridsize);
-#endif
 	    segment_dir_t dir = s->wind.is_filled?DIR_DOWN:DIR_UP;
+#ifdef DEBUG
+	    fprintf(stderr, "[%d] receives next point (%.2f,%.2f)->(%.2f,%.2f) (drawing (%s))\n", s->nr,
+		    s->pos.x * status->gridsize, s->pos.y * status->gridsize, 
+		    p.x * status->gridsize, p.y * status->gridsize,
+		    dir==DIR_UP?"up":"down"
+		    );
+#endif
 	    assert(s->pos.y != p.y);
 	    append_stroke(status, s->pos, p, dir, s->fs_out);
 	} else {
@@ -993,6 +1013,9 @@ static void add_points_to_ending_segments(status_t*status, int32_t y)
                 start = status->xrow->num-1;
                 end = dir = -1;
             }
+#ifdef CHECKS
+	    char ok = 0;
+#endif
             for(t=start;t!=end;t+=dir) {
                 box_t box = box_new(status->xrow->x[t], y);
                 double d0 = LINE_EQ(box.left1, seg);
@@ -1002,14 +1025,17 @@ static void add_points_to_ending_segments(status_t*status, int32_t y)
                 if(!(d0>=0 && d1>=0 && d2>=0 && d3>0 ||
                      d0<=0 && d1<=0 && d2<=0 && d3<0)) {
                     insert_point_into_segment(status, seg, box.right2);
-                    break;
+                    //break;
+#ifdef CHECKS
+		    ok = 1;
+#endif
                 }
             }
 
 #ifdef CHECKS
             /* we *need* to find a point to insert. the segment's own end point
                is in that list, for Pete's sake. */
-            assert(t!=end);
+            assert(ok);
 #endif
         }
         // now that this is done, too, we can also finally free this segment
@@ -1153,89 +1179,187 @@ void horiz_destroy(horizdata_t*horiz)
     horiz->data = 0;
 }
 
-static int compare_horizontals(const void *_h1, const void *_h2)
+static windstate_t get_horizontal_first_windstate(status_t*status, int x1, int x2)
 {
-    horizontal_t*h1 = (horizontal_t*)_h1;
-    horizontal_t*h2 = (horizontal_t*)_h2;
-    return h1->x1 - h2->x1;
+    point_t p1 = {x1,status->y};
+    point_t p2 = {x2,status->y};
+    segment_t*left = actlist_find(status->actlist, p1, p2);
+
+    segment_t*a = actlist_right(status->actlist, left);
+    while(a) {
+	if(a->pos.y == status->y) {
+	    /* we need to iterate through all segments that received a point in this
+	       scanline, as actlist_find above will miss (positively sloped) segments 
+	       that are to the right of (x1,y) only as long as we don't take the 
+	       hotpixel re-routing into account 
+               TODO: this is inefficient, we should probably be iterating through the
+	       hotpixels on this scanline.
+	     */
+	    if(a->pos.x == x1)
+		left = a;
+	    if(a->pos.x > x1)
+		break;
+	}
+	a = a->right;
+    }
+
+    assert(!left || left->fs_out_ok);
+#ifdef DEBUG
+    fprintf(stderr, "  fragment %.2f..%.2f\n", 
+	    x1 * status->gridsize,
+	    x2 * status->gridsize);
+    if(left) {
+	fprintf(stderr, "    segment [%d] (%.2f,%.2f -> %.2f,%2f, at %.2f,%.2f) is to the left\n", 
+		SEGNR(left), 
+		left->a.x * status->gridsize,
+		left->a.y * status->gridsize,
+		left->b.x * status->gridsize,
+		left->b.y * status->gridsize,
+		left->pos.x * status->gridsize,
+		left->pos.y * status->gridsize
+		);
+	/* this segment might be a distance away from the left point
+	   of the horizontal line if the horizontal line belongs to a stroke
+	   with segments that just ended (so this horizontal line appears to
+	   be "floating in space" from our current point of view)
+	assert(left->pos.y == h->y && left->pos.x == h->x1);
+	*/
+    }
+#endif
+    return left?left->wind:status->windrule->start(status->context);
+}
+
+static windstate_t process_horizontal_fragment(status_t*status, horizontal_t*h, int x1, int x2, windstate_t below)
+{
+    windstate_t above = status->windrule->add(status->context, below, h->fs, h->dir, h->polygon_nr);
+    edgestyle_t*fs = status->windrule->diff(&above, &below);
+	
+    segment_dir_t dir = above.is_filled?DIR_DOWN:DIR_UP;
+    point_t p1 = {x1,h->y};
+    point_t p2 = {x2,h->y};
+
+    if(fs) {
+	//append_stroke(status, p1, p2, DIR_INVERT(h->dir), fs);
+	append_stroke(status, p1, p2, dir, fs);
+    }
+#ifdef DEBUG
+    fprintf(stderr, "    ...%s (below: (wind_nr=%d, filled=%d), above: (wind_nr=%d, filled=%d) %s %d-%d\n",
+	    fs?"storing":"ignoring",
+	    below.wind_nr, below.is_filled,
+	    above.wind_nr, above.is_filled, 
+	    dir==DIR_UP?"up":"down", x1, x2);
+#endif
+    return above;
+}
+
+typedef enum {hevent_hotpixel,hevent_end,hevent_start} horizontal_event_type_t;
+typedef struct _hevent {
+    int32_t x;
+    horizontal_t*h;
+    horizontal_event_type_t type;
+} hevent_t;
+
+typedef struct _hevents {
+    hevent_t*events;
+    int num;
+} hevents_t;
+
+static int compare_hevents(const void *_e1, const void *_e2)
+{
+    hevent_t*e1 = (hevent_t*)_e1;
+    hevent_t*e2 = (hevent_t*)_e2;
+    int diff = e1->x - e2->x;
+    if(diff) return diff;
+    return e1->type - e2->type; //schedule hotpixel before hend
+}
+
+static hevents_t hevents_fill(status_t*status)
+{
+    horizdata_t*horiz = &status->horiz;
+    xrow_t*xrow = status->xrow;
+
+    hevents_t e;
+    e.events = malloc(sizeof(hevent_t)*(horiz->num*2 + xrow->num));
+    e.num = 0;
+
+    int t;
+    for(t=0;t<horiz->num;t++) {
+	assert(horiz->data[t].x1 != horiz->data[t].x2);
+	e.events[e.num].x = horiz->data[t].x1;
+	e.events[e.num].h = &horiz->data[t];
+	e.events[e.num].type = hevent_start;
+	e.num++;
+	e.events[e.num].x = horiz->data[t].x2;
+	e.events[e.num].h = &horiz->data[t];
+	e.events[e.num].type = hevent_end;
+	e.num++;
+    }
+    for(t=0;t<xrow->num;t++) {
+	e.events[e.num].x = status->xrow->x[t];
+	e.events[e.num].h = 0;
+	e.events[e.num].type = hevent_hotpixel;
+	e.num++;
+    }
+    qsort(e.events, e.num, sizeof(hevent_t), compare_hevents);
+    return e;
+
 }
 
 static void process_horizontals(status_t*status)
 {
     horizdata_t*horiz = &status->horiz;
-    qsort(horiz->data, horiz->num, sizeof(horizontal_t), compare_horizontals);
-    int t;
-    int xstart = 0;
-    for(t=0;t<horiz->num;t++) {
-	horizontal_t*h = &horiz->data[t];
-#ifdef DEBUG
-	fprintf(stderr, "horizontal (y=%.2f): %.2f -> %.2f dir=%s fs=%p\n", 
-		h->y * status->gridsize,
-		h->x1 * status->gridsize,
-		h->x2 * status->gridsize,
-		h->dir==DIR_UP?"up":"down", h->fs);
-#endif
-	assert(h->y == status->y);
-	assert(xrow_contains(status->xrow, h->x1));
-	assert(xrow_contains(status->xrow, h->x2));
 
-	int pos = xrow_find(status->xrow, h->x1);
-	int x = h->x1;
-	assert(pos <= status->xrow->num);
-	assert(pos == status->xrow->num || status->xrow->x[pos] > x);
+    if(!horiz->num)
+	return;
 
-	while(x < h->x2) {
-	    int next_x = pos < status->xrow->num ? status->xrow->x[pos] : h->x2;
-	    pos++;
-	    
-	    assert(next_x > x);
+    hevents_t events = hevents_fill(status);
+    int num_open = 0;
+    horizontal_t**open = malloc(sizeof(horizontal_t*)*horiz->num);
 
-	    point_t p1 = {x,h->y};
-	    point_t p2 = {next_x,h->y};
-	    segment_t* left = actlist_find(status->actlist, p1, p2);
-	    assert(!left || left->fs_out_ok);
+    int s,t;
+    for(t=0;t<events.num;t++) {
+	hevent_t*e = &events.events[t];
+	switch(e->type) {
+	    case hevent_start:
+		e->h->pos = num_open;
+		open[num_open++] = e->h;
 #ifdef DEBUG
-	    fprintf(stderr, "  fragment %.2f..%.2f edge=%08x\n", 
-		    x * status->gridsize,
-		    next_x * status->gridsize,
-		    h->fs);
-	    if(left) {
-		fprintf(stderr, "    segment [%d] (%.2f,%.2f -> %.2f,%2f, at %.2f,%.2f) is to the left\n", 
-			SEGNR(left), 
-			left->a.x * status->gridsize,
-			left->a.y * status->gridsize,
-			left->b.x * status->gridsize,
-			left->b.y * status->gridsize,
-			left->pos.x * status->gridsize,
-			left->pos.y * status->gridsize
-			);
-		/* this segment might be a distance away from the left point
-		   of the horizontal line if the horizontal line belongs to a stroke
-		   with segments that just ended (so this horizontal line appears to
-		   be "floating in space" from our current point of view)
-		assert(left->pos.y == h->y && left->pos.x == h->x1);
-		*/
-	    }
+		fprintf(stderr, "horizontal (y=%.2f): %.2f -> %.2f dir=%s fs=%p\n", 
+			e->h->y * status->gridsize,
+			e->h->x1 * status->gridsize,
+			e->h->x2 * status->gridsize,
+			e->h->dir==DIR_UP?"up":"down", e->h->fs);
 #endif
-	    windstate_t below = left?left->wind:status->windrule->start(status->context);
-	    windstate_t above = status->windrule->add(status->context, below, h->fs, h->dir, h->polygon_nr);
-	    edgestyle_t*fs = status->windrule->diff(&above, &below);
-		
-	    segment_dir_t dir = above.is_filled?DIR_DOWN:DIR_UP;
-	    if(fs) {
-		//append_stroke(status, p1, p2, DIR_INVERT(h->dir), fs);
-		append_stroke(status, p1, p2, dir, fs);
-	    }
-#ifdef DEBUG
-	    fprintf(stderr, "    ...%s (below: (wind_nr=%d, filled=%d), above: (wind_nr=%d, filled=%d) %s\n",
-		    fs?"storing":"ignoring",
-		    below.wind_nr, below.is_filled,
-		    above.wind_nr, above.is_filled, 
-		    dir==DIR_UP?"up":"down");
-#endif
-	    x = next_x;
+		assert(e->h->y == status->y);
+		assert(xrow_contains(status->xrow, e->h->x1));
+		assert(xrow_contains(status->xrow, e->h->x2));
+	    break;
+	    case hevent_end:
+		num_open--;
+		if(num_open) {
+		    open[num_open]->pos = e->h->pos;
+		    open[e->h->pos] = open[num_open];
+		}
+	    break;
+	    case hevent_hotpixel:
+	        {
+		    windstate_t	below;
+		    for(s=0;s<num_open;s++) {
+			int x1 = open[s]->xpos;
+			int x2 = e->x;
+			assert(status->y == open[s]->y);
+			if(!s)
+			    below = get_horizontal_first_windstate(status, x1, x2);
+			open[s]->xpos = e->x;
+			assert(x1 < x2);
+			below = process_horizontal_fragment(status, open[s], x1, x2, below);
+		    }
+		}
+	    break;
 	}
     }
+    free(open);
+    free(events.events);
 }
 
 static void store_horizontal(status_t*status, point_t p1, point_t p2, edgestyle_t*fs, segment_dir_t dir, int polygon_nr)
@@ -1251,6 +1375,7 @@ static void store_horizontal(status_t*status, point_t p1, point_t p2, edgestyle_
 	p2 = p_1;
     }
 
+    /* TODO: convert this into a linked list */
     if(status->horiz.size == status->horiz.num) {
 	if(!status->horiz.size)
 	    status->horiz.size = 16;
@@ -1259,6 +1384,7 @@ static void store_horizontal(status_t*status, point_t p1, point_t p2, edgestyle_
     }
     horizontal_t*h = &status->horiz.data[status->horiz.num++];
     h->y = p1.y;
+    h->xpos = p1.x;
     h->x1 = p1.x;
     h->x2 = p2.x;
     h->fs = fs;
@@ -1373,8 +1499,6 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
     memset(&status, 0, sizeof(status_t));
     status.gridsize = poly1->gridsize;
     
-    gfxpoly_dump(poly1);
-
     queue_init(&status.queue);
     gfxpoly_enqueue(poly1, &status.queue, 0, /*polygon nr*/0);
     if(poly2) {
@@ -1426,13 +1550,15 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
         memset(&range, 0, sizeof(range));
 #ifdef DEBUG
         actlist_dump(status.actlist, status.y, status.gridsize);
-#endif
 	xrow_dump(status.xrow, status.gridsize);
+#endif
         add_points_to_positively_sloped_segments(&status, status.y, &range);
         add_points_to_negatively_sloped_segments(&status, status.y, &range);
         add_points_to_ending_segments(&status, status.y);
 
         recalculate_windings(&status, &range);
+        
+	actlist_verify(status.actlist, status.y);
 	process_horizontals(&status);
 #ifdef CHECKS
         check_status(&status);

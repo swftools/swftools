@@ -327,8 +327,8 @@ void test3(int argn, char*argv[])
 
     //gfxline_t*line = mkrandomshape(RANGE, N);
     //windrule_t*rule = &windrule_circular;
-    //gfxline_t*line = mkchessboard();
-    gfxline_t*line = make_circles(30);
+    gfxline_t*line = mkchessboard();
+    //gfxline_t*line = make_circles(30);
     windrule_t*rule = &windrule_evenodd;
     //windrule_t*rule = &windrule_circular;
 
@@ -362,6 +362,7 @@ void test3(int argn, char*argv[])
         gfxpoly_t*poly1 = gfxpoly_from_fill(l, 0.05);
 
         gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+	assert(gfxpoly_check(poly2, 0));
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
         SHAPE* s;
@@ -474,10 +475,11 @@ void test4(int argn, char*argv[])
 
         if(!gfxpoly_check(poly1, 0)) {
             printf("bad polygon\n");
-            continue;
+	    goto end_of_loop;
         }
 
         gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+	gfxpoly_dump(poly2);
 	assert(gfxpoly_check(poly2, 1));
 
 	int pass;
@@ -503,6 +505,8 @@ void test4(int argn, char*argv[])
 
         gfxpoly_destroy(poly1);
         gfxpoly_destroy(poly2);
+	
+	end_of_loop:
         if(argn==2) 
             break;
     }
@@ -668,6 +672,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test4(argn, argv);
+    test0(argn, argv);
 }
 
