@@ -1,8 +1,8 @@
-all: test stroke
+all: test speedtest stroke
 include ../../Makefile.common
 
-CC = gcc -O2 -g -pg
-#CC = gcc -O3
+CC = gcc -DDEBUG -DCHECKS -O2 -g -pg
+CCO = gcc -O2 -fno-inline -g -pg
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
 	cd ..; make libbase.a
@@ -13,6 +13,7 @@ CC = gcc -O2 -g -pg
 testheap: ../libbase.a testheap.c
 	$(CC) testheap.c ../libbase.a -o testheap -lm -lz -ljpeg
 
+SRC = active.c convert.c poly.c wind.c renderpoly.c xrow.c stroke.c
 OBJS = active.o convert.o poly.o wind.o renderpoly.o xrow.o stroke.o
 
 active.o: active.c active.h poly.h
@@ -43,6 +44,9 @@ stroke: test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a ../libbase.a
 SWF = ../librfxswf.a ../libgfxpdf.a -lstdc++
 test: ../libbase.a test.c $(OBJS) poly.h convert.h $(GFX) 
 	$(CC) test.c $(OBJS) $(SWF) $(GFX) ../libbase.a -o test $(LIBS)
+
+speedtest: ../libbase.a speedtest.c $(SRC) poly.h convert.h $(GFX) 
+	$(CCO) speedtest.c $(SRC) $(GFX) ../libbase.a -o speedtest $(LIBS)
 
 clean: 
 	rm -f *.o test stroke

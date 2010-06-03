@@ -6,9 +6,6 @@
 #include "../types.h"
 #include "wind.h"
 
-//#define DEBUG
-#define CHECKS
-
 /* features */
 #define SPLAY
 #define DONT_REMEMBER_CROSSINGS
