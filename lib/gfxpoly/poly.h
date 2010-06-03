@@ -5,9 +5,6 @@
 #include "../q.h"
 #include "../types.h"
 
-//#define DEBUG
-//#define CHECKS
-
 /* features */
 #define SPLAY
 #define DONT_REMEMBER_CROSSINGS

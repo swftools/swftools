@@ -1,8 +1,8 @@
-all: test stroke
+all: test speedtest stroke
 include ../../Makefile.common
 
-CC = gcc -O2 -g
-#CC = gcc -O3
+CC = gcc -DDEBUG -DCHECKS -O2 -g -pg
+CCO = gcc -O2 -fno-inline -g -pg
 
 ../libbase.a: ../q.c ../q.h ../mem.c ../mem.h
 	cd ..; make libbase.a
@@ -13,6 +13,7 @@ CC = gcc -O2 -g
 testheap: ../libbase.a testheap.c
 	$(CC) testheap.c ../libbase.a -o testheap -lm -lz -ljpeg
 
+SRC = active.c convert.c poly.c wind.c renderpoly.c xrow.c stroke.c
 OBJS = active.o convert.o poly.o wind.o renderpoly.o xrow.o stroke.o
 
 active.o: active.c active.h poly.h
@@ -36,13 +37,16 @@ xrow.o: xrow.c xrow.h ../q.h ../mem.h
 stroke.o: stroke.c poly.h convert.h wind.h
 	$(CC) -c stroke.c -o stroke.o
 
-GFX=../gfxfont.o ../gfxtools.o  ../devices/ops.o ../devices/polyops.o ../devices/text.o ../devices/bbox.o ../devices/render.o ../devices/rescale.o ../devices/record.o
+GFX=../gfxfont.o ../gfxtools.o ../gfximage.o ../devices/ops.o ../devices/polyops.o ../devices/text.o ../devices/bbox.o ../devices/render.o ../devices/rescale.o ../devices/record.o
 stroke: test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a ../libbase.a 
 	$(CC) test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a $(GFX) ../libbase.a -o stroke $(LIBS)
 
-SWF = ../librfxswf.a ../libpdf.a -lstdc++
+SWF = ../librfxswf.a ../libgfxpdf.a -lstdc++
 test: ../libbase.a test.c $(OBJS) poly.h convert.h $(GFX) 
 	$(CC) test.c $(OBJS) $(SWF) $(GFX) ../libbase.a -o test $(LIBS)
+
+speedtest: ../libbase.a speedtest.c $(SRC) poly.h convert.h $(GFX) 
+	$(CCO) speedtest.c $(SRC) $(GFX) ../libbase.a -o speedtest $(LIBS)
 
 clean: 
 	rm -f *.o test stroke
