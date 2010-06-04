@@ -1699,11 +1699,20 @@ gfxbbox_t BitmapOutputDev::getImageBBox(GfxState*state)
     bbox.ymax=max(bbox.ymax,y);
     return bbox;
 }
+
+GBool invalid_size(int width, int height)
+{
+    if((U64)width*(U64)height > 0x7fffffffll)
+	return 1;
+    return 0;
+}
+
 void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
 			   GBool inlineImg)
 {
     msg("<debug> drawImageMask streamkind=%d", str->getKind());
+    if(invalid_size(width,height)) return;
 
     CopyStream*cpystr = new CopyStream(str, height * ((width + 7) / 8));
     str = cpystr->getStream();
@@ -1720,6 +1729,7 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int *maskColors, GBool inlineImg)
 {
     msg("<debug> drawImage streamkind=%d", str->getKind());
+    if(invalid_size(width,height)) return;
 	
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
@@ -1738,6 +1748,7 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     GBool maskInvert)
 {
     msg("<debug> drawMaskedImage streamkind=%d", str->getKind());
+    if(invalid_size(width,height)) return;
     
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
@@ -1757,6 +1768,7 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
 				 GfxImageColorMap *maskColorMap)
 {
     msg("<debug> drawSoftMaskedImage %dx%d (%dx%d) streamkind=%d", width, height, maskWidth, maskHeight, str->getKind());
+    if(invalid_size(width,height)) return;
 
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
