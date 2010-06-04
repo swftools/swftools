@@ -101,6 +101,14 @@ class _SaveSWFThread:
                 filename = self.__filename.replace('.swf', form % pagenr)
                 swf.save(filename)
                 swf = gfx.SWF()
+
+                try:
+                    plugin = self.__options.viewers.init(swf, self.__filename)
+                except Exception, e:
+                    wx.CallAfter(Publisher.sendMessage, "PLUGIN_ERROR")
+                    self.__running = False
+                    return
+
                 self.setparameters(swf)
 
             if not self.__keep_running:
