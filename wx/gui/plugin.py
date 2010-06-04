@@ -117,7 +117,9 @@ class Plugin:
                 # To avoid an ugly "DOS Window" to show up
                 flags = win32process.CREATE_NO_WINDOW
             except ImportError:
-                flags = 0
+                # See http://msdn.microsoft.com/en-us/library/ms684863(VS.85).aspx
+                # for this flag (CREATE_NO_WINDOW) value
+                flags = 0x08000000
         else:
             flags = 0
         output = Popen(cmd, stdin=PIPE, stdout=PIPE,
