@@ -24,7 +24,7 @@
 
 from gui.fields import Choose, ChooseAndInt
 
-order = 3
+order = 2
 type = "custom"
 name = u"Flex Paper Viewer"
 desc = u"""Provides a light weight document viewer with:

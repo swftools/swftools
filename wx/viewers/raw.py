@@ -24,7 +24,7 @@
 
 from gui.fields import Choose
 
-order = 0
+order = 4
 type = "core"
 name = u"No Viewer"
 desc = (u'The SWF will be in "raw" format, with each page a seperate frame. '

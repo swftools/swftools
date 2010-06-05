@@ -24,7 +24,7 @@
 
 from gui.fields import Hidden, Choose
 
-order = 1
+order = 3
 type = "core"
 name = u"Simple Viewer"
 desc = (u"A tiny viewer, which attaches directly to the SWF, "

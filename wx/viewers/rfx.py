@@ -24,7 +24,8 @@
 
 from gui.fields import Choose, ChooseAndInt
 
-order = 2
+order = 0
+default = True
 type = "custom"
 name = u"rfx Viewer"
 desc = u"A more sophisticated viewer with zooming and scrolling."

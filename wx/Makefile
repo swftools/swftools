@@ -6,8 +6,9 @@ include ../Makefile.common
 all: pdf2swf_gui.exe
 
 pdf2swf_gui.exe: gpdf2swf.py gui/*.py viewers/*.py
-	cp gpdf2swf.py /xpython/main.py
-	cp -R viewers gui lib /xpython/
+	cp -a ../installer/swftools.ico /xpython/xpython.ico
+	cp -a gpdf2swf.py /xpython/main.py
+	cp -a -R viewers gui lib /xpython/
 	cd /xpython/swftools;git pull
 	cd /xpython;make xpython.exe
 	ln -f /xpython/xpython.exe ./gpdf2swf.exe

@@ -104,6 +104,8 @@ class ViewerBook(wx.Listbook):
 
             win = self.makePanel(mod)
             self.AddPage(win, mod, imageId=idx)
+            if hasattr(mod, "default"):
+                self.SetSelection(idx)
 
 
     def makePanel(self, mod):

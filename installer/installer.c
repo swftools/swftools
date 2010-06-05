@@ -534,7 +534,7 @@ BOOL CALLBACK PropertySheetFunc3(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	SetDlgItemText(hwnd, IDC_SPACE2, "");
 	PropSheet_SetWizButtons(dialog, 0);
 	SendMessage(dialog, PSM_CANCELTOCLOSE, 0, 0); //makes wine display a warning
-	SetDlgItemText(hwnd, IDC_TITLE, "Installing files...");
+	SetDlgItemText(hwnd, IDC_TITLE, "Installing...");
 	statuswnd = hwnd;
 	status_t status;
 	status.status = PropertyArchiveStatus;

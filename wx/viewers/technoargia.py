@@ -24,7 +24,7 @@
 
 from gui.fields import Choose, ChooseAndInt, Hidden
 
-order = 4
+order = 1
 type = "custom"
 name = u"technoargia Viewer"
 desc = (u"Simple viewer with home link from Laurent Lalanne"
