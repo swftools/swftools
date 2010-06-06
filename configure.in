@@ -34,7 +34,7 @@ if test "x$enable_lame" = "xno";then
 fi,DISABLE_LAME=)
 
 PACKAGE=swftools
-VERSION=2010-05-20-1815
+VERSION=0.9.1
 
 # ------------------------------------------------------------------
 
