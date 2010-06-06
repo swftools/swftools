@@ -77,7 +77,7 @@ int test_stroke1()
 
 	//gfxpoly_t*p = gfxpoly_fromstroke(l, width, gfx_capRound, gfx_joinRound, 500);
 	gfxpoly_t*p1 = gfxpoly_from_stroke(l, width, gfx_capRound, gfx_joinRound, 500, 0.05);
-	assert(gfxpoly_check(p1));
+	assert(gfxpoly_check(p1, 1));
 	
 	//gfxpoly_t*p2 = gfxpoly_from_fill(f, 0.05);
 	gfxline_t*l2 = gfxline_clone(l);
@@ -92,10 +92,10 @@ int test_stroke1()
 	                  s, -c,  -(350+x1)*s+(350+y1)*c+350};
 	gfxline_transform(l2, &m);
 	gfxpoly_t*p2 = gfxpoly_from_stroke(l2, width, gfx_capRound, gfx_joinRound, 500, 0.05);
-	assert(gfxpoly_check(p2));
+	assert(gfxpoly_check(p2, 1));
 
 	gfxpoly_t*p3 = gfxpoly_intersect(p1, p2);
-	assert(gfxpoly_check(p3));
+	assert(gfxpoly_check(p3, 1));
 	
 	//gfxpoly_t*p4 = gfxpoly_from_fill(f, 0.05);
 	//gfxpoly_t*p5 = gfxpoly_intersect(p1, p4);

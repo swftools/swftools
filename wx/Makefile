@@ -15,5 +15,6 @@ pdf2swf_gui.exe: gpdf2swf.py gui/*.py viewers/*.py
 	#ln -f gpdf2swf.exe ../win32_gui/
 	ln -f gpdf2swf.exe ../win32/
 	cp -R viewers/* ../win32/viewers/
+	rm -rf ../win32/viewers/flexpaper* # we're not distributing flexpaper
 
 .PHONY: exe

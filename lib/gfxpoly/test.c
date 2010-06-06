@@ -166,6 +166,29 @@ int test_speed()
     gfxline_free(b);
 }
 
+int testbox(int argn, char*argv[])
+{
+    gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
+    gfxline_t*box2 = gfxline_makerectangle(-50,-50,150,150);
+    gfxpoly_t*poly1 = gfxpoly_from_fill(box1, 0.05);
+    gfxpoly_t*poly2 = gfxpoly_from_fill(box2, 0.05);
+    gfxline_free(box1);
+    gfxline_free(box2);
+    
+    gfxpoly_t*poly12 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
+    gfxpoly_dump(poly12);
+    assert(gfxpoly_check(poly12, 0));
+    gfxpoly_destroy(poly12);
+}
+
+int teststroke(int argn, char*argv[])
+{
+    //gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
+    gfxline_t*box1 = gfxline_makerectangle(100,100,200,200);
+    gfxpoly_t*poly = gfxpoly_from_stroke(box1, 10.0, gfx_capRound, gfx_joinMiter, 1000, 0.05);
+    assert(gfxpoly_check(poly, 1));
+}
+
 int test0(int argn, char*argv[])
 {
     gfxline_t*box1 = gfxline_makerectangle(-100,-100,100,100);
@@ -173,14 +196,12 @@ int test0(int argn, char*argv[])
     gfxline_t*box3 = gfxline_makerectangle(-100,-100,100,100);
     //gfxline_append(box2, box3);
 
-    gfxpoly_check(gfxpoly_from_stroke(box1, 2.0, gfx_capRound, gfx_joinRound, 0, 0.05));
-
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
     double ua=M_PI/4;
     matrix.m00=cos(ua);matrix.m10=sin(ua);
     matrix.m01=-sin(ua);matrix.m11=cos(ua);
-    //gfxline_transform(box1, &matrix);
+    gfxline_transform(box1, &matrix);
     
     //gfxline_t*b = 0;
     //b = gfxline_append(b, box1);
@@ -192,9 +213,13 @@ int test0(int argn, char*argv[])
     
     gfxline_free(box1);
     gfxline_free(box2);
+    
+    //gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
     gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
     gfxpoly_dump(poly3);
+    
     gfxline_t*line = gfxline_from_gfxpoly(poly3);
+
     gfxline_dump(line, stdout, "");
     gfxline_free(line);
     gfxpoly_destroy(poly1);
@@ -207,22 +232,28 @@ int test1(int argn, char*argv[])
 {
     gfxline_t*box1 = gfxline_makerectangle(50,50,150,150);
     gfxline_t*box2 = gfxline_makerectangle(100,100,200,200);
-    gfxline_t*box3 = gfxline_makerectangle(100,100,200,200);
+    gfxline_t*box3 = gfxline_makerectangle(200,100,300,200);
+    gfxline_t*box4 = gfxline_makerectangle(300,200,400,400);
+    gfxline_t* board = mkchessboard();
     gfxline_t*star = mkstar(50,50, 150,150);
     gfxline_t*b = 0;
     b = gfxline_append(b, box1);
     b = gfxline_append(b, box2);
     b = gfxline_append(b, box3);
+    b = gfxline_append(b, box4);
 
     gfxmatrix_t matrix;
     memset(&matrix, 0, sizeof(gfxmatrix_t));
-    double ua=0.1;
-    matrix.m00=cos(ua);matrix.m10=sin(ua);
-    matrix.m01=-sin(ua);matrix.m11=cos(ua);
+    matrix.m00 = 1.0;
+    matrix.m11 = 1.0;
+    matrix.tx = 200;
+    matrix.ty = 200;
+    gfxline_transform(board, &matrix);
+    b = gfxline_append(b, board);
 
     //gfxline_transform(b, &matrix);
 
-    gfxline_dump(b, stderr, "");
+    //gfxline_dump(b, stderr, "");
     gfxpoly_t*poly = gfxpoly_from_fill(b, 0.05);
     
     gfxline_free(box1);
@@ -230,8 +261,10 @@ int test1(int argn, char*argv[])
     gfxline_free(box3);
     gfxline_free(star);
 
-    gfxpoly_dump(poly);
+    //gfxpoly_dump(poly);
     gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
+    //gfxpoly_dump(poly2);
+    gfxpoly_save_arrows(poly2, "test.ps");
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
 }
@@ -294,8 +327,8 @@ void test3(int argn, char*argv[])
 
     //gfxline_t*line = mkrandomshape(RANGE, N);
     //windrule_t*rule = &windrule_circular;
-    //gfxline_t*line = mkchessboard();
-    gfxline_t*line = make_circles(30);
+    gfxline_t*line = mkchessboard();
+    //gfxline_t*line = make_circles(30);
     windrule_t*rule = &windrule_evenodd;
     //windrule_t*rule = &windrule_circular;
 
@@ -329,6 +362,7 @@ void test3(int argn, char*argv[])
         gfxpoly_t*poly1 = gfxpoly_from_fill(l, 0.05);
 
         gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+	assert(gfxpoly_check(poly2, 0));
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
         SHAPE* s;
@@ -439,18 +473,20 @@ void test4(int argn, char*argv[])
 
         double zoom = 1.0;
 
-        if(!gfxpoly_check(poly1)) {
+        if(!gfxpoly_check(poly1, 0)) {
             printf("bad polygon\n");
-            continue;
+	    goto end_of_loop;
         }
 
         gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+	gfxpoly_dump(poly2);
+	assert(gfxpoly_check(poly2, 1));
 
 	int pass;
 	for(pass=0;pass<2;pass++) {
 	    intbbox_t bbox = intbbox_from_polygon(poly1, zoom);
 	    unsigned char*bitmap1 = render_polygon(poly1, &bbox, zoom, rule, &onepolygon);
-	    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd, &onepolygon);
+	    unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_circular, &onepolygon);
 	    if(!bitmap_ok(&bbox, bitmap1) || !bitmap_ok(&bbox, bitmap2)) {
 		save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
 		assert(!"error in bitmaps");
@@ -461,7 +497,7 @@ void test4(int argn, char*argv[])
 	    }
 	    free(bitmap1);
 	    free(bitmap2);
-	    
+
 	    // second pass renders the 90° rotated version
 	    rotate90(poly1);
 	    rotate90(poly2);
@@ -469,6 +505,8 @@ void test4(int argn, char*argv[])
 
         gfxpoly_destroy(poly1);
         gfxpoly_destroy(poly2);
+	
+	end_of_loop:
         if(argn==2) 
             break;
     }
@@ -507,7 +545,7 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 	fprintf(stderr, "%d segments (max so far: %d/%d)\n", size, max_segments, max_any_segments);
     }
 
-    if(!gfxpoly_check(poly1)) {
+    if(!gfxpoly_check(poly1, 0)) {
         gfxpoly_destroy(poly1);
         fprintf(stderr, "bad polygon\n");
         return;
@@ -594,6 +632,7 @@ finish: 0,
 internal: 0
 };
 
+#if 0
 void test5(int argn, char*argv[])
 {
     gfxsource_t*driver = gfxsource_pdf_create();
@@ -629,6 +668,7 @@ void test5(int argn, char*argv[])
     closedir(_dir);
     driver->destroy(driver);
 }
+#endif
 
 int main(int argn, char*argv[])
 {

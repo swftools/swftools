@@ -16,25 +16,25 @@ testheap: ../libbase.a testheap.c
 SRC = active.c convert.c poly.c wind.c renderpoly.c xrow.c stroke.c
 OBJS = active.o convert.o poly.o wind.o renderpoly.o xrow.o stroke.o
 
-active.o: active.c active.h poly.h
+active.o: active.c active.h poly.h Makefile
 	$(CC) -c active.c -o active.o
 
-convert.o: convert.c convert.h poly.h
+convert.o: convert.c convert.h poly.h Makefile
 	$(CC) -c convert.c -o convert.o
 
-poly.o: poly.c poly.h active.h heap.h ../q.h
+poly.o: poly.c poly.h active.h heap.h ../q.h Makefile
 	$(CC) -c poly.c -o poly.o
 
-wind.o: wind.c wind.h poly.h
+wind.o: wind.c wind.h poly.h Makefile
 	$(CC) -c wind.c -o wind.o
 
-renderpoly.o: renderpoly.c wind.h poly.h renderpoly.h
+renderpoly.o: renderpoly.c wind.h poly.h renderpoly.h Makefile
 	$(CC) -c renderpoly.c -o renderpoly.o
 
-xrow.o: xrow.c xrow.h ../q.h ../mem.h
+xrow.o: xrow.c xrow.h ../q.h ../mem.h Makefile
 	$(CC) -c xrow.c -o xrow.o
 
-stroke.o: stroke.c poly.h convert.h wind.h
+stroke.o: stroke.c poly.h convert.h wind.h Makefile
 	$(CC) -c stroke.c -o stroke.o
 
 GFX=../gfxfont.o ../gfxtools.o ../gfximage.o ../devices/ops.o ../devices/polyops.o ../devices/text.o ../devices/bbox.o ../devices/render.o ../devices/rescale.o ../devices/record.o
@@ -42,7 +42,7 @@ stroke: test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a ../libbase.a
 	$(CC) test_stroke.c $(OBJS) ../libgfxswf.a ../librfxswf.a $(GFX) ../libbase.a -o stroke $(LIBS)
 
 SWF = ../librfxswf.a ../libgfxpdf.a -lstdc++
-test: ../libbase.a test.c $(OBJS) poly.h convert.h $(GFX) 
+test: ../libbase.a test.c $(OBJS) poly.h convert.h $(GFX)  Makefile
 	$(CC) test.c $(OBJS) $(SWF) $(GFX) ../libbase.a -o test $(LIBS)
 
 speedtest: ../libbase.a speedtest.c $(SRC) poly.h convert.h $(GFX) 

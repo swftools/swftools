@@ -16,7 +16,7 @@ void actlist_destroy(actlist_t*a)
     free(a);
 }
 
-void actlist_dump(actlist_t*a, int32_t y)
+void actlist_dump(actlist_t*a, int32_t y, double gridsize)
 {
     segment_t*s = a->list;
     double lastx;
@@ -27,14 +27,14 @@ void actlist_dump(actlist_t*a, int32_t y)
             double x = ((double)s->delta.x*(y-s->a.y)/s->delta.y)+s->a.x;
             if(s!=a->list) {
                 if(lastx>x) 
-                    fprintf(stderr, "?%f<->%f? ", lastx, x);
+                    fprintf(stderr, "?%.2f<->%.2f? ", lastx * gridsize, x * gridsize);
             }
             lastx = x;
         }
-        fprintf(stderr, "[%d]", s->nr);
+        fprintf(stderr, "[%d]", (int)s->nr);
         s = s->right;
         if(s) fprintf(stderr, " ");
-        else fprintf(stderr, " y=%d\n", y);
+        else fprintf(stderr, " y=%.2f\n", y * gridsize);
     }
 }
 void actlist_verify(actlist_t*a, int32_t y)
@@ -97,10 +97,10 @@ segment_t* actlist_find(actlist_t*a, point_t p1, point_t p2)
 	//double d = cmp(t, p1, p2);
 	double d = single_cmp(t, p1);
 	if(d>=0 && to_the_left) {
-	    actlist_dump(a, p1.y);
+	    actlist_dump(a, p1.y, 1);
 	    segment_t*s = a->list;
 	    while(s) {
-		fprintf(stderr, "[%d] %f/%f (%d,%d) -> (%d,%d)\n", s->nr,
+		fprintf(stderr, "[%d] %f/%f (%d,%d) -> (%d,%d)\n", SEGNR(s),
 			single_cmp(s,p1), cmp(s,p1,p2),
 			s->a.x, s->a.y, s->b.x, s->b.y);
 		s = s->right;
