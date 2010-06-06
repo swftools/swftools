@@ -290,5 +290,7 @@
 
 0.9.1:
 	* pdf2swf: bugfixes, speedups
+	* pdf2swf: improved font quality (FlashType)
+	* librfxswf: support for fontalignzones
 	* gpdf2swf: completely reworked pdf2swf GUI (Ricardo Pedroso)
-	* as3compile: many bugfixes
+	* as3compile: many bugfixes, support for swc libraries
