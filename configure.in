@@ -391,7 +391,9 @@ fi
 RFX_CHECK_RUBY
 
 if test "x$RUBY_OK" '!=' "xyes";then
-    echo all install uninstall clean: > lib/ruby/Makefile
+    if test -d "lib/ruby/";then
+	echo all install uninstall clean: > lib/ruby/Makefile
+    fi
     # fail silently- the most users won't have any need for the
     # ruby interface anyway
 else
