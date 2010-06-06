@@ -277,6 +277,10 @@
 #endif
 #endif
 
+#ifndef WIN32
+#define CHECKS
+#endif
+
 // supply a substitute calloc function if necessary
 #ifndef HAVE_CALLOC
 #define calloc rfx_calloc_replacement

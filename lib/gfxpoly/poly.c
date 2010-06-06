@@ -325,7 +325,7 @@ void gfxpoly_save_arrows(gfxpoly_t*poly, const char*filename)
     double g = poly->gridsize;
     gfxpolystroke_t*stroke = poly->strokes;
     for(;stroke;stroke=stroke->next) {
-	fprintf(fi, "%g setgray\n", 0);
+	fprintf(fi, "0 setgray\n");
 
 	int s = stroke->dir==DIR_UP?stroke->num_points-1:0;
 	int end = stroke->dir==DIR_UP?-1:stroke->num_points;
