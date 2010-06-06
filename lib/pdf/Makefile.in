@@ -183,7 +183,7 @@ pdfinfo$(E): $(XPDFOK) xpdf/pdfinfo.$(O) xpdf/parseargs.$(O) $(xpdf_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdfinfo.$(O) $(xpdf_objects) xpdf/parseargs.$(O) -o pdfinfo$(E) $(LIBS)
 
 gfx_objects = ../libgfxswf$(A) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
-gfx_objects2 = $(gfx_objects) ../devices/lrf.$(O) ../libocr$(A)
+gfx_objects2 = $(gfx_objects) ../libocr$(A)
 
 pdf2jpeg$(E): $(XPDFOK) pdf2jpeg.c ../libbase$(A) xpdf/parseargs.$(O) $(xpdf_objects) $(splash_objects)
 	$(LL) $(CPPFLAGS) -DXPDFEXE -Ixpdf -I. -g pdf2jpeg.c xpdf/parseargs.$(O) ../libbase$(A) $(xpdf_objects) $(splash_objects) -o pdf2jpeg$(E) $(LIBS)

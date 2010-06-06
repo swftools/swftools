@@ -3039,7 +3039,7 @@ static void setfontscale(gfxdevice_t*dev,double m11,double m12, double m21,doubl
     MATRIX m;
     swf_GetMatrix(0, &m);
 
-    if(m21 || m12 || fabs(m11+m22)>0.001) {
+    if(m21 || m12 || fabs(m11+m22)>0.001 || m11<0) {
 	double ifs = (double)extrazoom/(i->current_font_size);
 	m.sx =  (S32)((m11*ifs)*65536); m.r1 = -(S32)((m21*ifs)*65536);
 	m.r0 =  (S32)((m12*ifs)*65536); m.sy = -(S32)((m22*ifs)*65536); 
