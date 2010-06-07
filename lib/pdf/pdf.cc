@@ -4,7 +4,12 @@
 #include "../gfxsource.h"
 #include "../devices/rescale.h"
 #include "../log.h"
-#include "config.h"
+#include "../../config.h"
+#ifdef HAVE_POPPLER
+  #include <poppler-config.h>
+#else
+  #include "xpdf/config.h"
+#endif
 #include "GlobalParams.h"
 #include "InfoOutputDev.h"
 #include "GFXOutputDev.h"
@@ -355,7 +360,11 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
     else if(!strcmp(name, "oktoaddnotes")) return strdup(i->doc->okToAddNotes() ? "yes" : "no");
     else if(!strcmp(name, "version")) { 
         char buf[32];
+#ifdef HAVE_POPPLER
+        sprintf(buf, "%d.%d", i->doc->getPDFMajorVersion(), i->doc->getPDFMinorVersion());
+#else
         sprintf(buf, "%.1f", i->doc->getPDFVersion());
+#endif
         return strdup(buf);
     }
     return strdup("");
