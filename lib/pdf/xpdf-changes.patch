@@ -1052,6 +1052,56 @@
  #endif
  #include <string.h>
  #include <ctype.h>
+@@ -2456,6 +2460,9 @@
+   // check for an EOB run
+   if (eobRun > 0) {
+     while (i <= scanInfo.lastCoeff) {
++      if(i>=64) {
++	  return gFalse;
++      }
+       j = dctZigZag[i++];
+       if (data[j] != 0) {
+ 	if ((bit = readBit()) == EOF) {
+@@ -2480,6 +2487,9 @@
+     if (c == 0xf0) {
+       k = 0;
+       while (k < 16) {
++        if(i>=64) {
++	  return gFalse;
++	}
+ 	j = dctZigZag[i++];
+ 	if (data[j] == 0) {
+ 	  ++k;
+@@ -2505,6 +2515,9 @@
+       }
+       eobRun += 1 << j;
+       while (i <= scanInfo.lastCoeff) {
++	if(i>=64) {
++	  return gFalse;
++	}
+ 	j = dctZigZag[i++];
+ 	if (data[j] != 0) {
+ 	  if ((bit = readBit()) == EOF) {
+@@ -2527,6 +2540,9 @@
+       }
+       k = 0;
+       do {
++	if(i>=64) {
++	  return gFalse;
++	}
+ 	j = dctZigZag[i++];
+ 	while (data[j] != 0) {
+ 	  if ((bit = readBit()) == EOF) {
+@@ -2535,6 +2551,9 @@
+ 	  if (bit) {
+ 	    data[j] += 1 << scanInfo.al;
+ 	  }
++	  if(i>=64) {
++	    return gFalse;
++	  }
+ 	  j = dctZigZag[i++];
+ 	}
+ 	++k;
 --- xpdf/Stream.h.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/Stream.h	2010-05-18 11:22:18.000000000 -0700
 @@ -41,7 +41,8 @@
