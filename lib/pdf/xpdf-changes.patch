@@ -656,6 +656,19 @@
    syms = (JBIG2Bitmap **)gmallocn(numSyms, sizeof(JBIG2Bitmap *));
 --- xpdf/JPXStream.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/JPXStream.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -241,6 +242,12 @@
+   haveCompMap = gFalse;
+   haveChannelDefn = gFalse;
+ 
++  img.xSize = 0;
++  img.ySize = 0;
++  img.xOffset = 0;
++  img.yOffset = 0;
++  curX = 0;
++  curY = 0;
+   img.tiles = NULL;
+   bitBuf = 0;
+   bitBufLen = 0;
 @@ -450,6 +450,7 @@
    GBool haveBPC, haveCSMode;
  
