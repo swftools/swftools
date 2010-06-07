@@ -71,6 +71,20 @@
  	if (!strcmp(tok3, "[")) {
  	  i = 0;
  	  while (pst->getToken(tok1, sizeof(tok1), &n1) &&
+@@ -320,7 +327,13 @@
+   if (code >= mapLen) {
+     oldLen = mapLen;
+     mapLen = (code + 256) & ~255;
++    Unicode *oldmap;
+     map = (Unicode *)greallocn(map, mapLen, sizeof(Unicode));
++    if(!map) {
++       /* we sometimes get overflows for files trying to use 0xffffffff as charcode */
++       map = oldmap;
++       return;
++    }
+     for (i = oldLen; i < mapLen; ++i) {
+       map[i] = 0;
+     }
 --- xpdf/CoreOutputDev.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/CoreOutputDev.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -57,5 +57,5 @@
