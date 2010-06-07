@@ -455,6 +455,7 @@ EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
 
     *destwidth = header.width;
     *destheight = header.height;
+    fclose(fi);
     return 1;
 }
 
@@ -561,6 +562,7 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
         }
     }
     
+    fclose(fi);
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
 	printf("Couldn't uncompress %s!\n", sname);
 	if(zimagedata)
@@ -568,7 +570,6 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 	return 0;
     }
     free(zimagedata);
-    fclose(fi);
 
     *destwidth = header.width;
     *destheight = header.height;
