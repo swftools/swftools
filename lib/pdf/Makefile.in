@@ -33,6 +33,8 @@ splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState
 		 xpdf/SplashScreen.$(O) xpdf/SplashPath.$(O) xpdf/SplashXPath.$(O) xpdf/SplashXPathScanner.$(O) \
 		 xpdf/SplashFTFontEngine.$(O) xpdf/SplashFTFontFile.$(O) xpdf/SplashFTFont.$(O)
 
+xpdf_include = @xpdf_include@
+
 popplercompat.$(O): popplercompat.cc
 	$(C) popplercompat.cc -o $@
 fonts.$(O): fonts.c
@@ -40,21 +42,21 @@ fonts.$(O): fonts.c
 bbox.$(O): bbox.c
 	$(C) bbox.c -o $@
 cmyk.$(O): cmyk.cc
-	$(CC) -I ./ -I xpdf cmyk.cc -o $@
+	$(CC) -I ./ $(xpdf_include) cmyk.cc -o $@
 GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h
-	$(CC) -I ./ -I xpdf GFXOutputDev.cc -o $@
+	$(CC) -I ./ $(xpdf_include) GFXOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
-	$(CC) -I ./ -I xpdf InfoOutputDev.cc -o $@
+	$(CC) -I ./ $(xpdf_include) InfoOutputDev.cc -o $@
 BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
-	$(CC) -I ./ -I xpdf BitmapOutputDev.cc -o $@
+	$(CC) -I ./ $(xpdf_include) BitmapOutputDev.cc -o $@
 XMLOutputDev.$(O): XMLOutputDev.cc XMLOutputDev.h xpdf/TextOutputDev.h
-	$(CC) -I ./ -I xpdf XMLOutputDev.cc -o $@
+	$(CC) -I ./ $(xpdf_include) XMLOutputDev.cc -o $@
 FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
-	$(CC) -I ./ -I xpdf FullBitmapOutputDev.cc -o $@
+	$(CC) -I ./ $(xpdf_include) FullBitmapOutputDev.cc -o $@
 DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h InfoOutputDev.h
-	$(CC) -I ./ -I xpdf DummyOutputDev.cc -o $@
+	$(CC) -I ./ $(xpdf_include) DummyOutputDev.cc -o $@
 pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h InfoOutputDev.h
-	$(CC) -I ./ -I xpdf pdf.cc -o $@
+	$(CC) -I ./ $(xpdf_include) pdf.cc -o $@
 
 XPDFOK = xpdf/Gfx.cc
 ifeq ($(shell echo inject*xpdf.pl),inject-xpdf.pl)
@@ -178,17 +180,17 @@ pdfinfo.$(O): $(XPDFOK) xpdf/pdfinfo.cc $(xpdf_objects)
 	$(CC) -DXPDFEXE -I xpdf -I . xpdf/pdfinfo.cc
 
 pdftoppm$(E): $(XPDFOK) xpdf/pdftoppm.$(O) xpdf/parseargs.$(O) $(xpdf_objects) $(splash_objects)
-	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftoppm.$(O) $(xpdf_objects) $(splash_objects) xpdf/parseargs.$(O) -o pdftoppm$(E) $(LIBS)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g $(xpdf_include) -I . xpdf/pdftoppm.$(O) $(xpdf_objects) $(splash_objects) xpdf/parseargs.$(O) -o pdftoppm$(E) $(LIBS)
 pdftotext$(E): $(XPDFOK) xpdf/pdftotext.$(O) xpdf/parseargs.$(O) $(xpdf_objects)
-	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdftotext.$(O) $(xpdf_objects) xpdf/parseargs.$(O) -o pdftotext$(E) $(LIBS)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g $(xpdf_include) -I . xpdf/pdftotext.$(O) $(xpdf_objects) xpdf/parseargs.$(O) -o pdftotext$(E) $(LIBS)
 pdfinfo$(E): $(XPDFOK) xpdf/pdfinfo.$(O) xpdf/parseargs.$(O) $(xpdf_objects)
-	$(LL) $(CPPFLAGS) -DXPDFEXE -g -I xpdf -I . xpdf/pdfinfo.$(O) $(xpdf_objects) xpdf/parseargs.$(O) -o pdfinfo$(E) $(LIBS)
+	$(LL) $(CPPFLAGS) -DXPDFEXE -g $(xpdf_include) -I . xpdf/pdfinfo.$(O) $(xpdf_objects) xpdf/parseargs.$(O) -o pdfinfo$(E) $(LIBS)
 
 gfx_objects = ../libgfxswf$(A) ../libgfx$(A) ../librfxswf$(A) ../libbase$(A)
 gfx_objects2 = $(gfx_objects) ../libocr$(A)
 
 pdf2jpeg$(E): $(XPDFOK) pdf2jpeg.c ../libbase$(A) xpdf/parseargs.$(O) $(xpdf_objects) $(splash_objects)
-	$(LL) $(CPPFLAGS) -DXPDFEXE -Ixpdf -I. -g pdf2jpeg.c xpdf/parseargs.$(O) ../libbase$(A) $(xpdf_objects) $(splash_objects) -o pdf2jpeg$(E) $(LIBS)
+	$(LL) $(CPPFLAGS) -DXPDFEXE $(xpdf_include) -I. -g pdf2jpeg.c xpdf/parseargs.$(O) ../libbase$(A) $(xpdf_objects) $(splash_objects) -o pdf2jpeg$(E) $(LIBS)
 pdf2swf$(E): $(XPDFOK) ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
 	$(LL) $(CPPFLAGS) -g ../../src/pdf2swf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects) -o pdf2swf$(E) $(LIBS)
 pdf2pdf$(E): $(XPDFOK) ../../src/pdf2pdf.c $(libgfxpdf_objects) $(xpdf_in_source) $(splash_in_source) $(gfx_objects)
