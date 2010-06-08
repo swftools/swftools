@@ -24,6 +24,7 @@
 #include "GfxFont.h"
 #include "OutputDev.h"
 #include "SplashOutputDev.h"
+#include "Page.h"
 #ifdef HAVE_POPPLER
 #include <splash/SplashTypes.h>
 #include <splash/SplashPath.h>
@@ -99,6 +100,7 @@ class InfoOutputDev: public OutputDev
     FontInfo* currentfont;
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
+    Page *page;
 
     public:
     int x1,y1,x2,y2;
@@ -117,7 +119,13 @@ class InfoOutputDev: public OutputDev
     virtual GBool upsideDown();
     virtual GBool useDrawChar();
     virtual GBool interpretType3Chars();
-    virtual void startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2);
+    virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
+			       int rotate, GBool useMediaBox, GBool crop,
+			       int sliceX, int sliceY, int sliceW, int sliceH,
+			       GBool printing, Catalog *catalog,
+			       GBool (*abortCheckCbk)(void *data) = NULL,
+			       void *abortCheckCbkData = NULL);
+    virtual void startPage(int pageNum, GfxState *state);
     virtual void endPage();
     virtual void drawLink(Link *link, Catalog *catalog);
     virtual double getMaximumFontSize(char*id);

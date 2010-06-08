@@ -85,15 +85,6 @@
      for (i = oldLen; i < mapLen; ++i) {
        map[i] = 0;
      }
---- xpdf/CoreOutputDev.cc.orig	2010-05-18 11:22:18.000000000 -0700
-+++ xpdf/CoreOutputDev.cc	2010-05-18 11:22:18.000000000 -0700
-@@ -57,5 +57,5 @@
- 
- void CoreOutputDev::clear() {
-   startDoc(NULL);
--  startPage(0, NULL);
-+  startPage(0, NULL, 0,0,0,0);
- }
 --- xpdf/Decrypt.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/Decrypt.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -596,6 +596,7 @@
@@ -106,19 +97,6 @@
      }
 --- xpdf/Gfx.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/Gfx.cc	2010-05-18 11:22:18.000000000 -0700
-@@ -454,7 +454,11 @@
-   fontChanged = gFalse;
-   clip = clipNone;
-   ignoreUndef = 0;
--  out->startPage(pageNum, state);
-+  if(cropBox) {
-+      out->startPage(pageNum, state, cropBox->x1,cropBox->y1,cropBox->x2,cropBox->y2);
-+  } else {
-+      out->startPage(pageNum, state, 0,0,0,0);
-+  }
-   out->setDefaultCTM(state->getCTM());
-   out->updateAll(state);
-   for (i = 0; i < 6; ++i) {
 @@ -465,6 +469,7 @@
    abortCheckCbkData = abortCheckCbkDataA;
  
@@ -812,15 +790,6 @@
  
  class GString;
  class GfxState;
-@@ -94,7 +95,7 @@
-     { return gTrue; }
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state) {}
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {}
- 
-   // End a page.
-   virtual void endPage() {}
 --- xpdf/SplashFTFont.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/SplashFTFont.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -46,6 +46,7 @@
@@ -973,15 +942,6 @@
  #include <math.h>
  #include "gfile.h"
  #include "GlobalParams.h"
-@@ -702,7 +703,7 @@
-   nT3Fonts = 0;
- }
- 
--void SplashOutputDev::startPage(int pageNum, GfxState *state) {
-+void SplashOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
-   int w, h;
-   double *ctm;
-   SplashCoord mat[6];
 @@ -2646,9 +2647,9 @@
  
    softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
@@ -996,15 +956,6 @@
        tBitmap->getPixel(x, y, color);
 --- xpdf/SplashOutputDev.h.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/SplashOutputDev.h	2010-05-18 11:22:18.000000000 -0700
-@@ -70,7 +70,7 @@
-   //----- initialization and control
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state);
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
- 
-   // End a page.
-   virtual void endPage();
 @@ -196,6 +196,9 @@
    virtual void setVectorAntialias(GBool vaa);
  #endif
@@ -1136,17 +1087,6 @@
  };
  
  //------------------------------------------------------------------------
---- xpdf/TextOutputDev.cc.orig	2010-05-18 11:22:18.000000000 -0700
-+++ xpdf/TextOutputDev.cc	2010-05-18 11:22:18.000000000 -0700
-@@ -3877,7 +3877,7 @@
-   }
- }
- 
--void TextOutputDev::startPage(int pageNum, GfxState *state) {
-+void TextOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2) {
-   text->startPage(state);
- }
- 
 --- xpdf/TextOutputDev.h.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/TextOutputDev.h	2010-05-18 11:22:18.000000000 -0700
 @@ -170,6 +170,7 @@
@@ -1157,15 +1097,6 @@
  };
  
  //------------------------------------------------------------------------
-@@ -578,7 +579,7 @@
-   //----- initialization and control
- 
-   // Start a page.
--  virtual void startPage(int pageNum, GfxState *state);
-+  virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
- 
-   // End a page.
-   virtual void endPage();
 --- xpdf/gfile.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/gfile.cc	2010-05-18 11:22:18.000000000 -0700
 @@ -439,6 +439,52 @@

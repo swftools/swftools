@@ -1626,7 +1626,7 @@ void GFXOutputDev::endType3Char(GfxState *state)
     msg("<debug> endType3Char");
 }
 
-void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2) 
+void GFXOutputDev::startPage(int pageNum, GfxState *state)
 {
     this->currentpage = pageNum;
     double x1,y1,x2,y2;
@@ -1635,6 +1635,7 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     gfxcolor_t black = {255,0,0,0};
     laststate = state;
     gfxline_t clippath[5];
+    PDFRectangle *r = this->page->getCropBox();
 
     /* state->transform(state->getX1(),state->getY1(),&x1,&y1);
     state->transform(state->getX2(),state->getY2(),&x2,&y2);
@@ -1645,8 +1646,8 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, doubl
     y1 = crop_y1;
     x2 = crop_x2;
     y2 = crop_y2;*/
-    state->transform(crop_x1,crop_y1,&x1,&y1); //x1 += user_movex; y1 += user_movey;
-    state->transform(crop_x2,crop_y2,&x2,&y2); //x2 += user_movex; y2 += user_movey;
+    state->transform(r->x1,r->y1,&x1,&y1); //x1 += user_movex; y1 += user_movey;
+    state->transform(r->x2,r->y2,&x2,&y2); //x2 += user_movex; y2 += user_movey;
 
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}

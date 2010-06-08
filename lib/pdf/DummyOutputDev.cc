@@ -39,9 +39,9 @@ DummyOutputDev::~DummyOutputDev()
 	delete this->rgbdev;this->rgbdev= 0;
     }
 }
-void DummyOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
+void DummyOutputDev::startPage(int pageNum, GfxState *state)
 {
-    rgbdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
+    rgbdev->startPage(pageNum, state);
 }
 
 void DummyOutputDev::endPage()

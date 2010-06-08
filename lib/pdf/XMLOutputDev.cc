@@ -41,9 +41,9 @@ XMLOutputDev::~XMLOutputDev()
   fclose(out);
 }
 
-void XMLOutputDev::startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2)
+void XMLOutputDev::startPage(int pageNum, GfxState *state)
 {
-    TextOutputDev::startPage(pageNum, state, x1, y1, x2, y2);
+    TextOutputDev::startPage(pageNum, state);
     fprintf(out, "<page nr=\"%d\" width=\"%.0f\" height=\"%.0f\">\n", pageNum,
 	state->getPageWidth(), state->getPageHeight());
 }

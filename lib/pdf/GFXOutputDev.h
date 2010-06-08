@@ -73,7 +73,7 @@ public:
   virtual void setParameter(const char*key, const char*value);
   
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state, double x1, double y1, double x2, double y2) ;
+  virtual void startPage(int pageNum, GfxState *state);
   virtual void endPage();
 
   //----- get info about output device

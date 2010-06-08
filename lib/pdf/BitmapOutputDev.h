@@ -65,14 +65,14 @@ public:
     virtual GBool interpretType3Chars();
     virtual GBool needNonText();
     virtual void setDefaultCTM(double *ctm);
-/*    virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
+    virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
 			       int rotate, GBool useMediaBox, GBool crop,
 			       int sliceX, int sliceY, int sliceW, int sliceH,
 			       GBool printing, Catalog *catalog,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
-			       void *abortCheckCbkData = NULL);*/
+			       void *abortCheckCbkData = NULL);
 
-    virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+    virtual void startPage(int pageNum, GfxState *state);
     virtual void endPage();
     virtual void finishPage();
 

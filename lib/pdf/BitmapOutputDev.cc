@@ -851,12 +851,24 @@ GBool BitmapOutputDev::intersection(SplashBitmap*boolpoly, SplashBitmap*booltext
     }
 }
 
-
-void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
+GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
+             int rotate, GBool useMediaBox, GBool crop,
+             int sliceX, int sliceY, int sliceW, int sliceH,
+             GBool printing, Catalog *catalog,
+             GBool (*abortCheckCbk)(void *data),
+             void *abortCheckCbkData)
 {
+    this->setPage(page);
+    gfxdev->setPage(page);
+    return gTrue;
+}
+
+void BitmapOutputDev::startPage(int pageNum, GfxState *state)
+{
+    PDFRectangle *r = this->page->getCropBox();
     double x1,y1,x2,y2;
-    state->transform(crop_x1,crop_y1,&x1,&y1);
-    state->transform(crop_x2,crop_y2,&x2,&y2);
+    state->transform(r->x1,r->y1,&x1,&y1);
+    state->transform(r->x2,r->y2,&x2,&y2);
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
     
@@ -872,12 +884,12 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, do
     this->width = (int)(x2-x1);
     this->height = (int)(y2-y1);
 
-    rgbdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-    boolpolydev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-    booltextdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-    clip0dev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-    clip1dev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-    gfxdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
+    rgbdev->startPage(pageNum, state);
+    boolpolydev->startPage(pageNum, state);
+    booltextdev->startPage(pageNum, state);
+    clip0dev->startPage(pageNum, state);
+    clip1dev->startPage(pageNum, state);
+    gfxdev->startPage(pageNum, state);
 
     boolpolybitmap = boolpolydev->getBitmap();
     stalepolybitmap = new SplashBitmap(boolpolybitmap->getWidth(), boolpolybitmap->getHeight(), 1, boolpolybitmap->getMode(), 0);
@@ -990,15 +1002,6 @@ GBool BitmapOutputDev::needNonText()
     clip1dev->needNonText();
     return rgbdev->needNonText();
 }
-/*GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
-			   int rotate, GBool useMediaBox, GBool crop,
-			   int sliceX, int sliceY, int sliceW, int sliceH,
-			   GBool printing, Catalog *catalog,
-			   GBool (*abortCheckCbk)(void *data),
-			   void *abortCheckCbkData)
-{
-    return gTrue;
-}*/
 void BitmapOutputDev::setDefaultCTM(double *ctm) 
 {
     boolpolydev->setDefaultCTM(ctm);

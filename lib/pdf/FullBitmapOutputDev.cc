@@ -193,11 +193,24 @@ void FullBitmapOutputDev::flushBitmap()
     free(img->data);img->data=0;free(img);img=0;
 }
 
-void FullBitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
+GBool FullBitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
+             int rotate, GBool useMediaBox, GBool crop,
+             int sliceX, int sliceY, int sliceW, int sliceH,
+             GBool printing, Catalog *catalog,
+             GBool (*abortCheckCbk)(void *data),
+             void *abortCheckCbkData)
+{
+    this->setPage(page);
+    gfxdev->setPage(page);
+    return gTrue;
+}
+
+void FullBitmapOutputDev::startPage(int pageNum, GfxState *state)
 {
     double x1,y1,x2,y2;
-    state->transform(crop_x1,crop_y1,&x1,&y1);
-    state->transform(crop_x2,crop_y2,&x2,&y2);
+    PDFRectangle *r = page->getCropBox();
+    state->transform(r->x1,r->y1,&x1,&y1);
+    state->transform(r->x2,r->y2,&x2,&y2);
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
     
@@ -214,8 +227,8 @@ void FullBitmapOutputDev::startPage(int pageNum, GfxState *state, double crop_x1
     this->height = (int)(y2-y1);
 
     msg("<debug> startPage");
-    rgbdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
-    gfxdev->startPage(pageNum, state, crop_x1, crop_y1, crop_x2, crop_y2);
+    rgbdev->startPage(pageNum, state);
+    gfxdev->startPage(pageNum, state);
 }
 
 void FullBitmapOutputDev::endPage()

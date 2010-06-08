@@ -21,6 +21,7 @@
 #define __commonoutputdev_h__
 
 #include "OutputDev.h"
+#include "../gfxdevice.h"
 
 #define RENDER_FILL 0
 #define RENDER_STROKE 1
@@ -37,6 +38,21 @@ class CommonOutputDev: public OutputDev
     virtual void setParameter(const char*key, const char*value) = 0;
     virtual void setPageMap(int*pagemap, int pagemap_len) = 0;
   
+    virtual void setPage(Page *page) { this->page = page; }
     virtual void finishPage() {};
+
+    virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
+			       int rotate, GBool useMediaBox, GBool crop,
+			       int sliceX, int sliceY, int sliceW, int sliceH,
+			       GBool printing, Catalog *catalog,
+			       GBool (*abortCheckCbk)(void *data) = NULL,
+			       void *abortCheckCbkData = NULL)
+    {
+        this->setPage(page);
+        return gTrue;
+    }
+
+    protected:
+    Page *page;
 };
 #endif //__deviceinterface_h__

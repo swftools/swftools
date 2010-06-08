@@ -53,7 +53,7 @@ public:
 			       GBool (*abortCheckCbk)(void *data) = NULL,
 			       void *abortCheckCbkData = NULL);*/
 
-    virtual void startPage(int pageNum, GfxState *state, double x1,double y1,double x2,double y2);
+    virtual void startPage(int pageNum, GfxState *state);
     virtual void endPage();
 
     virtual void saveState(GfxState *state);

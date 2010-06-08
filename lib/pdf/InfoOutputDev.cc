@@ -298,11 +298,23 @@ GBool InfoOutputDev::useDrawChar() {return gTrue;}
 GBool InfoOutputDev::interpretType3Chars() {return gTrue;}
 GBool InfoOutputDev::useTilingPatternFill() {return gTrue;}
 
-void InfoOutputDev::startPage(int pageNum, GfxState *state, double crop_x1, double crop_y1, double crop_x2, double crop_y2)
+GBool InfoOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
+             int rotate, GBool useMediaBox, GBool crop,
+             int sliceX, int sliceY, int sliceW, int sliceH,
+             GBool printing, Catalog *catalog,
+             GBool (*abortCheckCbk)(void *data),
+             void *abortCheckCbkData)
 {
+    this->page = page;
+    return gTrue;
+}
+
+void InfoOutputDev::startPage(int pageNum, GfxState *state)
+{
+    PDFRectangle *r = this->page->getCropBox();
     double x1,y1,x2,y2;
-    state->transform(crop_x1,crop_y1,&x1,&y1);
-    state->transform(crop_x2,crop_y2,&x2,&y2);
+    state->transform(r->x1,r->y1,&x1,&y1);
+    state->transform(r->x2,r->y2,&x2,&y2);
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
     this->x1 = (int)x1;
