@@ -30,7 +30,7 @@ void ibbox_destroy(ibbox_t*b)
     }
 }
 
-ibbox_t*get_bitmap_bboxes_simple(unsigned char*alpha, int width, int height)
+ibbox_t*get_bitmap_bboxes_simple(unsigned char*alpha, int width, int height, int rowsize)
 {
     int ymin = -1;
     int ymax = -1;
@@ -39,7 +39,7 @@ ibbox_t*get_bitmap_bboxes_simple(unsigned char*alpha, int width, int height)
 
     int x,y;
     for(y=0;y<height;y++) {
-	unsigned char*a = &alpha[y*width];
+	unsigned char*a = &alpha[y*rowsize];
 	for(x=0;x<width;x++) {
 	    if(a[x]) break;
 	}
@@ -79,6 +79,7 @@ typedef struct _head {
 typedef struct _context {
     void**group;
     unsigned char*alpha;
+    int rowsize;
     int width;
     int height;
     head_t*heads;
@@ -193,6 +194,21 @@ static inline void merge(context_t*context, int set1, int set2)
     }
 }
 
+ibbox_t ibbox_clip(ibbox_t* outer, ibbox_t* inner)
+{
+    ibbox_t i = {inner->xmin, inner->ymin, inner->xmax, inner->ymax, 0};
+    if(i.xmax > outer->xmax) i.xmax = outer->xmax;
+    if(i.ymax > outer->ymax) i.ymax = outer->ymax;
+    if(i.xmax < outer->xmin) i.xmax = outer->xmin;
+    if(i.ymax < outer->ymin) i.ymax = outer->ymin;
+    
+    if(i.xmin > outer->xmax) i.xmin = outer->xmax;
+    if(i.ymin > outer->ymax) i.ymin = outer->ymax;
+    if(i.xmin < outer->xmin) i.xmin = outer->xmin;
+    if(i.ymin < outer->ymin) i.ymin = outer->ymin;
+    return i;
+}
+
 static void** annotate(context_t*context)
 {
     unsigned char*alpha = context->alpha;
@@ -211,9 +227,11 @@ static void** annotate(context_t*context)
 	}
     }
     int pos = 0;
+    int apos = 0;
     for(y=1;y<height;y++) {
 	pos += width;
-	if(alpha[pos]) {
+	apos += context->rowsize;
+	if(alpha[apos]) {
 	    if(group[pos-width])
 		link_to(context,pos,pos-width);
 	    else
@@ -223,7 +241,7 @@ static void** annotate(context_t*context)
 	    /* once this code is stable we should copy&paste it
 	       out of the loop, change the loop end to width-1 and
 	       add the pos-width+1 case */
-	    if(alpha[pos+x]) {
+	    if(alpha[apos+x]) {
 		if(group[pos+x-width]) {
 		    link_to(context,pos+x,pos+x-width);
 		    if(group[pos+x-1])
@@ -403,14 +421,15 @@ static void display(context_t*context)
     }
 }
 
-ibbox_t*get_bitmap_bboxes(unsigned char*alpha, int width, int height)
+ibbox_t*get_bitmap_bboxes(unsigned char*alpha, int width, int height, int rowsize)
 {
     int size = width*height;
     if(width<=1 || height<=1)
-	return get_bitmap_bboxes_simple(alpha, width, height);
+	return get_bitmap_bboxes_simple(alpha, width, height, rowsize);
     
     context_t context;
     context.alpha = alpha;
+    context.rowsize = rowsize;
     context.width = width;
     context.height = height;
     context.heads = 0;
@@ -457,6 +476,6 @@ int main(int argn, char*argv[])
 	"\1\0\0\0\0\0\1\0"
 	"\1\1\1\0\0\0\0\0";
 
-    get_bitmap_bboxes(alpha, 8,8);
+    get_bitmap_bboxes(alpha, 8,8, 8);
 }
 #endif

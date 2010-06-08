@@ -174,8 +174,8 @@ static int dbg_btm_counter=1;
 
 void BitmapOutputDev::flushBitmap()
 {
-    int width = rgbdev->getBitmapWidth();
-    int height = rgbdev->getBitmapHeight();
+    int bitmap_width = rgbdev->getBitmapWidth();
+    int bitmap_height = rgbdev->getBitmapHeight();
 
     if(sizeof(SplashColor)!=3) {
 	msg("<error> sizeof(SplashColor)!=3");
@@ -196,7 +196,7 @@ void BitmapOutputDev::flushBitmap()
     Guchar*alpha = rgbbitmap->getAlphaPtr();
     
     Guchar*alpha2 = stalepolybitmap->getDataPtr();
-    int width8 = (stalepolybitmap->getWidth()+7)/8;
+    int bitmap_width8 = (stalepolybitmap->getWidth()+7)/8;
 
     /*char filename[80];
     sprintf(filename, "flush%d_mask.png", dbg_btm_counter);
@@ -206,14 +206,17 @@ void BitmapOutputDev::flushBitmap()
     sprintf(filename, "flush%d_bitmap.png", dbg_btm_counter);
     writeBitmap(rgbbitmap, filename);*/
 
-    ibbox_t* boxes = get_bitmap_bboxes((unsigned char*)alpha, width, height);
-    ibbox_t*b;
+    ibbox_t pagebox = {-movex, -movey, -movex + this->width, -movey + this->height, 0};
+    ibbox_t bitmapbox = {0, 0, bitmap_width, bitmap_height, 0};
+    ibbox_t c = ibbox_clip(&bitmapbox, &pagebox);
+    ibbox_t* boxes = get_bitmap_bboxes((unsigned char*)(alpha+c.ymin*bitmap_width+c.xmin), c.xmax - c.xmin, c.ymax - c.ymin, bitmap_width);
 
+    ibbox_t*b;
     for(b=boxes;b;b=b->next) {
-	int xmin = b->xmin;
-	int ymin = b->ymin;
-	int xmax = b->xmax;
-	int ymax = b->ymax;
+	int xmin = b->xmin - this->movex;
+	int ymin = b->ymin - this->movey;
+	int xmax = b->xmax - this->movex;
+	int ymax = b->ymax - this->movey;
 
 	/* clip against (-movex, -movey, -movex+width, -movey+height) */
 
@@ -248,10 +251,10 @@ void BitmapOutputDev::flushBitmap()
 	img->height = rangey;
 	int x,y;
 	for(y=0;y<rangey;y++) {
-	    SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*sizeof(SplashColor)];
+	    SplashColorPtr in=&rgb[((y+ymin)*bitmap_width+xmin)*sizeof(SplashColor)];
 	    gfxcolor_t*out = &img->data[y*rangex];
-	    Guchar*ain = &alpha[(y+ymin)*width+xmin];
-	    Guchar*ain2 = &alpha2[(y+ymin)*width8];
+	    Guchar*ain = &alpha[(y+ymin)*bitmap_width+xmin];
+	    Guchar*ain2 = &alpha2[(y+ymin)*bitmap_width8];
 	    if(this->emptypage) {
 		for(x=0;x<rangex;x++) {
 		    /* the first bitmap on the page doesn't need to have an alpha channel-
