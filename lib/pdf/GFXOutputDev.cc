@@ -2640,6 +2640,9 @@ void addGlobalFont(const char*filename)
 
 void addGlobalLanguageDir(const char*dir)
 {
+#ifdef HAVE_POPPLER
+    msg("<notice> NOT adding %s to language pack directories (not implemented with poppler)", dir);
+#else
     msg("<notice> Adding %s to language pack directories", dir);
 
     FILE*fi = 0;
@@ -2655,6 +2658,7 @@ void addGlobalLanguageDir(const char*dir)
     }
     globalParams->parseFile(new GString(config_file), fi);
     fclose(fi);
+#endif
 }
 
 void addGlobalFontDir(const char*dirname)
