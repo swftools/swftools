@@ -435,15 +435,15 @@ GBool FullBitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShadin
     msg("<debug> functionShadedFill");
     return rgbdev->functionShadedFill(state, shading);
 }
-GBool FullBitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
+GBool FullBitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading POPPLER_RAXIAL_MIN_MAX)
 {
     msg("<debug> axialShadedFill");
-    return rgbdev->axialShadedFill(state, shading);
+    return rgbdev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
 }
-GBool FullBitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
+GBool FullBitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading POPPLER_RAXIAL_MIN_MAX)
 {
     msg("<debug> radialShadedFill");
-    return rgbdev->radialShadedFill(state, shading);
+    return rgbdev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
 }
 
 void FullBitmapOutputDev::clip(GfxState *state)

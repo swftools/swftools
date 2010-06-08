@@ -109,8 +109,8 @@ public:
 
     virtual GBool functionShadedFill(GfxState *state,
 				     GfxFunctionShading *shading);
-    virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading);
-    virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading);
+    virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading POPPLER_RAXIAL_MIN_MAX);
+    virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading POPPLER_RAXIAL_MIN_MAX);
 
     virtual void clip(GfxState *state);
     virtual void eoClip(GfxState *state);

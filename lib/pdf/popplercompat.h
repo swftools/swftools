@@ -34,4 +34,12 @@
 char* mktmpname(char*ptr);
 #endif
 
+#ifdef HAVE_POPPLER
+  #define POPPLER_RAXIAL_MIN_MAX , double min, double max
+  #define POPPLER_RAXIAL_MIN_MAX_ARG , min, max
+#else
+  #define POPPLER_RAXIAL_MIN_MAX
+  #define POPPLER_RAXIAL_MIN_MAX_ARG
+#endif
+
 #endif

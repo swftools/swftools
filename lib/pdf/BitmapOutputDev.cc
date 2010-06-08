@@ -1434,19 +1434,21 @@ GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *s
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
     return rgbdev->functionShadedFill(state, shading);
 }
-GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
+
+GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading POPPLER_RAXIAL_MIN_MAX)
 {
     msg("<debug> axialShadedFill");
-    boolpolydev->axialShadedFill(state, shading);
+    boolpolydev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    return rgbdev->axialShadedFill(state, shading);
+    return rgbdev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
 }
-GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
+
+GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading POPPLER_RAXIAL_MIN_MAX)
 {
     msg("<debug> radialShadedFill");
-    boolpolydev->radialShadedFill(state, shading);
+    boolpolydev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    return rgbdev->radialShadedFill(state, shading);
+    return rgbdev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
 }
 
 SplashColor black = {0,0,0};
