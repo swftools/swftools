@@ -184,6 +184,15 @@
  
 --- xpdf/GfxFont.cc.orig	2010-05-18 11:22:18.000000000 -0700
 +++ xpdf/GfxFont.cc	2010-05-18 11:22:18.000000000 -0700
+@@ -194,7 +194,7 @@
+       embFontID = obj2.getRef();
+       if (type != fontType1) {
+ 	error(-1, "Mismatch between font type and embedded font file");
+-	type = fontType1;
++	type = isCIDFont() ? fontCIDType0 : fontType1;
+       }
+     }
+     obj2.free();
 @@ -919,6 +919,10 @@
    return 1;
  }
