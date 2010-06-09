@@ -4,6 +4,18 @@
 #include "../../config.h"
 
 #ifdef HAVE_POPPLER
+  #define POPPLER_INTERPOLATE GBool interpolate,
+  #define POPPLER_INTERPOLATE_ARG interpolate,
+  #define POPPLER_MASK_INTERPOLATE , GBool maskInterpolate
+  #define POPPLER_MASK_INTERPOLATE_ARG , maskInterpolate
+#else
+  #define POPPLER_INTERPOLATE
+  #define POPPLER_INTERPOLATE_ARG
+  #define POPPLER_MASK_INTERPOLATE
+  #define POPPLER_MASK_INTERPOLATE_ARG
+#endif
+
+#ifdef HAVE_POPPLER
   #define POPPLER_TILING_PATERN_RETURN GBool
   #define POPPLER_TILING_PATERN_GFX
   #define POPPLER_TILING_PATERN_GFX_ARG

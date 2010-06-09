@@ -1713,7 +1713,7 @@ GBool invalid_size(int width, int height)
 }
 
 void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-			   int width, int height, GBool invert,
+			   int width, int height, GBool invert, POPPLER_INTERPOLATE
 			   GBool inlineImg)
 {
     msg("<debug> drawImageMask streamkind=%d", str->getKind());
@@ -1722,15 +1722,16 @@ void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     CopyStream*cpystr = new CopyStream(str, height * ((width + 7) / 8));
     str = cpystr->getStream();
     
-    boolpolydev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
+    boolpolydev->drawImageMask(state, ref, str, width, height, invert, POPPLER_INTERPOLATE_ARG inlineImg);
     gfxbbox_t bbox = getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawImageMask(state, ref, str, width, height, invert, inlineImg);
+    rgbdev->drawImageMask(state, ref, str, width, height, invert, POPPLER_INTERPOLATE_ARG inlineImg);
     delete cpystr;
     dbg_newdata("imagemask");
 }
 void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
+		       POPPLER_INTERPOLATE
 		       int *maskColors, GBool inlineImg)
 {
     msg("<debug> drawImage streamkind=%d", str->getKind());
@@ -1739,18 +1740,19 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
 
-    boolpolydev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
+    boolpolydev->drawImage(state, ref, str, width, height, colorMap, POPPLER_INTERPOLATE_ARG maskColors, inlineImg);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawImage(state, ref, str, width, height, colorMap, maskColors, inlineImg);
+    rgbdev->drawImage(state, ref, str, width, height, colorMap, POPPLER_INTERPOLATE_ARG maskColors, inlineImg);
     delete cpystr;
     dbg_newdata("image");
 }
 void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     int width, int height,
 			     GfxImageColorMap *colorMap,
+			     POPPLER_INTERPOLATE
 			     Stream *maskStr, int maskWidth, int maskHeight,
-			     GBool maskInvert)
+			     GBool maskInvert POPPLER_MASK_INTERPOLATE)
 {
     msg("<debug> drawMaskedImage streamkind=%d", str->getKind());
     if(invalid_size(width,height)) return;
@@ -1758,19 +1760,20 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
 
-    boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
+    boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, POPPLER_INTERPOLATE_ARG maskStr, maskWidth, maskHeight, maskInvert POPPLER_MASK_INTERPOLATE_ARG);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskInvert);
+    rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, POPPLER_INTERPOLATE_ARG maskStr, maskWidth, maskHeight, maskInvert POPPLER_MASK_INTERPOLATE_ARG);
     delete cpystr;
     dbg_newdata("maskedimage");
 }
 void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				 int width, int height,
 				 GfxImageColorMap *colorMap,
+				 POPPLER_INTERPOLATE
 				 Stream *maskStr,
 				 int maskWidth, int maskHeight,
-				 GfxImageColorMap *maskColorMap)
+				 GfxImageColorMap *maskColorMap POPPLER_MASK_INTERPOLATE)
 {
     msg("<debug> drawSoftMaskedImage %dx%d (%dx%d) streamkind=%d", width, height, maskWidth, maskHeight, str->getKind());
     if(invalid_size(width,height)) return;
@@ -1778,10 +1781,10 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
 
-    boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
+    boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, POPPLER_INTERPOLATE_ARG maskStr, maskWidth, maskHeight, maskColorMap POPPLER_MASK_INTERPOLATE_ARG);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, maskStr, maskWidth, maskHeight, maskColorMap);
+    rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, POPPLER_INTERPOLATE_ARG maskStr, maskWidth, maskHeight, maskColorMap POPPLER_MASK_INTERPOLATE_ARG);
     delete cpystr;
     dbg_newdata("softmaskimage");
 }

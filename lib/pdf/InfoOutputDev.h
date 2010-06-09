@@ -21,20 +21,23 @@
 #ifndef __infooutputdev_h__
 #define __infooutputdev_h__
 
+#include "popplercompat.h"
 #include "GfxFont.h"
 #include "OutputDev.h"
 #include "SplashOutputDev.h"
 #include "Page.h"
+
 #ifdef HAVE_POPPLER
-#include <splash/SplashTypes.h>
-#include <splash/SplashPath.h>
-#include <splash/SplashFont.h>
-#include <splash/SplashFontFile.h>
+  #include <splash/SplashTypes.h>
+  #include <splash/SplashPath.h>
+  #include <splash/SplashFont.h>
+  #include <splash/SplashFontFile.h>
 #else
-#include "SplashTypes.h"
-#include "SplashPath.h"
-#include "SplashFont.h"
-#include "SplashFontFile.h"
+  #include "xpdf/config.h"
+  #include "SplashTypes.h"
+  #include "SplashPath.h"
+  #include "SplashFont.h"
+  #include "SplashFontFile.h"
 #endif
 
 #ifdef HAVE_POPPLER
@@ -146,24 +149,31 @@ class InfoOutputDev: public OutputDev
 			  double dx, double dy,
 			  double originX, double originY,
 			  CharCode code, int nBytes, Unicode *u, int uLen);
+
     virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,
+			       POPPLER_INTERPOLATE
 			       GBool inlineImg);
     virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GfxImageColorMap *colorMap,
+			   POPPLER_INTERPOLATE
 			   int *maskColors, GBool inlineImg);
     virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				  int width, int height,
 				  GfxImageColorMap *colorMap,
+				  POPPLER_INTERPOLATE
 				  Stream *maskStr,
 				  int maskWidth, int maskHeight,
-				  GBool maskInvert);
+				  GBool maskInvert
+				  POPPLER_MASK_INTERPOLATE);
     virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				      int width, int height,
 				      GfxImageColorMap *colorMap,
+				      POPPLER_INTERPOLATE
 				      Stream *maskStr,
 				      int maskWidth, int maskHeight,
-				      GfxImageColorMap *maskColorMap);
+				      GfxImageColorMap *maskColorMap
+				      POPPLER_MASK_INTERPOLATE);
 
     virtual FontInfo* getFont(char*id);
 };
