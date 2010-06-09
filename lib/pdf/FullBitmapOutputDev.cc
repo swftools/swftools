@@ -19,12 +19,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
-#include "config.h"
 #include "FullBitmapOutputDev.h"
 #include "GFXOutputDev.h"
-#include "SplashBitmap.h"
-#include "SplashPattern.h"
-#include "Splash.h"
+
+#ifdef HAVE_POPPLER
+  #include "splash/SplashBitmap.h"
+  #include "splash/SplashPattern.h"
+  #include "splash/Splash.h"
+#else
+  #include "xpdf/config.h"
+  #include "SplashBitmap.h"
+  #include "SplashPattern.h"
+  #include "Splash.h"
+#endif
+
 #include "../log.h"
 #include "../png.h"
 #include "../devices/record.h"
@@ -408,27 +416,19 @@ void FullBitmapOutputDev::eoFill(GfxState *state)
     msg("<debug> eoFill");
     rgbdev->eoFill(state);
 }
-#if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
-void FullBitmapOutputDev::tilingPatternFill(GfxState *state, Object *str,
+POPPLER_TILING_PATERN_RETURN FullBitmapOutputDev::tilingPatternFill(GfxState *state, POPPLER_TILING_PATERN_GFX
+             Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep)
 {
     msg("<debug> tilingPatternFill");
-    rgbdev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-}
-#else
-void FullBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
-			       int paintType, Dict *resDict,
-			       double *mat, double *bbox,
-			       int x0, int y0, int x1, int y1,
-			       double xStep, double yStep) 
-{
-    msg("<debug> tilingPatternFill");
-    rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-}
+#ifdef HAVE_POPPLER
+    return
 #endif
+    rgbdev->tilingPatternFill(state, POPPLER_TILING_PATERN_GFX_ARG str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
+}
 
 GBool FullBitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
 {

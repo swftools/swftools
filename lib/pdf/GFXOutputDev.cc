@@ -36,15 +36,20 @@
 #ifdef HAVE_FONTCONFIG
 #include <fontconfig.h>
 #endif
+
+#include "../../config.h"
+
 //xpdf header files
-#include "config.h"
-#ifdef HAVE_POPPLER
-#include <goo/GooString.h>
-#include <goo/gfile.h>
+#include "popplercompat.h"
+  #ifdef HAVE_POPPLER
+  #include <goo/GooString.h>
+  #include <goo/gfile.h>
 #else
-#include "gfile.h"
-#include "GString.h"
+  #include "xpdf/config.h"
+  #include "gfile.h"
+  #include "GString.h"
 #endif
+
 #include "Object.h"
 #include "Stream.h"
 #include "Array.h"
@@ -962,23 +967,21 @@ void GFXOutputDev::transformXY(GfxState*state, double x, double y, double*nx, do
     *ny += user_movey + clipmovey;
 }
 
-
-#if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
-void GFXOutputDev::tilingPatternFill(GfxState *state, Object *str,
-			       int paintType, Dict *resDict,
-			       double *mat, double *bbox,
-			       int x0, int y0, int x1, int y1,
-			       double xStep, double yStep)
-#else
-void GFXOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
+POPPLER_TILING_PATERN_RETURN GFXOutputDev::tilingPatternFill(GfxState *state,
+			       POPPLER_TILING_PATERN_GFX
+			       Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep) 
-#endif
 {
     msg("<debug> tilingPatternFill");
     infofeature("tiling pattern fills");
+#ifdef HAVE_POPPLER
+    // since we don't implement this method yet,
+    // reduce it to a series of other drawing operations.
+    return gFalse;
+#endif
 }
 
 GBool GFXOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 

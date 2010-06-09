@@ -20,12 +20,20 @@
 #include <stdio.h>
 #include <memory.h>
 #include <assert.h>
-#include "config.h"
 #include "BitmapOutputDev.h"
 #include "GFXOutputDev.h"
-#include "SplashBitmap.h"
-#include "SplashPattern.h"
-#include "Splash.h"
+
+#ifdef HAVE_POPPLER
+  #include "splash/SplashBitmap.h"
+  #include "splash/SplashPattern.h"
+  #include "splash/Splash.h"
+#else
+  #include "xpdf/config.h"
+  #include "SplashBitmap.h"
+  #include "SplashPattern.h"
+  #include "Splash.h"
+#endif
+
 #include "../log.h"
 #include "../png.h"
 #include "../devices/record.h"
@@ -1400,33 +1408,24 @@ void BitmapOutputDev::eoFill(GfxState *state)
     rgbdev->eoFill(state);
     dbg_newdata("eofill");
 }
-#if (xpdfMajorVersion*10000 + xpdfMinorVersion*100 + xpdfUpdateVersion) < 30207
-void BitmapOutputDev::tilingPatternFill(GfxState *state, Object *str,
-			       int paintType, Dict *resDict,
-			       double *mat, double *bbox,
-			       int x0, int y0, int x1, int y1,
-			       double xStep, double yStep)
-{
-    msg("<debug> tilingPatternFill");
-    boolpolydev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-    checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    rgbdev->tilingPatternFill(state, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-    dbg_newdata("tilingpatternfill");
-}
-#else
-void BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
+
+POPPLER_TILING_PATERN_RETURN BitmapOutputDev::tilingPatternFill(GfxState *state, POPPLER_TILING_PATERN_GFX Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep) 
 {
     msg("<debug> tilingPatternFill");
-    boolpolydev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
+    boolpolydev->tilingPatternFill(state, POPPLER_TILING_PATERN_GFX_ARG str, paintType, resDict, mat,
+                                   bbox, x0, y0, x1, y1, xStep, yStep);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
+    rgbdev->tilingPatternFill(state, POPPLER_TILING_PATERN_GFX_ARG str, paintType, resDict, mat,
+                              bbox, x0, y0, x1, y1, xStep, yStep);
     dbg_newdata("tilingpatternfill");
-}
+#ifdef HAVE_POPPLER
+    return gTrue;
 #endif
+}
 
 GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
 {

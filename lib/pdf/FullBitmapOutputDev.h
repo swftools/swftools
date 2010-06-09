@@ -24,7 +24,7 @@
 #include "../gfxsource.h"
 #include "../gfxtools.h"
 
-#include "config.h"
+#include "../../config.h"
 #include "GFXOutputDev.h"
 #include "InfoOutputDev.h"
 #include "PDFDoc.h"
@@ -100,19 +100,12 @@ public:
     virtual void stroke(GfxState *state);
     virtual void fill(GfxState *state);
     virtual void eoFill(GfxState *state);
-#if (xpdfMajorVersion < 3) || (xpdfMinorVersion < 2) || (xpdfUpdateVersion < 7)
-    virtual void tilingPatternFill(GfxState *state, Object *str,
+    virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
+             POPPLER_TILING_PATERN_GFX Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep);
-#else
-    virtual void tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
-			       int paintType, Dict *resDict,
-			       double *mat, double *bbox,
-			       int x0, int y0, int x1, int y1,
-			       double xStep, double yStep);
-#endif
 
     virtual GBool functionShadedFill(GfxState *state,
 				     GfxFunctionShading *shading);
