@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include "XMLOutputDev.h"
 #include "GfxState.h"
+#include "popplercompat.h"
 #ifndef HAVE_POPPLER
   #include "gfile.h"
 #endif

@@ -18,4 +18,8 @@
   #endif
 #endif
 
+#ifdef HAVE_POPPLER
+char* mktmpname(char*ptr);
+#endif
+
 #endif
