@@ -19,9 +19,11 @@
 #include "../../config.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "gfile.h"
 #include "XMLOutputDev.h"
 #include "GfxState.h"
+#ifndef HAVE_POPPLER
+  #include "gfile.h"
+#endif
 
 XMLOutputDev::XMLOutputDev(char*filename)
 :TextOutputDev(mktmpname(0), false, false, false)
@@ -66,10 +68,15 @@ void XMLOutputDev::endPage()
 	TextWord*word = list->get(i);
 	GString*newfont = word->getFontName();
 	double newsize = word->getFontSize();
+#ifdef HAVE_POPPLER
+	double newbase = word->getBaseline();
+#else
 	double newbase = word->base;
-	double newcolor_r = word->colorR;
-	double newcolor_g = word->colorG;
-	double newcolor_b = word->colorB;
+#endif
+	double newcolor_r;
+	double newcolor_g;
+	double newcolor_b;
+  word->getColor(&newcolor_r, &newcolor_g, &newcolor_b);
 
 	if((newfont && newfont->cmp(fontname)) || 
 	   newsize != fontsize ||
@@ -103,15 +110,20 @@ void XMLOutputDev::endPage()
 		if(strstr(name, "medi")) bold = gTrue;
 		if(strstr(name, "serif")) serif = gTrue;
 	    }
-	    
+
+    double xMin,yMin,xMax,yMax;
+    word->getBBox(&xMin, &yMin, &xMax, &yMax);
+
+    int rot = word->getRotation();
+
 	    fprintf(out, "<t font=\"%s\" y=\"%f\" x=\"%f\" bbox=\"%f:%f:%f:%f\" style=\"%s%s%s%s\" fontsize=\"%.0fpt\" color=\"%02x%02x%02x\">", 
 		    name,
 		    newbase,
-		    (word->rot&1)?word->yMin:word->xMin,
-		    (word->rot&1)?word->yMin:word->xMin,
-		    (word->rot&1)?word->xMin:word->yMin,
-		    (word->rot&1)?word->yMax:word->xMax,
-		    (word->rot&1)?word->xMax:word->yMax,
+		    (rot&1)?yMin:xMin,
+		    (rot&1)?yMin:xMin,
+		    (rot&1)?xMin:yMin,
+		    (rot&1)?yMax:xMax,
+		    (rot&1)?xMax:yMax,
 		    info->isFixedWidth()?"fixed;":"",
 		    serif?"serif;":"",
 		    italic?"italic;":"",
@@ -138,7 +150,7 @@ void XMLOutputDev::endPage()
 	    }
 	    s++;
 	}
-	if(word->spaceAfter)
+	if(word->getSpaceAfter())
 	    fprintf(out, " ");
     }
     if(textTag) fprintf(out, "</t>\n");
