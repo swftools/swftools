@@ -2854,7 +2854,7 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     belowrender.endpage(&belowrender);
     gfxresult_t* belowresult = belowrender.finish(&belowrender);
     gfximage_t* belowimg = (gfximage_t*)belowresult->get(belowresult,"page0");
-    //writePNG("below.png", (unsigned char*)belowimg->data, belowimg->width, belowimg->height);
+    //png_write("below.png", (unsigned char*)belowimg->data, belowimg->width, belowimg->height);
 
     gfxdevice_t maskrender;
     gfxdevice_render_init(&maskrender);

@@ -129,7 +129,7 @@ static gfxdocument_t*image_open(gfxsource_t*src, const char*filename)
     unsigned width = 0;
     unsigned height = 0;
 
-    if(!getPNG(filename, &width, &height, (unsigned char**)&data)) {
+    if(!png_load(filename, &width, &height, (unsigned char**)&data)) {
 	if(!jpeg_load(filename, (unsigned char**)&data, &width, &height)) {
 	    msg("<error> Couldn't load image %s", filename);
 	    return 0;

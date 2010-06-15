@@ -757,7 +757,7 @@ int handlejpeg(TAG*tag)
 	    image[t*4+0] = data[t];
 	}
 	free(data);
-	writePNG(filename, image, width, height);
+	png_write(filename, image, width, height);
 	free(image);
     }
     else {

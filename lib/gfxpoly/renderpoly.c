@@ -395,6 +395,6 @@ void save_two_bitmaps(intbbox_t*b, unsigned char*data1, unsigned char*data2, cha
         }
         b1 += width8;
     }
-    writePNG(filename, data, b->width*2, b->height*2);
+    png_write(filename, data, b->width*2, b->height*2);
     free(data);
 }

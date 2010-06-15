@@ -800,18 +800,18 @@ int render_result_save(gfxresult_t*r, const char*filename)
 	while(i->next) {
 	    sprintf(filenamebuf, "%s.%d.png", origname, nr);
             if(!i->palette) {
-	        writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+	        png_write(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
             } else {
-	        writePalettePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+	        png_write_palette_based_2(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
             }
 	    nr++;
 	}
 	free(origname);
     } else {
         if(!i->palette) {
-	    writePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+	    png_write(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
 	} else {
-	    writePalettePNG(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
+	    png_write_palette_based_2(filename, (unsigned char*)i->img.data, i->img.width, i->img.height);
 	}
     }
     return 1;

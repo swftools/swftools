@@ -637,7 +637,7 @@ static PyObject* image_save(PyObject*self, PyObject*args)
     if(!PyArg_ParseTuple(args, "s", &filename))
 	return NULL;
 
-    writePNG(filename, (unsigned char*)fi->rgba ,fi->width, fi->height);
+    png_write(filename, (unsigned char*)fi->rgba ,fi->width, fi->height);
     
     return PY_NONE;
 }

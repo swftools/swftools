@@ -33,7 +33,7 @@ void gfximage_save_jpeg(gfximage_t*img, const char*filename, int quality)
 
 void gfximage_save_png(gfximage_t*image, const char*filename)
 {
-    writePNG(filename, (void*)image->data, image->width, image->height);
+    png_write(filename, (void*)image->data, image->width, image->height);
 }
 
 typedef struct scale_lookup {

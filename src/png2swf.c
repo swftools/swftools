@@ -760,7 +760,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     if(global.mkjpeg) {
 #ifdef HAVE_JPEGLIB
 	RGBA*data = 0;
-	getPNG(sname, &width, &height, (unsigned char**)&data);
+	png_load(sname, &width, &height, (unsigned char**)&data);
 	if(!data) 
 	    exit(1);
 	if(swf_ImageHasAlpha(data, width, height)) {
@@ -775,7 +775,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 #endif
     } else if(1) {
 	RGBA*data = 0;
-	getPNG(sname, &width, &height, (unsigned char**)&data);
+	png_load(sname, &width, &height, (unsigned char**)&data);
 	if(!data) 
 	    exit(1);
 	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);

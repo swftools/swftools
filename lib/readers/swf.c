@@ -200,7 +200,7 @@ static gfximage_t* findimage(render_t*r, U16 id)
 
     /*char filename[80];
     sprintf(filename, "bitmap%d.png", id);
-    writePNG(filename, (unsigned char*)img->data, img->width, img->height);
+    png_write(filename, (unsigned char*)img->data, img->width, img->height);
     printf("saving bitmap %d to %s\n", id, filename);*/
 
     return c->data;

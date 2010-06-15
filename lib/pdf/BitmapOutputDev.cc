@@ -350,7 +350,7 @@ void writeMonoBitmap(SplashBitmap*btm, char*filename)
             }
         }
     }
-    writePNG(filename, (unsigned char*)b, width, height);
+    png_write(filename, (unsigned char*)b, width, height);
     free(b);
 }
 
@@ -379,7 +379,7 @@ void writeBitmap(SplashBitmap*bitmap, char*filename)
 	    line[x].a =  bitmap->getAlpha(x,y);
 	}
     }
-    writePNG(filename, (unsigned char*)data, width, height);
+    png_write(filename, (unsigned char*)data, width, height);
     free(data);
 }
 
@@ -407,7 +407,7 @@ void writeAlpha(SplashBitmap*bitmap, char*filename)
 	    line[x].a = a;
 	}
     }
-    writePNG(filename, (unsigned char*)data, width, height);
+    png_write(filename, (unsigned char*)data, width, height);
     free(data);
 }
 

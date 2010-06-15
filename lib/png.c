@@ -441,7 +441,7 @@ void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsig
     }    
 }
 
-EXPORT int getPNGdimensions(const char*sname, unsigned*destwidth, unsigned*destheight)
+EXPORT int png_getdimensions(const char*sname, unsigned*destwidth, unsigned*destheight)
 {
     FILE*fi;
     struct png_header header;
@@ -459,7 +459,7 @@ EXPORT int getPNGdimensions(const char*sname, unsigned*destwidth, unsigned*desth
     return 1;
 }
 
-EXPORT int getPNG(const char*sname, unsigned*destwidth, unsigned*destheight, unsigned char**destdata)
+EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, unsigned char**destdata)
 {
     char tagid[4];
     int len;
@@ -1523,7 +1523,7 @@ int png_apply_filter_32(unsigned char*dest, unsigned char*src, unsigned width, i
     return png_apply_filter(dest, src, width, y, 32);
 }
 
-EXPORT void savePNG(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors)
+EXPORT void png_write_palette_based(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors)
 {
     FILE*fi;
     int crc;
@@ -1689,11 +1689,11 @@ EXPORT void savePNG(const char*filename, unsigned char*data, unsigned width, uns
     fclose(fi);
 }
 
-EXPORT void writePNG(const char*filename, unsigned char*data, unsigned width, unsigned height)
+EXPORT void png_write(const char*filename, unsigned char*data, unsigned width, unsigned height)
 {
-    savePNG(filename, data, width, height, 0);
+    png_write_palette_based(filename, data, width, height, 0);
 }
-EXPORT void writePalettePNG(const char*filename, unsigned char*data, unsigned width, unsigned height)
+EXPORT void png_write_palette_based_2(const char*filename, unsigned char*data, unsigned width, unsigned height)
 {
-    savePNG(filename, data, width, height, 256);
+    png_write_palette_based(filename, data, width, height, 256);
 }

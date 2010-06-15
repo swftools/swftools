@@ -142,9 +142,9 @@ int main(int argn, char*argv[])
 	swf_RenderSWF(&buf, &swf);
 	RGBA* img = swf_Render(&buf);
         if(quantize)
-	    writePalettePNG(outputname, (unsigned char*)img, buf.width, buf.height);
+	    png_write_palette_based_2(outputname, (unsigned char*)img, buf.width, buf.height);
         else
-	    writePNG(outputname, (unsigned char*)img, buf.width, buf.height);
+	    png_write(outputname, (unsigned char*)img, buf.width, buf.height);
 	swf_Render_Delete(&buf);
     } else {
 	parameter_t*p;

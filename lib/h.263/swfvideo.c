@@ -1532,7 +1532,7 @@ int main(int argn, char*argv[])
 
     memset(&stream, 0, sizeof(stream));
 
-    getPNG(fname, &width, &height, &data);
+    png_load(fname, &width, &height, &data);
     pic = (RGBA*)rfx_alloc(width*height*sizeof(RGBA));
     pic2 = (RGBA*)rfx_alloc(width*height*sizeof(RGBA));
     memcpy(pic, data, width*height*sizeof(RGBA));
