@@ -749,7 +749,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     MATRIX m;
     int fs;
 
-    int width=0, height=0;
+    unsigned width=0, height=0;
 
 #ifndef HAVE_JPEGLIB
     if(global.mkjpeg) {

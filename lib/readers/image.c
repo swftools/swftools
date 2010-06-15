@@ -126,8 +126,8 @@ static gfxdocument_t*image_open(gfxsource_t*src, const char*filename)
     memset(i, 0, sizeof(image_doc_internal_t));
 
     gfxcolor_t*data = 0;
-    int width = 0;
-    int height = 0;
+    unsigned width = 0;
+    unsigned height = 0;
 
     if(!getPNG(filename, &width, &height, (unsigned char**)&data)) {
 	if(!jpeg_load(filename, (unsigned char**)&data, &width, &height)) {

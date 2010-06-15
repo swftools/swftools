@@ -23,16 +23,16 @@
 extern "C" {
 #endif
 
-int png_apply_filter_32(unsigned char*dest, unsigned char*src, int width, int y);
-void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width);
+int png_apply_filter_32(unsigned char*dest, unsigned char*src, unsigned width, int y);
+void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, unsigned width);
 
-int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char**destdata);
-int getPNGdimensions(const char*sname, int*destwidth, int*destheight);
+int getPNG(const char*sname, unsigned*destwidth, unsigned*destheight, unsigned char**destdata);
+int getPNGdimensions(const char*sname, unsigned*destwidth, unsigned*destheight);
 
-void savePNG(const char*filename, unsigned char*data, int width, int height, int numcolors);
+void savePNG(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors);
 
-void writePNG(const char*filename, unsigned char*data, int width, int height);
-void writePalettePNG(const char*filename, unsigned char*data, int width, int height);
+void writePNG(const char*filename, unsigned char*data, unsigned width, unsigned height);
+void writePalettePNG(const char*filename, unsigned char*data, unsigned width, unsigned height);
 
 #ifdef __cplusplus
 }

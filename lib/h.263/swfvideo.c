@@ -1514,8 +1514,8 @@ int main(int argn, char*argv[])
     TAG * tag;
     RGBA* pic, *pic2, rgb;
     SWFPLACEOBJECT obj;
-    int width = 0;
-    int height = 0;
+    unsigned width = 0;
+    unsigned height = 0;
     int frames = 10;
     int framerate = 29;
     unsigned char*data;

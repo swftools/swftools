@@ -85,8 +85,8 @@ static unsigned int png_get_dword(FILE*fi)
 
 struct png_header
 {
-    int width;
-    int height;
+    unsigned width;
+    unsigned height;
     int bpp;
     int mode;
 };
@@ -167,7 +167,7 @@ static inline byte PaethPredictor (byte a,byte b,byte c)
         else return c;
 }
 
-static void applyfilter1(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
+static void applyfilter1(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, unsigned width)
 {
     int x;
     unsigned char last=0;
@@ -218,7 +218,7 @@ static void applyfilter1(int mode, unsigned char*src, unsigned char*old, unsigne
 
 }
 
-static void applyfilter2(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
+static void applyfilter2(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, unsigned width)
 {
     int x;
     unsigned char lasta=0;
@@ -281,7 +281,7 @@ static void applyfilter2(int mode, unsigned char*src, unsigned char*old, unsigne
 
 
 /* also performs 24 bit conversion! */
-static void applyfilter3(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
+static void applyfilter3(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, unsigned width)
 {
     int x;
     unsigned char lastr=0;
@@ -358,7 +358,7 @@ static void applyfilter3(int mode, unsigned char*src, unsigned char*old, unsigne
     }    
 }
 
-void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, int width)
+void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsigned char*dest, unsigned width)
 {
     int x;
     unsigned char lastr=0;
@@ -441,7 +441,7 @@ void png_inverse_filter_32(int mode, unsigned char*src, unsigned char*old, unsig
     }    
 }
 
-EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
+EXPORT int getPNGdimensions(const char*sname, unsigned*destwidth, unsigned*destheight)
 {
     FILE*fi;
     struct png_header header;
@@ -459,14 +459,13 @@ EXPORT int getPNGdimensions(const char*sname, int*destwidth, int*destheight)
     return 1;
 }
 
-EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char**destdata)
+EXPORT int getPNG(const char*sname, unsigned*destwidth, unsigned*destheight, unsigned char**destdata)
 {
     char tagid[4];
     int len;
     unsigned char*data;
     unsigned char*imagedata;
     unsigned char*zimagedata=0;
-    unsigned long int imagedatalen;
     unsigned long int zimagedatalen=0;
     unsigned char*palette = 0;
     int palettelen = 0;
@@ -500,7 +499,10 @@ EXPORT int getPNG(const char*sname, int*destwidth, int*destheight, unsigned char
 	return 0;
     }
 
-    imagedatalen = bypp * header.width * header.height + 65536;
+    unsigned long long imagedatalen_64 = ((unsigned long long)header.width + 1) * header.height * bypp;
+    if(imagedatalen_64 > 0xffffffff)
+	return 0;
+    unsigned long imagedatalen = (unsigned long)imagedatalen_64;
     imagedata = (unsigned char*)malloc(imagedatalen);
 
     fseek(fi,8,SEEK_SET);
@@ -1151,7 +1153,7 @@ static inline u32 color_hash(COL*col)
     return hash;
 }
 
-static int png_get_number_of_palette_entries(COL*img, int width, int height, COL*palette, char*has_alpha)
+static int png_get_number_of_palette_entries(COL*img, unsigned width, unsigned height, COL*palette, char*has_alpha)
 {
     int len = width*height;
     int t;
@@ -1266,11 +1268,11 @@ static void png_map_to_palette(COL*src, unsigned char*dest, int size, COL*palett
     }
 }
 
-static int png_apply_specific_filter_8(int filtermode, unsigned char*dest, unsigned char*src, int width)
+static int png_apply_specific_filter_8(int filtermode, unsigned char*dest, unsigned char*src, unsigned width)
 {
     int pos2 = 0;
     int pos = 0;
-    int srcwidth = width;
+    unsigned srcwidth = width;
     int x;
     if(filtermode == 0) {
 	for(x=0;x<width;x++) {
@@ -1309,11 +1311,11 @@ static int png_apply_specific_filter_8(int filtermode, unsigned char*dest, unsig
     return filtermode;
 }
 
-static int png_apply_specific_filter_32(int filtermode, unsigned char*dest, unsigned char*src, int width)
+static int png_apply_specific_filter_32(int filtermode, unsigned char*dest, unsigned char*src, unsigned width)
 {
     int pos2 = 0;
     int pos = 0;
-    int srcwidth = width*4;
+    unsigned srcwidth = width*4;
     int x;
     if(filtermode == 0) {
 	for(x=0;x<width;x++) {
@@ -1396,7 +1398,7 @@ static void make_num_bits_table()
     }
 }
 
-static int png_find_best_filter(unsigned char*src, int width, int bpp, int y)
+static int png_find_best_filter(unsigned char*src, unsigned width, int bpp, int y)
 {
     make_num_bits_table();
     
@@ -1464,7 +1466,7 @@ static int png_find_best_filter(unsigned char*src, int width, int bpp, int y)
 }
     
     
-static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, int y, int bpp)
+static int png_apply_filter(unsigned char*dest, unsigned char*src, unsigned width, int y, int bpp)
 {
     int best_nr = 0;
 #if 0
@@ -1512,16 +1514,16 @@ static int png_apply_filter(unsigned char*dest, unsigned char*src, int width, in
     return best_nr;
 }
 
-int png_apply_filter_8(unsigned char*dest, unsigned char*src, int width, int y)
+int png_apply_filter_8(unsigned char*dest, unsigned char*src, unsigned width, int y)
 {
     return png_apply_filter(dest, src, width, y, 8);
 }
-int png_apply_filter_32(unsigned char*dest, unsigned char*src, int width, int y)
+int png_apply_filter_32(unsigned char*dest, unsigned char*src, unsigned width, int y)
 {
     return png_apply_filter(dest, src, width, y, 32);
 }
 
-EXPORT void savePNG(const char*filename, unsigned char*data, int width, int height, int numcolors)
+EXPORT void savePNG(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors)
 {
     FILE*fi;
     int crc;
@@ -1626,8 +1628,8 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
     {
 	int x,y;
         int bypp = bpp/8;
-	int srcwidth = width * bypp;
-	int linelen = 1 + srcwidth;
+	unsigned srcwidth = width * bypp;
+	unsigned linelen = 1 + srcwidth;
         if(bypp==2) 
             linelen = 1 + ((srcwidth+1)&~1);
         else if(bypp==3) 
@@ -1687,11 +1689,11 @@ EXPORT void savePNG(const char*filename, unsigned char*data, int width, int heig
     fclose(fi);
 }
 
-EXPORT void writePNG(const char*filename, unsigned char*data, int width, int height)
+EXPORT void writePNG(const char*filename, unsigned char*data, unsigned width, unsigned height)
 {
     savePNG(filename, data, width, height, 0);
 }
-EXPORT void writePalettePNG(const char*filename, unsigned char*data, int width, int height)
+EXPORT void writePalettePNG(const char*filename, unsigned char*data, unsigned width, unsigned height)
 {
     savePNG(filename, data, width, height, 256);
 }

@@ -1465,7 +1465,7 @@ void s_image(const char*name, const char*type, const char*filename, int quality)
     /* step 1: the bitmap */
     SRECT r;
     int imageID = id;
-    int width, height;
+    unsigned width, height;
     if(!strcmp(type,"jpeg")) {
 #ifndef HAVE_JPEGLIB
 	warning("no jpeg support compiled in");

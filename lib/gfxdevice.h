@@ -69,8 +69,8 @@ typedef struct _gfximage
     /* if the data contains an alpha layer (a != 255), the
        r,g,b values will have to be premultiplied */
     gfxcolor_t*data;
-    int width;
-    int height;
+    unsigned width;
+    unsigned height;
 } gfximage_t;
 
 /* gradients: A radial gradient will start at 0,0 and have a radius of 1,0 

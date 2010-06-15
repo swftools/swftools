@@ -680,8 +680,6 @@ static void fill_gradient(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, GRA
 	    RGBA col;
 	    double xx = (  (x - rx) * m22 - (y - ry) * m21)*det;
 	    double yy = (- (x - rx) * m12 + (y - ry) * m11)*det;
-	    int ainv;
-	    ainv = 255-col.a;
 
 	    if(type == FILL_LINEAR) {
 		int xr = xx*256;
@@ -698,7 +696,8 @@ static void fill_gradient(RGBA*line, int*z, int y, int x1, int x2, MATRIX*m, GRA
 		    xr = 511;
 		col = palette[xr];
 	    }
-
+	    int ainv;
+	    ainv = 255-col.a;
 	    line[x].r = clamp(((line[x].r*ainv)>>8)+col.r);
 	    line[x].g = clamp(((line[x].g*ainv)>>8)+col.g);
 	    line[x].b = clamp(((line[x].b*ainv)>>8)+col.b);

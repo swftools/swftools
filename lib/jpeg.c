@@ -76,7 +76,7 @@ static void mem_term_destination(j_compress_ptr cinfo)
   dmgr->free_in_buffer = 0;
 }
 
-int jpeg_save(unsigned char*data, int width, int height, int quality, const char*filename)
+int jpeg_save(unsigned char*data, unsigned width, unsigned height, int quality, const char*filename)
 {
   struct jpeg_destination_mgr mgr;
   struct jpeg_compress_struct cinfo;
@@ -124,7 +124,7 @@ int jpeg_save(unsigned char*data, int width, int height, int quality, const char
   return 1;
 }
 
-int jpeg_save_gray(unsigned char*data, int width, int height, int quality, const char*filename)
+int jpeg_save_gray(unsigned char*data, unsigned width, unsigned height, int quality, const char*filename)
 {
   struct jpeg_destination_mgr mgr;
   struct jpeg_compress_struct cinfo;
@@ -163,7 +163,7 @@ int jpeg_save_gray(unsigned char*data, int width, int height, int quality, const
 }
 
 
-int jpeg_save_to_file(unsigned char*data, int width, int height, int quality, FILE*_fi)
+int jpeg_save_to_file(unsigned char*data, unsigned width, unsigned height, int quality, FILE*_fi)
 {
   struct jpeg_destination_mgr mgr;
   struct jpeg_compress_struct cinfo;
@@ -206,7 +206,7 @@ int jpeg_save_to_file(unsigned char*data, int width, int height, int quality, FI
   return 1;
 }
 
-int jpeg_save_to_mem(unsigned char*data, int width, int height, int quality, unsigned char*_dest, int _destlen)
+int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int quality, unsigned char*_dest, int _destlen)
 {
   struct jpeg_destination_mgr mgr;
   struct jpeg_compress_struct cinfo;
@@ -288,7 +288,7 @@ void mem_term_source (j_decompress_ptr cinfo)
     //printf("term %d\n", size - mgr->bytes_in_buffer);
 }
 
-int jpeg_load_from_mem(unsigned char*_data, int _size, unsigned char**dest, int*width, int*height)
+int jpeg_load_from_mem(unsigned char*_data, int _size, unsigned char**dest, unsigned*width, unsigned*height)
 {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -344,7 +344,7 @@ typedef struct _RGBA {
 
 typedef unsigned char U8;
 
-int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
+int jpeg_load(const char*filename, unsigned char**dest, unsigned*_width, unsigned*_height)
 {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -364,9 +364,15 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
     
     U8*scanline = (U8 *)malloc(4 * cinfo.output_width);
 
-    int width = *_width = cinfo.output_width;
-    int height = *_height = cinfo.output_height;
-    *dest = (unsigned char*)malloc(width*height*4);
+    unsigned int width = *_width = cinfo.output_width;
+    unsigned int height = *_height = cinfo.output_height;
+    unsigned long long int image_size = (unsigned long long)width * height * 4;
+    if(image_size > 0xffffffff) {
+	*_width = 0;
+	*_height = 0;
+	return 0;
+    }
+    *dest = (unsigned char*)malloc(image_size);
 
     int y;
     for (y=0;y<height;y++) {
@@ -419,7 +425,7 @@ int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
     return 1;
 }
 
-void jpeg_get_size(const char *filename, int *width, int *height)
+void jpeg_get_size(const char *filename, unsigned *width, unsigned*height)
 {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
@@ -444,32 +450,32 @@ void jpeg_get_size(const char *filename, int *width, int *height)
 
 #else
 
-int jpeg_save(unsigned char*data, int width, int height, int quality, const char*filename)
+int jpeg_save(unsigned char*data, unsigned width, unsigned height, int quality, const char*filename)
 {
     fprintf(stderr, "jpeg_save: No JPEG support compiled in\n");
     return 0;
 }
-int jpeg_save_to_file(unsigned char*data, int width, int height, int quality, FILE*fi)
+int jpeg_save_to_file(unsigned char*data, unsigned width, unsigned height, int quality, FILE*fi)
 {
     fprintf(stderr, "jpeg_save_to_file: No JPEG support compiled in\n");
     return 0;
 }
-int jpeg_save_to_mem(unsigned char*data, int width, int height, int quality, unsigned char*dest, int destsize)
+int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int quality, unsigned char*dest, int destsize)
 {
     fprintf(stderr, "jpeg_save_tomem: No JPEG support compiled in\n");
     return 0;
 }
-int jpeg_load_from_mem(unsigned char*_data, int size, unsigned char*dest, int width, int height)
+int jpeg_load_from_mem(unsigned char*_data, int size, unsigned char*dest, unsigned width, unsigned height)
 {
     fprintf(stderr, "jpeg_load_from_mem: No JPEG support compiled in\n");
     return 0;
 }
-int jpeg_load(const char*filename, unsigned char**dest, int*_width, int*_height)
+int jpeg_load(const char*filename, unsigned char**dest, unsigned*_width, unsigned*_height)
 {
     fprintf(stderr, "jpeg_load: No JPEG support compiled in\n");
     return 0;
 }
-void jpeg_get_size(const char *fname, int *width, int *height)
+void jpeg_get_size(const char *fname, unsigned *width, unsigned *height)
 {
     *width = 0;
     *height = 0;

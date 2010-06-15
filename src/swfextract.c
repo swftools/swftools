@@ -741,7 +741,7 @@ int handlejpeg(TAG*tag)
 	    memmove(&tag->data[pos], &tag->data[pos+4], end-(pos+4));
 	}
 	unsigned char*image;
-	int width=0, height=0;
+	unsigned width=0, height=0;
 	jpeg_load_from_mem(&tag->data[6], end-6, &image, &width, &height);
 
 	uLongf datalen = width*height;
