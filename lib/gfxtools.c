@@ -205,8 +205,8 @@ static double get_spline_len(qspline_abc_t*s)
 void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phase)
 {
     double x=0,y=0;
-    double linepos,nextpos;
-    char on;
+    double linepos = 0,nextpos = 0;
+    char on = 0;
     int apos=0;
 
     if(line && line->type != gfx_moveTo) {
@@ -911,7 +911,7 @@ gfxbbox_t* gfxline_isrectangle(gfxline_t*_l)
     gfxline_t*l = gfxline_clone(_l);
     gfxline_optimize(l);
 
-    double x1,x2,y1,y2;
+    double x1=0,x2=0,y1=0,y2=0;
     int xc=0,yc=0;
     char corners=0;
 

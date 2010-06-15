@@ -395,7 +395,7 @@ gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, 
 		}
 		l = l->next;
 	    }
-	    if(!ok && !name) {
+	    if(!ok && !hasname) {
 		gfxline_free(font->glyphs[font->num_glyphs].line);
 		font->glyphs[font->num_glyphs].line = 0;
 		font->glyphs[font->num_glyphs].advance = 0;

@@ -454,7 +454,7 @@ void applyfilter1(int mode, U8*src, U8*old, U8*dest, int width)
 
 }
 
-TAG* PNG2Image(TAG*t, U16 id, char*filename, int*width, int*height)
+TAG* PNG2Image(TAG*t, U16 id, char*filename, unsigned*width, unsigned*height)
 {
     char tagid[4];
     U8*data;

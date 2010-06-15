@@ -209,7 +209,7 @@ namespace_t* namespace_fromstring(const char*name)
     namespace_t*ns = malloc(sizeof(namespace_t));
     memset(ns, 0, sizeof(namespace_t));
     if(name[0] == '[') {
-        U8 access;
+        U8 access = 0;
         char*n = strdup(name);
         char*bracket = strchr(n, ']');
         if(bracket) {

@@ -608,7 +608,7 @@ void render_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 static void draw_line(gfxdevice_t*dev, gfxline_t*line)
 {
     internal_t*i = (internal_t*)dev->internal;
-    double x,y;
+    double x=0,y=0;
 
     while(line)
     {

@@ -93,10 +93,10 @@ static void convert_file(const char*filename, polywriter_t*w, double gridsize)
         double x,y;
         char s[256];
         if(sscanf(line, "%lf %lf %s", &x, &y, (char*)&s) == 3) {
-            if(s && !strcmp(s,"moveto")) {
+            if(!strcmp(s,"moveto")) {
 		w->moveto(w, convert_coord(x,z), convert_coord(y,z));
                 count++;
-            } else if(s && !strcmp(s,"lineto")) {
+            } else if(!strcmp(s,"lineto")) {
 		w->lineto(w, convert_coord(x,z), convert_coord(y,z));
                 count++;
             } else {
