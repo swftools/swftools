@@ -292,6 +292,7 @@ public:
   int config_bigchar;
   int config_drawonlyshapes;
   int config_detectspaces;
+  int config_textonly;
   char* config_linkdatafile;
   double config_fontquality;
 };

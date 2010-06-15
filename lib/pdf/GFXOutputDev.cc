@@ -676,6 +676,8 @@ void GFXOutputDev::setParameter(const char*key, const char*value)
         this->config_linkdatafile = strdup(value);
     } else if(!strcmp(key,"convertgradients")) {
         this->config_convertgradients = atoi(value);
+    } else if(!strcmp(key,"textonly")) {
+        this->config_textonly = atoi(value);
     } else if(!strcmp(key,"multiply")) {
         this->config_multiply = atoi(value);
         if(this->config_multiply<1) 
@@ -999,6 +1001,8 @@ static gfxcolor_t col2col(GfxColorSpace*colspace, GfxColor* col)
 
 GBool GFXOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
 {
+    if(config_textonly) {return gTrue;}
+
     double x0,y0,r0,x1,y1,x2,y2,x9,y9,r1;
     shading->getCoords(&x0,&y0,&r0,&x9,&y9,&r1);
     x1=x0+r1;y1=y0;
@@ -1057,6 +1061,8 @@ GBool GFXOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading)
 
 GBool GFXOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading)
 {
+    if(config_textonly) {return gTrue;}
+
     double x0,y0,x1,y1;
     shading->getCoords(&x0,&y0,&x1,&y1);
     this->transformXY(state, x0,y0,&x0,&y0);
@@ -2476,6 +2482,10 @@ void GFXOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GBool invert,
 				   GBool inlineImg) 
 {
+    if(config_textonly) {
+	OutputDev::drawImageMask(state,ref,str,width,height,invert,inlineImg);
+	return;
+    }
     dbg("drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
     msg("<verbose> drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
     drawGeneralImage(state,ref,str,width,height,0,invert,inlineImg,1, 0, 0,0,0,0, 0);
@@ -2485,6 +2495,10 @@ void GFXOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 			 int width, int height, GfxImageColorMap *colorMap,
 			 int *maskColors, GBool inlineImg)
 {
+    if(config_textonly) {
+	OutputDev::drawImage(state,ref,str,width,height,colorMap,maskColors,inlineImg);
+	return;
+    }
     dbg("drawImage %dx%d, %s, %s, inline=%d", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
 	    maskColors?"maskColors":"no maskColors",
@@ -2505,6 +2519,10 @@ void GFXOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       Stream *maskStr, int maskWidth, int maskHeight,
 			       GBool maskInvert)
 {
+    if(config_textonly) {
+	OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskInvert);
+	return;
+    }
     dbg("drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
 	    maskWidth, maskHeight);
@@ -2524,6 +2542,10 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
 				   int maskWidth, int maskHeight,
 				   GfxImageColorMap *maskColorMap)
 {
+    if(config_textonly) {
+	OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,maskStr,maskWidth,maskHeight,maskColorMap);
+	return;
+    }
     dbg("drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 
 	    colorMap?"colorMap":"no colorMap", 
 	    maskWidth, maskHeight);
@@ -2533,11 +2555,13 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
     if(colorMap)
 	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d", colorMap->getNumPixelComps(),
 		colorMap->getBits(),colorMap->getColorSpace()->getMode());
-    drawGeneralImage(state,ref,str,width,height,colorMap,0,0,0,0, maskStr, maskWidth, maskHeight, 0, maskColorMap);
 }
+
 
 void GFXOutputDev::stroke(GfxState *state) 
 {
+    if(config_textonly) {return;}
+
     dbg("stroke");
 
     GfxPath * path = state->getPath();
@@ -2548,6 +2572,8 @@ void GFXOutputDev::stroke(GfxState *state)
 
 void GFXOutputDev::fill(GfxState *state) 
 {
+    if(config_textonly) {return;}
+
     gfxcolor_t col = getFillColor(state);
     dbg("fill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
@@ -2564,6 +2590,8 @@ void GFXOutputDev::fill(GfxState *state)
 
 void GFXOutputDev::eoFill(GfxState *state) 
 {
+    if(config_textonly) {return;}
+
     gfxcolor_t col = getFillColor(state);
     dbg("eofill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
@@ -2899,7 +2927,9 @@ void GFXOutputDev::clearSoftMask(GfxState *state)
     matrix.m00 = 1.0; matrix.m10 = 0.0; matrix.tx = 0.0;
     matrix.m01 = 0.0; matrix.m11 = 1.0; matrix.ty = 0.0;
 
-    this->device->fillbitmap(this->device, line, belowimg, &matrix, 0);
+    if(!config_textonly) {
+	this->device->fillbitmap(this->device, line, belowimg, &matrix, 0);
+    }
 
     mask->destroy(mask);
     below->destroy(below);
