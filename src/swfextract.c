@@ -44,6 +44,7 @@ char* extractjpegids = 0;
 char* extractfontids = 0;
 char* extractpngids = 0;
 char* extractsoundids = 0;
+char* extractmp3ids = 0;
 char* extractbinaryids = 0;
 char* extractanyids = 0;
 char extractmp3 = 0;
@@ -69,6 +70,7 @@ struct options_t options[] =
  {"P","placeobject"},
  {"0","movetozero"},
  {"m","mp3"},
+ {"M","embeddedmp3"},
  {"s","sound"},
  {"n","name"},
  {"f","frame"},
@@ -117,6 +119,15 @@ int args_callback_option(char*name,char*val)
 	numextracts++;
 	return 0;
     }
+    else if(!strcmp(name, "M")) {
+	if(extractsoundids) {
+	    fprintf(stderr, "Only one --embeddedmp3 argument is allowed. (Try to use a range, e.g. -M 1,2,3)\n");
+	    exit(1);
+	}
+	numextracts++;
+	extractmp3ids = val;
+	return 1;
+    } 
     else if(!strcmp(name, "j")) {
 	if(extractjpegids) {
 	    fprintf(stderr, "Only one --jpegs argument is allowed. (Try to use a range, e.g. -j 1,2,3)\n");
@@ -226,6 +237,7 @@ void args_callback_usage(char*name)
     printf("\n");
     printf("Sound extraction:\n");
     printf("\t-m , --mp3\t\t\t Extract main mp3 stream\n");
+    printf("\t-M , --embeddedmp3\t\t\t Extract embedded mp3 stream(s)\n");
     printf("\t-s , --sound ID\t\t\t Extract Sound(s)\n");
 }
 int args_callback_command(char*name,char*val)
@@ -532,6 +544,25 @@ int isOfType(int t, TAG*tag)
     if (t== 6 && (tag->id == ST_DEFINEBINARY)) {
         show = 1;
     }
+    if (t== 7 && (tag->id == ST_DEFINESPRITE)) {
+	int wasFolded = swf_IsFolded(tag);
+	TAG *toFold = tag;
+
+	if(wasFolded) 
+	    swf_UnFoldSprite(tag);
+
+        while(tag->id != ST_END) { 
+	    tag = tag->next;
+            if(tag->id == ST_SOUNDSTREAMHEAD || tag->id == ST_SOUNDSTREAMHEAD2) {
+                show = 1;
+                break;
+	    }
+	}
+
+	if(wasFolded) 
+	    swf_FoldSprite(toFold);
+    }
+
     return show;
 }
 
@@ -541,8 +572,8 @@ void listObjects(SWF*swf)
     char first;
     int t;
     int frame = 0;
-    char*names[] = {"Shape", "MovieClip", "JPEG", "PNG", "Sound", "Font", "Binary"};
-    char*options[] = {"-i", "-i", "-j", "-p", "-s", "-F","-b"};
+    char*names[] = {"Shape", "MovieClip", "JPEG", "PNG", "Sound", "Font", "Binary", "Embedded MP3"};
+    char*options[] = {"-i", "-i", "-j", "-p", "-s", "-F","-b","-M"};
     int mp3=0;
     printf("Objects in file %s:\n",filename);
     swf_FoldAll(swf);
@@ -1136,6 +1167,39 @@ int handlebinary(TAG*tag) {
     return 1;
 }
 
+int handleembeddedmp3(TAG*tag) {
+    int wasFolded;
+    TAG *toFold;
+
+    if (tag->id!=ST_DEFINESPRITE) {
+        if (!extractanyids) {
+          fprintf(stderr, "Object %d is not a sprite entity!\n",
+                          GET16(tag->data));
+        }
+        return 0;
+    }
+
+    wasFolded = swf_IsFolded(tag);
+    toFold = tag;
+
+    if(wasFolded) 
+	swf_UnFoldSprite(tag);
+
+    while(tag->id != ST_END) { 
+	tag = tag->next;
+	if(tag->id == ST_SOUNDSTREAMHEAD ||
+	   tag->id == ST_SOUNDSTREAMHEAD2 ||
+	   tag->id == ST_SOUNDSTREAMBLOCK) {
+ 	   handlesoundstream(tag);
+	}
+    }
+
+    if(wasFolded) 
+	swf_FoldSprite(toFold);
+
+    return 1;
+}
+
 int main (int argc,char ** argv)
 { 
     TAG*tag;
@@ -1149,7 +1213,8 @@ int main (int argc,char ** argv)
     processargs(argc, argv);
 
     if(!extractframes && !extractids && ! extractname && !extractjpegids && !extractpngids
-	&& !extractmp3 && !extractsoundids && !extractfontids && !extractbinaryids && !extractanyids)
+	&& !extractmp3 && !extractsoundids && !extractfontids && !extractbinaryids 
+        && !extractanyids && !extractmp3ids)
 	listavailable = 1;
 
     if(!originalplaceobjects && movetozero) {
@@ -1254,6 +1319,9 @@ int main (int argc,char ** argv)
 	    if(extractsoundids && is_in_range(id, extractsoundids)) {
 		handledefinesound(tag);
 	    }
+	    if(extractmp3ids && is_in_range(id, extractmp3ids)) {
+		handleembeddedmp3(tag);
+	    }
 	    if(extractbinaryids && is_in_range(id, extractbinaryids)) {
 		handlebinary(tag);
 	    }
@@ -1275,6 +1343,8 @@ int main (int argc,char ** argv)
 #endif
 		} else if (handledefinesound(tag)) {
 		    // Not sure if sound code checks carefully for type.
+		    // pass
+		} else if (handleembeddedmp3(tag)) {
 		    // pass
 		} else {
 		    printf("#%d not processed\n", id);
