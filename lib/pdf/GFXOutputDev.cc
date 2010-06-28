@@ -2558,6 +2558,7 @@ void GFXOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str
     if(colorMap)
 	msg("<verbose> colorMap pixcomps:%d bits:%d mode:%d", colorMap->getNumPixelComps(),
 		colorMap->getBits(),colorMap->getColorSpace()->getMode());
+    drawGeneralImage(state,ref,str,width,height,colorMap,0,0,0,0, maskStr, maskWidth, maskHeight, 0, maskColorMap);
 }
 
 
