@@ -285,7 +285,7 @@ gfxfont_t* FontInfo::getGfxFont()
 GBool InfoOutputDev::upsideDown() {return gTrue;}
 GBool InfoOutputDev::useDrawChar() {return gTrue;}
 GBool InfoOutputDev::interpretType3Chars() {return gTrue;}
-GBool InfoOutputDev::useTilingPatternFill() {return gTrue;}
+GBool InfoOutputDev::useTilingPatternFill() {return gFalse;}
 
 GBool InfoOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
              int rotate, GBool useMediaBox, GBool crop,

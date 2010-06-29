@@ -111,16 +111,6 @@ public:
   virtual void updateStrokeOverprint(GfxState *state);
   virtual void updateTransfer(GfxState *state);
   
-  virtual void updateAll(GfxState *state) 
-  {
-      updateFont(state);
-      updateFillColor(state);
-      updateStrokeColor(state);
-      updateLineWidth(state);
-      updateLineJoin(state);
-      updateLineCap(state);
-  };
-
   //----- path painting
   virtual void stroke(GfxState *state) ;
   virtual void fill(GfxState *state) ;
