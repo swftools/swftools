@@ -37,6 +37,8 @@ chdir("..");
 system("rm -f xpdf");
 system("ln -s $directory xpdf");
 
+system("touch xpdf/*");
+
 open(fi, ">switch");
 
 print fi <<EOF
