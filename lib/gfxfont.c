@@ -527,7 +527,7 @@ void gfxfont_free(gfxfont_t*font)
 
 static inline int invalid_unicode(int u)
 {
-    return (u<32 || (u>=0xe000 && u<0xf900));
+    return (u<32 || (u>=0xd800 && u<0xf900));
 }
 void gfxfont_fix_unicode(gfxfont_t*font)
 {
