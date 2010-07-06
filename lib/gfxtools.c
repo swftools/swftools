@@ -233,6 +233,11 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
         }
         return;
     }
+
+    if(phase < 0) {
+	phase = -phase;
+    }
+
     if(r[0]<0 || phase<0) {
 	fprintf(stderr, "gfxtool: invalid (negative) dashes: %f, phase=%f\n", r[0], phase);
 	return;
