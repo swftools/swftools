@@ -657,6 +657,7 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_multiply = 1;
     this->config_detectspaces = 1;
     this->config_linkdatafile = 0;
+    this->config_textonly = 0;
     this->page2page = 0;
     this->num_pages = 0;
   

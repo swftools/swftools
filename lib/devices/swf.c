@@ -116,6 +116,7 @@ typedef struct _swfoutput_internal
     int config_disable_polygon_conversion;
     int config_normalize_polygon_positions;
     int config_alignfonts;
+    double config_remove_small_polygons;
     char config_disablelinks;
     RGBA config_linkcolor;
     float config_minlinewidth;
@@ -2108,6 +2109,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	}
     } else if(!strcmp(name, "minlinewidth")) {
 	i->config_minlinewidth = atof(value);
+    } else if(!strcmp(name, "remove_small_polygons")) {
+	i->config_remove_small_polygons = atof(value);
     } else if(!strcmp(name, "caplinewidth")) {
 	i->config_caplinewidth = atof(value);
     } else if(!strcmp(name, "linktarget")) {
@@ -2692,8 +2695,15 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
 	return;
     if(!color->a)
 	return;
+
     gfxbbox_t r = gfxline_getbbox(line);
     int is_outside_page = !is_inside_page(dev, r.xmin, r.ymin) || !is_inside_page(dev, r.xmax, r.ymax);
+
+    if(r.xmax - r.xmin < i->config_remove_small_polygons &&
+       r.ymax - r.ymin < i->config_remove_small_polygons) {
+	msg("<verbose> Not drawing %.2fx%.2f polygon", r.xmax - r.xmin, r.ymax - r.ymin);
+	return;
+    }
 
     endtext(dev);
 
