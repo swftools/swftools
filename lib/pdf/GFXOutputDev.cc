@@ -1887,11 +1887,11 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 
 	char buf[80];
 	sprintf(buf, "page%d", lpage);
-	device->drawlink(device, points, buf);
+	device->drawlink(device, points, buf, 0);
     }
     else if(s)
     {
-        device->drawlink(device, points, s);
+        device->drawlink(device, points, s, 0);
 	if(this->config_linkdatafile) {
 	    FILE*fi = fopen(config_linkdatafile, "ab+");
 	    fprintf(fi, "%s\n", s);

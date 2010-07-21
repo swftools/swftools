@@ -146,10 +146,10 @@ void ops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcolor_t
     i->out->drawchar(i->out, font, glyphnr, color, matrix);
 }
 
-void ops_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
+void ops_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->drawlink(i->out, line, action);
+    i->out->drawlink(i->out, line, action, text);
 }
 
 void ops_endpage(struct _gfxdevice*dev)

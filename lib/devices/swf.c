@@ -219,7 +219,7 @@ static void swf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color);
 static void swf_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix);
 static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font);
-static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action);
+static void swf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text);
 static void swf_startframe(gfxdevice_t*dev, int width, int height);
 static void swf_endframe(gfxdevice_t*dev);
 static void swfoutput_namedlink(gfxdevice_t*dev, char*name, gfxline_t*points);
@@ -1669,7 +1669,7 @@ static void swfoutput_linktourl(gfxdevice_t*dev, const char*url, gfxline_t*point
     dev->drawlink(dev, points, url);
 }*/
 
-void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, const char*url)
+void swf_drawlink(gfxdevice_t*dev, gfxline_t*points, const char*url, const char*text)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
 

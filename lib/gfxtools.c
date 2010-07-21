@@ -676,7 +676,7 @@ void gfxbbox_intersect(gfxbbox_t*box1, gfxbbox_t*box2)
 	box1->ymin = box2->ymin;
     if(box2->xmax < box1->xmax)
 	box1->xmax = box2->xmax;
-    if(box2->ymax > box1->ymax)
+    if(box2->ymax < box1->ymax)
 	box1->ymax = box2->ymax;
     if(box1->xmin > box1->xmax)
 	box1->xmax = box1->xmin;

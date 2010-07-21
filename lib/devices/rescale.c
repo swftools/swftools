@@ -241,11 +241,11 @@ void rescale_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*c
     i->out->drawchar(i->out, font, glyphnr, color, &m2);
 }
 
-void rescale_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+void rescale_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
     gfxline_t*line2 = transformgfxline(i, line);
-    i->out->drawlink(i->out, line2, action);
+    i->out->drawlink(i->out, line2, action, text);
     gfxline_free(line2);
 }
 

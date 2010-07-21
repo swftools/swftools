@@ -133,7 +133,7 @@ void text_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*colo
     }
 }
 
-void text_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+void text_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*drawlink)
 {
     internal_t*i = (internal_t*)dev->internal;
 }

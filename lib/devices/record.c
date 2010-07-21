@@ -651,13 +651,14 @@ static void record_endpage(struct _gfxdevice*dev)
     writer_writeU8(&i->w, OP_ENDPAGE);
 }
 
-static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
+static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
     msg("<trace> record: %08x DRAWLINK\n", dev);
     writer_writeU8(&i->w, OP_DRAWLINK);
     dumpLine(&i->w, &i->state, line);
     writer_writeString(&i->w, action);
+    writer_writeString(&i->w, text);
 }
 
 /* ------------------------------- replaying --------------------------------- */
@@ -790,7 +791,8 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r, gfxfontli
 		msg("<trace> replay: DRAWLINK");
 		gfxline_t* line = readLine(r, &state);
 		char* s = reader_readString(r);
-		out->drawlink(out,line,s);
+		char* t = reader_readString(r);
+		out->drawlink(out,line,s, t);
 		gfxline_free(line);
 		free(s);
 		break;

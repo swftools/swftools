@@ -129,7 +129,7 @@ typedef struct _gfxdevice
 
     void (*drawchar)(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 
-    void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, const char*action);
+    void (*drawlink)(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text);
     
     void (*endpage)(struct _gfxdevice*dev);
     

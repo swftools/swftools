@@ -484,7 +484,7 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
     }
 }
 
-void pdf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+void pdf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
 }

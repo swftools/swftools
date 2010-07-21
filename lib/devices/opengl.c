@@ -536,7 +536,7 @@ void opengl_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*co
 
 
 
-void opengl_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
+void opengl_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text)
 {
     dbg("link");
 }

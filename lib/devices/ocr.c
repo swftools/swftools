@@ -73,7 +73,7 @@ void ocr_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
 void ocr_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*matrix) { ((internal_t*)dev->internal)->render->fillgradient(((internal_t*)dev->internal)->render, line, gradient, type, matrix); }
 void ocr_addfont(gfxdevice_t*dev, gfxfont_t*font) { ((internal_t*)dev->internal)->render->addfont(((internal_t*)dev->internal)->render, font); }
 void ocr_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix) { ((internal_t*)dev->internal)->render->drawchar(((internal_t*)dev->internal)->render, font, glyphnr, color, matrix); }
-void ocr_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action) { ((internal_t*)dev->internal)->render->drawlink(((internal_t*)dev->internal)->render, line, action); }
+void ocr_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text) { ((internal_t*)dev->internal)->render->drawlink(((internal_t*)dev->internal)->render, line, action, text); }
 
 void ocr_result_write(gfxresult_t*r, int filedesc)
 {

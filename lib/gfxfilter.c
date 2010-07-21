@@ -89,10 +89,10 @@ static void filter_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcol
     internal_t*i = (internal_t*)dev->internal;
     i->filter->drawchar(i->filter, font, glyphnr, color, matrix, i->out);
 }
-static void filter_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+static void filter_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->filter->drawlink(i->filter, line, action, i->out);
+    i->filter->drawlink(i->filter, line, action, text, i->out);
 }
 static void filter_endpage(gfxdevice_t*dev)
 {
@@ -168,10 +168,10 @@ static void passthrough_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, g
     internal_t*i = (internal_t*)dev->internal;
     i->out->drawchar(i->out, font, glyphnr, color, matrix);
 }
-static void passthrough_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+static void passthrough_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->drawlink(i->out, line, action);
+    i->out->drawlink(i->out, line, text, action);
 }
 static void passthrough_endpage(gfxdevice_t*dev)
 {
@@ -210,7 +210,7 @@ static void discard_addfont(gfxdevice_t*dev, gfxfont_t*font)
 static void discard_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
 }
-static void discard_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+static void discard_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
 }
 static void discard_endpage(gfxdevice_t*dev)

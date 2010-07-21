@@ -133,7 +133,7 @@ void file_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     internal_t*i = (internal_t*)dev->internal;
 }
 
-void file_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
+void file_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
     fprintf(i->fi, "drawlink %s\n", action);

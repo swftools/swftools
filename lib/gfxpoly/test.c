@@ -591,7 +591,7 @@ void extract_polygons_fillgradient(gfxdevice_t*dev, gfxline_t*line, gfxgradient_
 {
     extract_polygons_fill(dev, line, 0);
 }
-void extract_polygons_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+void extract_polygons_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     extract_polygons_fill(dev, line, 0);
 }

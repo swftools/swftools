@@ -53,7 +53,7 @@ typedef struct _gfxfilter
     void (*fillgradient)(struct _gfxfilter*in, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*gradcoord2devcoord, struct _gfxdevice*out); //?
     void (*addfont)(struct _gfxfilter*in, gfxfont_t*font, struct _gfxdevice*out);
     void (*drawchar)(struct _gfxfilter*in, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix, struct _gfxdevice*out);
-    void (*drawlink)(struct _gfxfilter*in, gfxline_t*line, const char*action, struct _gfxdevice*out);
+    void (*drawlink)(struct _gfxfilter*in, gfxline_t*line, const char*action, const char*text, struct _gfxdevice*out);
     void (*endpage)(struct _gfxfilter*in, struct _gfxdevice*out);
     gfxresult_t* (*finish)(struct _gfxfilter*in, struct _gfxdevice*out);
 

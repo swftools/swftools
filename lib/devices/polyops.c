@@ -343,11 +343,11 @@ void polyops_drawchar(struct _gfxdevice*dev, gfxfont_t*font, int glyphnr, gfxcol
     gfxline_free(glyph);
 }
 
-void polyops_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
+void polyops_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text)
 {
     dbg("polyops_drawlink");
     internal_t*i = (internal_t*)dev->internal;
-    if(i->out) i->out->drawlink(i->out, line, action);
+    if(i->out) i->out->drawlink(i->out, line, action, text);
 }
 
 void polyops_endpage(struct _gfxdevice*dev)

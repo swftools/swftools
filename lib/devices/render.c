@@ -1041,7 +1041,7 @@ void render_endpage(struct _gfxdevice*dev)
     i->height2 = 0;
 }
 
-void render_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action)
+void render_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*action, const char*text)
 {
     /* not supported for this output device */
 }

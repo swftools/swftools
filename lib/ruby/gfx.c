@@ -622,13 +622,14 @@ void rb_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color,
     volatile VALUE v_matrix = convert_matrix(matrix);
     forward(v, id_drawchar, 4, f, INT2FIX(glyphnr), v_color, v_matrix);
 }
-void rb_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+void rb_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     HEAD
     volatile VALUE v_line = convert_line(line);
     volatile VALUE v_action = rb_tainted_str_new2(action);
+    volatile VALUE v_text  = rb_tainted_str_new2(text);
 
-    forward(v, id_drawlink, 2, v_line, v_action);
+    forward(v, id_drawlink, 2, v_line, v_action, v_text);
 }
 void rb_endpage(gfxdevice_t*dev)
 {

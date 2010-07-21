@@ -102,11 +102,11 @@ void dummy_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*col
 	i->out->drawchar(i->out, font, glyphnr, color, matrix);
 }
 
-void dummy_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+void dummy_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
     if(i->out)
-	i->out->drawlink(i->out, line, action);
+	i->out->drawlink(i->out, line, action, text);
 }
 
 void dummy_endpage(gfxdevice_t*dev)

@@ -34,8 +34,8 @@ class TestRender < GFX::Device
     def drawchar(font, glyph, color, matrix)
         puts "drawchar(#{font.name}, #{glyph}, #{color.inspect}, #{matrix.inspect})"
     end
-    def drawlink(line, action)
-        puts "drawchar(#{line.inspect}, #{action})"
+    def drawlink(line, action, text)
+        puts "drawchar(#{line.inspect}, #{action}, #{text})"
     end
 end
 
