@@ -15,41 +15,41 @@
   	  64
 */
 
-#define KD_RIGHT 0
-#define KD_DOWN 1
-#define KD_LEFT 2
-#define KD_UP 3
-
-typedef enum {KD_LEAF, KD_BRANCH} kdtype_t;
+typedef enum {KD_LEAF=-1, KD_RIGHT=0, KD_DOWN=1, KD_LEFT=2, KD_UP=3, KD_PARENT=4} kdtype_t;
 
 typedef struct _kdbbox {
     int32_t xmin, ymin, xmax, ymax;
 } kdbbox_t;
 
-typedef struct _kdbranch {
-    kdtype_t type;
-    struct _kdbranch*side[2];
-    int32_t r;
-    unsigned char angle;
-} kdbranch_t;
+struct _kdbranch;
+struct _kdarea;
+typedef struct _kdbranch kdbranch_t;
+typedef struct _kdarea kdarea_t;
 
-typedef struct _kdleaf {
+struct _kdbranch {
     kdtype_t type;
-    kdbranch_t*neighbor[4];
+    kdarea_t*side[2];
+    int32_t xy;
+};
+
+struct _kdarea {
+    kdarea_t*neighbors[4];
+    kdbbox_t bbox;
+    kdbranch_t*split;
     void*data;
-} kdleaf_t;
+};
 
 typedef struct _kdtree {
-    kdbranch_t*root;
+    kdarea_t*root;
 } kdtree_t;
 
 /* usually a subset of the tree, e.g. caused by
    intersecting the tree with a halfplane */
-typedef struct _kdbranch_list {
-    struct _kdbranch_list*next;
-    struct _kdbranch_list*prev;
-    kdbranch_t*branch;
-} kdbranch_list_t;
+typedef struct _kdarea_list {
+    struct _kdarea_list*next;
+    struct _kdarea_list*prev;
+    kdarea_t*area;
+} kdarea_list_t;
 
 
 #endif

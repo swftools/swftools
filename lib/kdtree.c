@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <memory.h>
+#include <limits.h>
 #include "q.h"
 #include "kdtree.h"
 
@@ -25,12 +28,28 @@
 
 */
 
-static double vx[4] = {1.0, 0, -1.0, 0};
-static double vy[4] = {0, 1.0, 0, -1.0};
+/* right down left up */
+static int vx_and[4] = {INT_MAX, 0, INT_MAX, 0};
+static int vy_and[4] = {0, INT_MAX, 0, INT_MAX};
+static int vx[4] = {1, 0, -1, 0};
+static int vy[4] = {0, 1, 0, -1};
+static int vsign[4] = {1,1,-1,-1};
+static char* vname[4] = {"right", "down", "left", "up"};
+
+kdarea_t* kdarea_new()
+{
+    NEW(kdarea_t,area);
+    area->bbox.xmin = INT_MIN;
+    area->bbox.ymin = INT_MIN;
+    area->bbox.xmax = INT_MAX;
+    area->bbox.ymax = INT_MAX;
+    return area;
+}
 
 kdtree_t* kdtree_new()
 {
     NEW(kdtree_t,tree);
+    tree->root = kdarea_new();
     return tree;
 }
 
@@ -39,52 +58,62 @@ kdtree_t* kdtree_new()
 static inline int32_t max32(int32_t v1, int32_t v2) {return v1>v2?v1:v2;}
 static inline int32_t min32(int32_t v1, int32_t v2) {return v1<v2?v1:v2;}
 
-kdleaf_t*kdleaf_new(void*data)
-{
-    NEW(kdleaf_t,l);
-    l->type = KD_LEAF;
-    l->data = data;
-    return l;
-}
-
-kdbranch_t*kdbranch_new(int32_t r, int angle, kdbranch_t*side1, kdbranch_t*side2)
+kdbranch_t*kdbranch_new(int32_t xy, kdtype_t type)
 {
     NEW(kdbranch_t,b);
-    b->type = KD_BRANCH;
-    b->r = r;
-    b->angle = angle;
-    b->side[0] = side1;
-    b->side[1] = side2;
+    b->type = type;
+    b->xy = xy;
     return b;
 }
 
-kdbranch_t**kdtree_branch(kdbranch_t*tree, int32_t x, int32_t y)
+kdarea_t*kdtree_branch(kdbranch_t*tree, int32_t x, int32_t y)
 {
-    int a = tree->angle >> 6;
-    int side = vx[a]*x + vy[a]*y < tree->r;
-    return &tree->side[side];
+    /*
+    int follow = 0;
+    switch(tree->type) {
+	case KD_LEFT:
+	    follow = (x < tree->xy);
+	break;
+	case KD_RIGHT:
+	    follow = (x > tree->xy);
+	break;
+	case KD_UP:
+	    follow = (y < tree->xy);
+	break;
+	case KD_DOWN:
+	    follow = (y > tree->xy);
+	break;
+    }
+    return &tree->side[follow];
+    */
+    int32_t s = x*vx[tree->type] + y*vy[tree->type];
+    if(s == tree->xy*vsign[tree->type])
+	return 0;
+    return tree->side[s < tree->xy*vsign[tree->type]];
 }
 
-kdbranch_list_t* kdleaf_list_new(kdbranch_t**branch)
+static kdarea_list_t* kdarea_list_new(kdarea_t*area)
 {
-    NEW(kdbranch_list_t,b);
-    b->branch = branch;
+    NEW(kdarea_list_t,b);
+    b->area = area;
     b->next = b->prev = b;
     return b;
 }
 
-kdbranch_list_t*kdbranch_list_concatenate(kdbranch_list_t*l1, kdbranch_list_t*l2)
+static kdarea_list_t*kdarea_list_concatenate(kdarea_list_t*l1, kdarea_list_t*l2)
 {
 /*
    l1->prev       l2->prev   |   l1->prev       l2->prev   
-    |             |          |    |             |          
-    V             V          |    V      +------+          
+    |             |          |    |       +-----+          
+    V             V          |    V       |                
    l1             l2         |   l1  -------->  l2
-    |             |          |           |      |          
-    |             |          |    +------+      |          
+    |             |          |            |     |          
+    |             |          |    +-------+     |          
     V             V          |    V             V          
    l1->next       l2->next   |   l1->next       l2->next   
 */
+    if(!l1) return l2;
+    if(!l2) return l1;
     l2->prev->next = l1->next;
     l1->next->prev = l2->prev;
     l2->prev = l1;
@@ -92,101 +121,209 @@ kdbranch_list_t*kdbranch_list_concatenate(kdbranch_list_t*l1, kdbranch_list_t*l2
     return l1;
 }
 
-void add_line(kdbranch_t**branch, int r, int angle,
-				  int32_t x1, int32_t y1, 
-				  int32_t x2, int32_t y2, 
-				  void*data)
+kdbbox_t bbox_for_halfplane(int xy, int dir)
 {
-    if(!*branch || IS_LEAF(*branch)) {
-	kdleaf_t*l = kdleaf_new(data);
-	*branch = kdbranch_new(r, angle, (kdbranch_t*)l, *branch);
-	return kdleaf_list_new(&(*branch)->side[0]);
-    } else {
-	kdbranch_t**first = kdtree_branch(*branch, x1, y1);
-	kdbranch_t**second = kdtree_branch(*branch, x2, y2);
-	if(first == second) {
-	    /* we don't split parts of the tree that don't contain the line (x1,y1)->(x2,y2).
-	       Hence, we only further process nodes on the branch that contained 
-	       both (x1,y1) as well as (x2,y2).
-	     */
-	    add_line(first, r, angle, x1,y1, x2,y2, data);
-	} else {
-	    add_line(first, r, angle, x1,y1, x2,y2, data);
-	    add_line(second, r, angle, x1,y1, x2,y2, data);
-	}
+    kdbbox_t b = {INT_MIN,INT_MIN,INT_MAX,INT_MAX};
+    switch(dir) {
+	case KD_LEFT:
+	    b.xmax = xy;
+	break;
+	case KD_RIGHT:
+	    b.xmin = xy;
+	break;
+	case KD_UP:
+	    b.ymax = xy;
+	break;
+	case KD_DOWN:
+	    b.ymin = xy;
+	break;
     }
+    return b;
 }
 
-kdbranch_list_t* filter_tree(kdbranch_t*branch, int r, int angle, void*data)
+kdbbox_t intersect_bbox(kdbbox_t*box1, kdbbox_t*box2)
 {
-    if(!branch)
-	return;
-
-    if(IS_LEAF(branch)) {
-	return kdleaf_list_new(branch);
-    } else {
-	if((branch->angle == angle && branch->r < r)
-	|| (branch->angle == (angle^128)) && branch->r > r) {
-	    return filter_tree(branch->side[0], r, angle, data);
-	} else {
-	    kdbranch_list_t*l1 = filter_tree(first, r, angle, x1,y1, x2,y2, data);
-	    kdbranch_list_t*l2 = filter_tree(second, r, angle, x1,y1, x2,y2, data);
-	    return kdbranch_list_concatenate(l1,l2);
-	}
-    }
+    kdbbox_t b = *box1;
+    if(box2->xmin > b.xmin)
+	b.xmin = box2->xmin;
+    if(box2->ymin > b.ymin)
+	b.ymin = box2->ymin;
+    if(box2->xmax < b.xmax)
+	b.xmax = box2->xmax;
+    if(box2->ymax < b.ymax)
+	b.ymax = box2->ymax;
+    if(b.xmin > b.xmax)
+	b.xmax = b.xmin;
+    if(b.ymin > b.ymax)
+	b.ymax = b.ymin;
+    return b;
 }
 
-void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data)
+void add_line(kdarea_t*area, int xy, int dir,
+			     int32_t x1, int32_t y1, 
+			     int32_t x2, int32_t y2)
 {
-    kdbranch_list_t*branches1 = add_branch(&tree->root, x2, 0, x2,y1, x2,y2, data);
-    kdbranch_list_t*i;
-    for(i=branches1;i;i=i->next) {
-	kdbranch_list_t*branches2 = add_branch(i->branch, y2, 64, x1,y2, x2,y2, data);
-	kdbranch_list_t*j;
-	for(j=branches2;j;j=j->next) {
-	    kdbranch_list_t*branches3 = add_branch(i->branch, x1, 128, x1,y1, x1,y2, data);
-	    kdbranch_list_t*k;
-	    for(k=branches3;k;k=k->next) {
-		kdbranch_list_t*branches4 = add_branch(i->branch, y1, 192, x1,y1, x2,y1, data);
-		kdbranch_list_t*l;
-		for(l=branches4;l;l=l->next) {
-		}
+    if(!area->split) {
+	kdbbox_t b1 = bbox_for_halfplane(xy, dir);
+	kdbbox_t b2 = bbox_for_halfplane(xy, dir^2);
+	kdbranch_t*b = area->split = kdbranch_new(xy, dir);
+	b->side[0] = kdarea_new();
+	b->side[1] = kdarea_new();
+	b->side[0]->bbox = intersect_bbox(&area->bbox,&b1);
+	b->side[1]->bbox = intersect_bbox(&area->bbox,&b2);
+	kdbbox_t c = b->side[0]->bbox;
+	/*printf("intersect (%d,%d,%d,%d) and (%d,%d,%d,%d) -> (%d,%d,%d,%d)\n", 
+		area->bbox.xmin, area->bbox.ymin, area->bbox.xmax, area->bbox.ymax,
+		b1.xmin, b1.ymin, b1.xmax, b1.ymax,
+		c.xmin, c.ymin, c.xmax, c.ymax
+		);*/
+	memcpy(b->side[0]->neighbors, area->neighbors, sizeof(area->neighbors));
+	memcpy(b->side[1]->neighbors, area->neighbors, sizeof(area->neighbors));
+	b->side[0]->neighbors[dir^2] = b->side[1];
+	b->side[1]->neighbors[dir] = b->side[0];
+    } else {
+	kdbranch_t*split = area->split;
+	kdarea_t*first = kdtree_branch(split, x1,y1);
+
+	if(!first) {
+	    kdarea_t*second = kdtree_branch(split, x2,y2);
+	    if(!second) {
+		/* line is on top of an already existing segment */
+		return;
+	    } else {
+		/* first point is directly on the split */
+		add_line(second, xy, dir, x1,y1, x2,y2);
+		return;
+	    }
+	} else {
+	    kdarea_t*second = kdtree_branch(split, x2,y2);
+	    if(!second) {
+		/* second point is directly on the split */
+		add_line(first, xy, dir, x1,y1, x2,y2);
+		return;
+	    } else if(first == second) {
+		/* both points are to the same side of this split */
+		add_line(first, xy, dir, x1,y1, x2,y2);
+		return;
+	    } else {
+		add_line(first, xy, dir, x1,y1, x2,y2);
+		add_line(second, xy, dir, x1,y1, x2,y2);
+		return;
 	    }
 	}
     }
 }
 
+kdarea_list_t* filter_tree(kdarea_t*area, int xy, int dir, void*data)
+{
+    if(!area->split) {
+	return kdarea_list_new(area);
+    } else {
+	kdbranch_t*branch = area->split;
+	if((branch->type^dir) == 0) {
+	    /* both filter as well as branch point into the same direction */
+	    if(xy*vsign[dir] >= branch->xy*vsign[dir]) {
+		/* filter splits the primary node. We can skip the other one. */
+		return filter_tree(branch->side[0], xy, dir, data);
+	    } else {
+		/* filter splits the secondary node. the primary node is left completely intact, 
+		   and returned as such */
+		kdarea_list_t*l1 = kdarea_list_new(branch->side[0]);
+		kdarea_list_t*l2 = filter_tree(branch->side[1], xy, dir, data);
+		return kdarea_list_concatenate(l1,l2);
+	    }
+	} else if((branch->type^dir) == 1) {
+	    /* filter and branch point into opposite directions */
+	    if(xy*vsign[dir] <= branch->xy*vsign[dir]) {
+		// filter splits the secondary node. We can skip the primary node.
+		return filter_tree(branch->side[1], xy, dir, data);
+	    } else {
+		/* filter splits the primary node. the secondary node is left completely intact, 
+		   and returned as such */
+		kdarea_list_t*l1 = filter_tree(branch->side[0], xy, dir, data);
+		kdarea_list_t*l2 = kdarea_list_new(branch->side[1]);
+		return kdarea_list_concatenate(l1,l2);
+	    }
+	}
+	/* filter segment is perpendicular to the node */
+	kdarea_list_t*l1 = filter_tree(branch->side[0], xy, dir, data);
+	kdarea_list_t*l2 = filter_tree(branch->side[1], xy, dir, data);
+	return kdarea_list_concatenate(l1,l2);
+    }
+}
+
+void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data)
+{
+    add_line(tree->root, x2, KD_LEFT,  x2,y1, x2,y2);
+    add_line(tree->root, y2, KD_UP,    x1,y2, x2,y2);
+    add_line(tree->root, x1, KD_RIGHT, x1,y1, x1,y2);
+    add_line(tree->root, y1, KD_DOWN,  x1,y1, x2,y1);
+
+    kdarea_list_t*branches1 = filter_tree(tree->root, x2, KD_LEFT, data);
+    kdarea_list_t*i = branches1;
+    if(i) do {
+	kdarea_list_t*branches2 = filter_tree(i->area, y2, KD_UP, data);
+	kdarea_list_t*j = branches2;
+	if(j) do {
+	    kdarea_list_t*branches3 = filter_tree(i->area, x1, KD_RIGHT, data);
+	    kdarea_list_t*k = branches3;
+	    if(k) do {
+		kdarea_list_t*branches4 = filter_tree(i->area, y1, KD_DOWN, data);
+		kdarea_list_t*l = branches4;
+		if(l) do {
+		    // ...
+		} while(l!=branches4);
+		k = k->next;
+	    } while(k!=branches3);
+	    j = j->next;
+	} while(j!=branches2);
+	i = i->next;
+    } while(i!=branches1);
+}
+
 static void do_indent(int l)
 {
     int i;
-    for(i=0;i<l;i++) printf(" ");
+    for(i=0;i<l;i++) 
+	printf(" ");
 }
 
+void kdarea_print(kdarea_t*area, int indent);
 void kdbranch_print(kdbranch_t*branch, int indent)
 {
+    do_indent(indent);printf("[%08x] branch (%s, %d)\n", branch, vname[branch->type], branch->xy);
+    kdbbox_t b = bbox_for_halfplane(branch->xy, branch->type);
+    kdarea_print(branch->side[0], indent+4);
+    kdarea_print(branch->side[1], indent+4);
+}
+void kdarea_print(kdarea_t*area, int indent)
+{
     int i;
-    if(IS_LEAF(branch)) {
-	kdleaf_t*leaf = (kdleaf_t*)branch;
-	do_indent(indent);printf("[%08x] leaf (l:%08x r:%08x u:%08x d:%08x)\n", branch,
-		leaf->neighbor[KD_LEFT],
-		leaf->neighbor[KD_RIGHT],
-		leaf->neighbor[KD_UP],
-		leaf->neighbor[KD_DOWN]);
-    } else {
-	do_indent(indent);printf("[%08x] branch\n", branch);
-	kdbranch_print(branch->side[0], indent+4);
-	kdbranch_print(branch->side[1], indent+4);
+    assert(area);
+    do_indent(indent);printf("[%08x] leaf (%d,%d,%d,%d) (l:%08x r:%08x u:%08x d:%08x)\n", area,
+	    area->bbox.xmin,
+	    area->bbox.ymin,
+	    area->bbox.xmax,
+	    area->bbox.ymax,
+	    area->neighbors[KD_LEFT],
+	    area->neighbors[KD_RIGHT],
+	    area->neighbors[KD_UP],
+	    area->neighbors[KD_DOWN]);
+    if(area->split) {
+	kdbranch_print(area->split, indent+4);
     }
 }
 
 void kdtree_print(kdtree_t*tree)
 {
-    kdbranch_print(tree->root, 0);
+    kdarea_print(tree->root, 0);
 }
 
 #ifdef MAIN
 int main()
 {
+    assert((1^vx[2]) < 0);
+
     kdtree_t*tree = kdtree_new();
     kdtree_add_box(tree, 10,12,14,16, "hello world");
     kdtree_print(tree);
