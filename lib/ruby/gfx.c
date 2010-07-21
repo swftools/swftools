@@ -629,7 +629,7 @@ void rb_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*
     volatile VALUE v_action = rb_tainted_str_new2(action);
     volatile VALUE v_text  = rb_tainted_str_new2(text);
 
-    forward(v, id_drawlink, 2, v_line, v_action, v_text);
+    forward(v, id_drawlink, 3, v_line, v_action, v_text);
 }
 void rb_endpage(gfxdevice_t*dev)
 {
