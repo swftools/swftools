@@ -8,45 +8,45 @@ else
     if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
         echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
     fi
-    # iterate through version 2.2 to 2.6
-    for v in 2 3 4 5 6; do
+    # iterate through version 2.2 to 3.2
+    for v in 2.2 2.3 2.4 2.5 2.6 3.0 3.1 3.2; do
         # Linux
-        if test -f "/usr/include/python2.$v/Python.h";then
-            PY_VERSION=2.$v
+        if test -f "/usr/include/python$v/Python.h";then
+            PY_VERSION=$v
 	    PYTHON_LIB="-lpython$PY_VERSION"
-            if test -f "/usr/lib/python2.$v/site-packages/PIL/_imaging.so";then 
-                PYTHON_LIB2="$PYTHON_LIB /usr/lib/python2.$v/site-packages/PIL/_imaging.so"
+            if test -f "/usr/lib/python$v/site-packages/PIL/_imaging.so";then 
+                PYTHON_LIB2="$PYTHON_LIB /usr/lib/python$v/site-packages/PIL/_imaging.so"
                 HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"
             fi
 	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
         # Mac OS X
-        elif test -f "/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/Python.h";then
-            PY_VERSION=2.$v
+        elif test -f "/Library/Frameworks/Python.framework/Versions/$v/include/python$v/Python.h";then
+            PY_VERSION=$v
             PYTHON_LIB="-framework Python" 
-            if test -f "/Library/Frameworks/Python.framework/Versions/2.$v/site-packages/PIL/_imaging.so";then
-                PYTHON_LIB2="$PYTHON_LIB /Library/Python/2.$v/PIL/_imaging.so"
+            if test -f "/Library/Frameworks/Python.framework/Versions/$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /Library/Python/$v/PIL/_imaging.so"
                 HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"
             fi
-            PYTHON_INCLUDES="-I/Library/Frameworks/Python.framework/Versions/2.$v/include/python2.$v/"
+            PYTHON_INCLUDES="-I/Library/Frameworks/Python.framework/Versions/$v/include/python$v/"
 	# Mac OS X [Fink]:
-        elif test "(" -f "/sw/lib/python2.$v/config/libpython2.$v.dylib" \
-	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.a" \
-	           -o -f "/sw/lib/python2.$v/config/libpython2.$v.so" \
+        elif test "(" -f "/sw/lib/python$v/config/libpython$v.dylib" \
+	           -o -f "/sw/lib/python$v/config/libpython$v.a" \
+	           -o -f "/sw/lib/python$v/config/libpython$v.so" \
 	          ")" \
-	       -a -f "/sw/include/python2.$v/Python.h"; then
-            PY_VERSION=2.$v
-            PYTHON_LIB="-L /sw/lib/python2.$v/config/ -lpython$PY_VERSION /sw/lib/python2.$v/site-packages/PIL/_imaging.so"
-            if test -f "/sw/lib/python2.$v/site-packages/PIL/_imaging.so";then
-                PYTHON_LIB2="$PYTHON_LIB /sw/lib/python2.$v/site-packages/PIL/_imaging.so"
+	       -a -f "/sw/include/python$v/Python.h"; then
+            PY_VERSION=$v
+            PYTHON_LIB="-L /sw/lib/python$v/config/ -lpython$PY_VERSION /sw/lib/python$v/site-packages/PIL/_imaging.so"
+            if test -f "/sw/lib/python$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /sw/lib/python$v/site-packages/PIL/_imaging.so"
                 HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"
             fi
-            PYTHON_INCLUDES="-I /sw/include/python2.$v/"
+            PYTHON_INCLUDES="-I /sw/include/python$v/"
         fi
     done
 fi
