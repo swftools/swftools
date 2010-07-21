@@ -391,6 +391,15 @@ if test "x$PYTHON_OK" '!=' "xyes";then
     # python interface anyway
 else
     pythongfx="lib/python/Makefile"
+    rm -f lib/python/gfx.c
+    case $PY_VERSION in
+	*2* ) 
+	    ln -s gfx2.c lib/python/gfx.c
+	    ;;
+	*3* ) 
+	    ln -s gfx3.c lib/python/gfx.c
+	    ;;
+    esac
 fi
 
 # ------------------------------------------------------------------

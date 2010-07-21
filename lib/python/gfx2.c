@@ -587,13 +587,13 @@ static void my_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t
         return;
     }
 }
-static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action)
+static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, consr char*text)
 {
-    callback_python("drawlink", dev, "ls", line, action);
+    callback_python("drawlink", dev, "lss", line, action, text);
 }
 static void my_endpage(gfxdevice_t*dev)
 {
-    callback_python("drawlink", dev, "");
+    callback_python("endpage", dev, "");
 }
 static gfxresult_t* my_finish(gfxdevice_t*dev)
 {
