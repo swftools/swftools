@@ -66,7 +66,7 @@ kdbranch_t*kdbranch_new(int32_t xy, kdtype_t type)
     return b;
 }
 
-kdarea_t*kdtree_branch(kdbranch_t*tree, int32_t x, int32_t y)
+kdarea_t*kdbranch_follow(kdbranch_t*tree, int32_t x, int32_t y)
 {
     /*
     int follow = 0;
@@ -183,10 +183,10 @@ void add_line(kdarea_t*area, int xy, int dir,
 	b->side[1]->neighbors[dir] = b->side[0];
     } else {
 	kdbranch_t*split = area->split;
-	kdarea_t*first = kdtree_branch(split, x1,y1);
+	kdarea_t*first = kdbranch_follow(split, x1,y1);
 
 	if(!first) {
-	    kdarea_t*second = kdtree_branch(split, x2,y2);
+	    kdarea_t*second = kdbranch_follow(split, x2,y2);
 	    if(!second) {
 		/* line is on top of an already existing segment */
 		return;
@@ -196,7 +196,7 @@ void add_line(kdarea_t*area, int xy, int dir,
 		return;
 	    }
 	} else {
-	    kdarea_t*second = kdtree_branch(split, x2,y2);
+	    kdarea_t*second = kdbranch_follow(split, x2,y2);
 	    if(!second) {
 		/* second point is directly on the split */
 		add_line(first, xy, dir, x1,y1, x2,y2);
@@ -281,6 +281,46 @@ void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y
     } while(i!=branches1);
 }
 
+kdarea_t*kdarea_find(kdarea_t*area, int x, int y)
+{
+    if(!area->split)
+	return area;
+    else
+	return kdarea_find(kdbranch_follow(area->split, x,y), x,y);
+}
+
+kdarea_t*kdtree_find(kdtree_t*tree, int x, int y)
+{
+    return kdarea_find(tree->root, x,y);
+}
+
+kdarea_t*kdarea_neighbor(kdarea_t*area, int dir, int xy)
+{
+    int x,y;
+    switch(dir) {
+	case KD_LEFT:
+	    x = area->bbox.xmin;
+	    y = xy;
+	break;
+	case KD_RIGHT:
+	    x = area->bbox.xmax;
+	    y = xy;
+	break;
+	case KD_UP:
+	    x = xy;
+	    y = area->bbox.ymin;
+	break;
+	case KD_DOWN:
+	    x = xy;
+	    y = area->bbox.ymax;
+	break;
+    }
+    kdarea_t*n = area->neighbors[dir];
+    if(!n)
+	return 0;
+    return kdarea_find(n, x, y);
+}
+
 static void do_indent(int l)
 {
     int i;
@@ -325,7 +365,12 @@ int main()
     assert((1^vx[2]) < 0);
 
     kdtree_t*tree = kdtree_new();
-    kdtree_add_box(tree, 10,12,14,16, "hello world");
+    kdtree_add_box(tree, 10,30,20,40, "hello world");
     kdtree_print(tree);
+    kdarea_t*a = kdtree_find(tree, 15,35);
+    kdarea_t*left = kdarea_neighbor(a, KD_LEFT, /*y*/35);
+    kdarea_t*right = kdarea_neighbor(a, KD_RIGHT, /*y*/35);
+    kdarea_t*up = kdarea_neighbor(a, KD_UP, /*x*/15);
+    kdarea_t*down = kdarea_neighbor(a, KD_DOWN, /*x*/15);
 }
 #endif

@@ -15,7 +15,7 @@
   	  64
 */
 
-typedef enum {KD_LEAF=-1, KD_RIGHT=0, KD_DOWN=1, KD_LEFT=2, KD_UP=3, KD_PARENT=4} kdtype_t;
+typedef enum {KD_RIGHT=0, KD_DOWN=1, KD_LEFT=2, KD_UP=3} kdtype_t;
 
 typedef struct _kdbbox {
     int32_t xmin, ymin, xmax, ymax;
