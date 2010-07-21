@@ -52,4 +52,8 @@ typedef struct _kdarea_list {
 } kdarea_list_t;
 
 
+void kdarea_destroy(kdarea_t*area);
+void kdbranch_destroy(kdbranch_t*b);
+void kdtree_destroy(kdtree_t*tree);
+
 #endif

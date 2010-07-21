@@ -36,20 +36,21 @@ static int vy[4] = {0, 1, 0, -1};
 static int vsign[4] = {1,1,-1,-1};
 static char* vname[4] = {"right", "down", "left", "up"};
 
-kdarea_t* kdarea_new()
+kdarea_t* kdarea_new(void*data)
 {
     NEW(kdarea_t,area);
     area->bbox.xmin = INT_MIN;
     area->bbox.ymin = INT_MIN;
     area->bbox.xmax = INT_MAX;
     area->bbox.ymax = INT_MAX;
+    area->data = data;
     return area;
 }
 
 kdtree_t* kdtree_new()
 {
     NEW(kdtree_t,tree);
-    tree->root = kdarea_new();
+    tree->root = kdarea_new(0);
     return tree;
 }
 
@@ -164,11 +165,11 @@ void add_line(kdarea_t*area, int xy, int dir,
 			     int32_t x2, int32_t y2)
 {
     if(!area->split) {
+	kdbranch_t*b = area->split = kdbranch_new(xy, dir);
 	kdbbox_t b1 = bbox_for_halfplane(xy, dir);
 	kdbbox_t b2 = bbox_for_halfplane(xy, dir^2);
-	kdbranch_t*b = area->split = kdbranch_new(xy, dir);
-	b->side[0] = kdarea_new();
-	b->side[1] = kdarea_new();
+	b->side[0] = kdarea_new(area->data);
+	b->side[1] = kdarea_new(area->data);
 	b->side[0]->bbox = intersect_bbox(&area->bbox,&b1);
 	b->side[1]->bbox = intersect_bbox(&area->bbox,&b2);
 	kdbbox_t c = b->side[0]->bbox;
@@ -181,6 +182,7 @@ void add_line(kdarea_t*area, int xy, int dir,
 	memcpy(b->side[1]->neighbors, area->neighbors, sizeof(area->neighbors));
 	b->side[0]->neighbors[dir^2] = b->side[1];
 	b->side[1]->neighbors[dir] = b->side[0];
+	area->data = 0;
     } else {
 	kdbranch_t*split = area->split;
 	kdarea_t*first = kdbranch_follow(split, x1,y1);
@@ -214,7 +216,7 @@ void add_line(kdarea_t*area, int xy, int dir,
     }
 }
 
-kdarea_list_t* filter_tree(kdarea_t*area, int xy, int dir, void*data)
+kdarea_list_t* filter_tree(kdarea_t*area, int xy, int dir)
 {
     if(!area->split) {
 	return kdarea_list_new(area);
@@ -224,61 +226,117 @@ kdarea_list_t* filter_tree(kdarea_t*area, int xy, int dir, void*data)
 	    /* both filter as well as branch point into the same direction */
 	    if(xy*vsign[dir] >= branch->xy*vsign[dir]) {
 		/* filter splits the primary node. We can skip the other one. */
-		return filter_tree(branch->side[0], xy, dir, data);
+		return filter_tree(branch->side[0], xy, dir);
 	    } else {
 		/* filter splits the secondary node. the primary node is left completely intact, 
 		   and returned as such */
 		kdarea_list_t*l1 = kdarea_list_new(branch->side[0]);
-		kdarea_list_t*l2 = filter_tree(branch->side[1], xy, dir, data);
+		kdarea_list_t*l2 = filter_tree(branch->side[1], xy, dir);
 		return kdarea_list_concatenate(l1,l2);
 	    }
 	} else if((branch->type^dir) == 1) {
 	    /* filter and branch point into opposite directions */
 	    if(xy*vsign[dir] <= branch->xy*vsign[dir]) {
 		// filter splits the secondary node. We can skip the primary node.
-		return filter_tree(branch->side[1], xy, dir, data);
+		return filter_tree(branch->side[1], xy, dir);
 	    } else {
 		/* filter splits the primary node. the secondary node is left completely intact, 
 		   and returned as such */
-		kdarea_list_t*l1 = filter_tree(branch->side[0], xy, dir, data);
+		kdarea_list_t*l1 = filter_tree(branch->side[0], xy, dir);
 		kdarea_list_t*l2 = kdarea_list_new(branch->side[1]);
 		return kdarea_list_concatenate(l1,l2);
 	    }
 	}
 	/* filter segment is perpendicular to the node */
-	kdarea_list_t*l1 = filter_tree(branch->side[0], xy, dir, data);
-	kdarea_list_t*l2 = filter_tree(branch->side[1], xy, dir, data);
+	kdarea_list_t*l1 = filter_tree(branch->side[0], xy, dir);
+	kdarea_list_t*l2 = filter_tree(branch->side[1], xy, dir);
 	return kdarea_list_concatenate(l1,l2);
     }
 }
 
-void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data)
+void kdarea_list_destroy(kdarea_list_t*list)
+{
+    kdarea_list_t*i = list;
+    if(i) do {
+	kdarea_list_t*next = i->next;
+	free(i);
+	i = next;
+    } while(i!=list);
+}
+
+kdarea_list_t* kdarea_list_add(kdarea_list_t*l, kdarea_t*area)
+{
+    return kdarea_list_concatenate(l,kdarea_list_new(area));
+}
+
+kdarea_list_t* kdarea_all_children(kdarea_t*area, kdarea_list_t*result)
+{
+    if(!area->split) {
+	result = kdarea_list_add(result, area);
+    } else {
+	result = kdarea_all_children(area->split->side[0], result);
+	result = kdarea_all_children(area->split->side[1], result);
+    }
+    return result;
+}
+
+kdarea_list_t* kdtree_filter(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, char leafs)
+{
+    kdarea_list_t*result = 0;
+    kdarea_list_t*branches1 = filter_tree(tree->root, x2, KD_LEFT);
+    kdarea_list_t*i = branches1;
+    if(i) do {
+	kdarea_list_t*branches2 = filter_tree(i->area, y2, KD_UP);
+	kdarea_list_t*j = branches2;
+	if(j) do {
+	    kdarea_list_t*branches3 = filter_tree(i->area, x1, KD_RIGHT);
+	    kdarea_list_t*k = branches3;
+	    if(k) do {
+		kdarea_list_t*branches4 = filter_tree(i->area, y1, KD_DOWN);
+		kdarea_list_t*l = branches4;
+		if(leafs) {
+		    if(l) do {
+			result = kdarea_list_concatenate(result, kdarea_all_children(l->area, 0));
+			l = l->next;
+		    } while(l!=branches4);
+		} else {
+		    result = kdarea_list_concatenate(result, l);
+		}
+		k = k->next;
+	    } while(k!=branches3);
+	    kdarea_list_destroy(branches3);
+	    j = j->next;
+	} while(j!=branches2);
+	kdarea_list_destroy(branches2);
+	i = i->next;
+    } while(i!=branches1);
+    kdarea_list_destroy(branches1);
+    return result;
+}
+
+void kdtree_modify_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*(*f)(void*user,void*data), void*user)
 {
     add_line(tree->root, x2, KD_LEFT,  x2,y1, x2,y2);
     add_line(tree->root, y2, KD_UP,    x1,y2, x2,y2);
     add_line(tree->root, x1, KD_RIGHT, x1,y1, x1,y2);
     add_line(tree->root, y1, KD_DOWN,  x1,y1, x2,y1);
-
-    kdarea_list_t*branches1 = filter_tree(tree->root, x2, KD_LEFT, data);
-    kdarea_list_t*i = branches1;
-    if(i) do {
-	kdarea_list_t*branches2 = filter_tree(i->area, y2, KD_UP, data);
-	kdarea_list_t*j = branches2;
-	if(j) do {
-	    kdarea_list_t*branches3 = filter_tree(i->area, x1, KD_RIGHT, data);
-	    kdarea_list_t*k = branches3;
-	    if(k) do {
-		kdarea_list_t*branches4 = filter_tree(i->area, y1, KD_DOWN, data);
-		kdarea_list_t*l = branches4;
-		if(l) do {
-		    // ...
-		} while(l!=branches4);
-		k = k->next;
-	    } while(k!=branches3);
-	    j = j->next;
-	} while(j!=branches2);
+    kdarea_list_t*l = kdtree_filter(tree, x1, y1, x2, y2, 0);
+    kdarea_list_t*i = l;
+    if(l) do {
+	f(user, l->area->data);
 	i = i->next;
-    } while(i!=branches1);
+    } while(i!=l);
+    kdarea_list_destroy(l);
+}
+
+static void* overwrite(void*user, void*data)
+{
+    return data;
+}
+
+void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data)
+{
+    kdtree_modify_box(tree, x1, y1, x2, y2, overwrite, 0);
 }
 
 kdarea_t*kdarea_find(kdarea_t*area, int x, int y)
@@ -359,6 +417,34 @@ void kdtree_print(kdtree_t*tree)
     kdarea_print(tree->root, 0);
 }
 
+void kdbranch_destroy(kdbranch_t*b)
+{
+    if(b->side[0]) {
+	kdarea_destroy(b->side[0]);
+	b->side[0] = 0;
+    }
+    if(b->side[1]) {
+	kdarea_destroy(b->side[1]);
+	b->side[1] = 0;
+    }
+    free(b);
+}
+
+void kdarea_destroy(kdarea_t*area)
+{
+    if(area->split) {
+	kdbranch_destroy(area->split);
+    }
+    free(area);
+}
+
+void kdtree_destroy(kdtree_t*tree)
+{
+    kdarea_destroy(tree->root);
+    tree->root = 0;
+    free(tree);
+}
+
 #ifdef MAIN
 int main()
 {
@@ -372,5 +458,6 @@ int main()
     kdarea_t*right = kdarea_neighbor(a, KD_RIGHT, /*y*/35);
     kdarea_t*up = kdarea_neighbor(a, KD_UP, /*x*/15);
     kdarea_t*down = kdarea_neighbor(a, KD_DOWN, /*x*/15);
+    kdtree_destroy(tree);
 }
 #endif
