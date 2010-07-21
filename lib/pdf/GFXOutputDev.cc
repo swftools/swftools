@@ -69,6 +69,8 @@
 
 //  swftools header files
 #include "../log.h"
+#include "../mem.h"
+#include "../utf8.h"
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfxfont.h"
@@ -967,6 +969,13 @@ void GFXOutputDev::transformXY(GfxState*state, double x, double y, double*nx, do
     *nx += user_movex + clipmovex;
     *ny += user_movey + clipmovey;
 }
+void GFXOutputDev::transformPoint(double x, double y, int*xout, int*yout)
+{
+    cvtUserToDev(x, y, xout, yout);
+    *xout += user_movex + clipmovex;
+    *yout += user_movey + clipmovey;
+}
+
 
 POPPLER_TILING_PATERN_RETURN GFXOutputDev::tilingPatternFill(GfxState *state,
 			       POPPLER_TILING_PATERN_GFX
@@ -1149,8 +1158,18 @@ void GFXOutputDev::endPage()
 	device->endclip(device);
 	outer_clip_box = 0;
     }
-    /* notice: we're not fully done yet with this page- there might still be 
-       a few calls to drawLink() yet to come */
+
+    if(this->links) {
+	kdtree_destroy(this->links);
+	this->links = 0;
+    }
+    GFXLink*l = this->last_link;
+    while(l) {
+	l->draw(this,device);
+	delete l;
+	l = l->last;
+    }
+    this->last_link = 0;
 }
 
 static inline double sqr(double x) {return x*x;}
@@ -1461,6 +1480,14 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     int render = state->getRender();
     gfxcolor_t col = getFillColor(state);
 
+    GFXLink*link = 0;
+    if(links) {
+	kdarea_t*a = kdtree_find(this->links, x+dx/2,y+dx/2);
+	if(a) {
+	    link = (GFXLink*)a->data;
+	}
+    }
+
     // check for invisible text -- this is used by Acrobat Capture
     if (render == RENDER_INVISIBLE) {
 	col.a = 0;
@@ -1481,6 +1508,8 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
     gfxmatrix_t m = this->current_font_matrix;
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
     //m.tx += originX; m.ty += originY;
+
+    gfxbbox_t bbox;
     
     msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
 
@@ -1506,6 +1535,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 		    m2.tx = expected_x + (m.tx - expected_x - current_gfxfont->glyphs[space].advance*m.m00)/2;
 		    if(m2.tx < expected_x) m2.tx = expected_x;
 		    device->drawchar(device, current_gfxfont, space, &col, &m2);
+		    link->addchar(32);
 		}
 	    }
 	    last_char_gfxfont = current_gfxfont;
@@ -1537,6 +1567,9 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	    }
 	}
 	gfxline_free(tglyph);
+    }
+    if(link) {
+	link->addchar(current_gfxfont->glyphs[glyphid].unicode);
     }
 }
 
@@ -1706,60 +1739,98 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state)
     this->last_char_gfxfont = 0;
 }
 
-
-void GFXOutputDev::processLink(Link *link, Catalog *catalog)
+void GFXLink::draw(GFXOutputDev*out, gfxdevice_t*dev)
 {
-    double x1, y1, x2, y2;
-    gfxline_t points[5];
-    int x, y;
-    
-    msg("<debug> drawlink");
+    int x1,y1,x2,y2;
+    out->transformPoint(this->x1, this->y1, &x1, &y1);
+    out->transformPoint(this->x2, this->y2, &x2, &y2);
 
-    link->getRect(&x1, &y1, &x2, &y2);
-    cvtUserToDev(x1, y1, &x, &y);
+    gfxline_t points[5];
     points[0].type = gfx_moveTo;
-    points[0].x = points[4].x = x + user_movex + clipmovex;
-    points[0].y = points[4].y = y + user_movey + clipmovey;
+    points[0].x = x1;
+    points[0].y = y1;
     points[0].next = &points[1];
-    cvtUserToDev(x2, y1, &x, &y);
     points[1].type = gfx_lineTo;
-    points[1].x = x + user_movex + clipmovex;
-    points[1].y = y + user_movey + clipmovey;
+    points[1].x = x1;
+    points[1].y = y2;
     points[1].next = &points[2];
-    cvtUserToDev(x2, y2, &x, &y);
     points[2].type = gfx_lineTo;
-    points[2].x = x + user_movex + clipmovex;
-    points[2].y = y + user_movey + clipmovey;
+    points[2].x = x2;
+    points[2].y = y2;
     points[2].next = &points[3];
-    cvtUserToDev(x1, y2, &x, &y);
     points[3].type = gfx_lineTo;
-    points[3].x = x + user_movex + clipmovex;
-    points[3].y = y + user_movey + clipmovey;
+    points[3].x = x2;
+    points[3].y = y1;
     points[3].next = &points[4];
-    cvtUserToDev(x1, y1, &x, &y);
     points[4].type = gfx_lineTo;
-    points[4].x = x + user_movex + clipmovex;
-    points[4].y = y + user_movey + clipmovey;
+    points[4].x = x1;
+    points[4].y = y1;
     points[4].next = 0;
-    
-    msg("<trace> drawlink %.2f/%.2f %.2f/%.2f %.2f/%.2f %.2f/%.2f",
+    msg("<trace> drawing link %.2f/%.2f %.2f/%.2f %.2f/%.2f %.2f/%.2f to %s (\"%s\")",
 	    points[0].x, points[0].y,
 	    points[1].x, points[1].y,
 	    points[2].x, points[2].y,
-	    points[3].x, points[3].y); 
+	    points[3].x, points[3].y, action, text); 
     
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
 	dump_outline(points);
     }
+    
+    dev->drawlink(dev, points, action, text);
+}
 
-    LinkAction*action=link->getAction();
+void GFXLink::addchar(int unicode)
+{
+    msg("<trace> Adding '%c' (%d) to link %s", unicode, unicode, action);
+    char buf[8];
+    int l = writeUTF8(unicode, buf);
+    while(size+l+1>=buf_size) {
+	buf_size += 32;
+	text = (char*)rfx_realloc(text, buf_size);
+    }
+    strcpy(text+size, buf);
+    size += l;
+}
+
+GFXLink::GFXLink(GFXLink*last, const char*action, double x1, double y1, double x2, double y2)
+{
+    this->buf_size = 0;
+    this->size = 0;
+    this->text = 0;
+    this->last = last;
+    this->action = strdup(action);
+    this->x1 = x1;
+    this->y1 = y1;
+    this->x2 = x2;
+    this->y2 = y2;
+}
+
+GFXLink::~GFXLink()
+{
+    free((void*)this->action);
+    if(this->text)
+	free(this->text);
+    this->text = 0;
+    this->action = 0;
+}
+
+
+void GFXOutputDev::processLink(Link *link, Catalog *catalog)
+{
+    double x1, y1, x2, y2;
+    
+    msg("<debug> drawlink");
+
+    link->getRect(&x1, &y1, &x2, &y2);
+
+    LinkAction*actionobj=link->getAction();
     char buf[128];
     char*s = 0;
     const char*type = "-?-";
     char*named = 0;
     int page = -1;
-    msg("<trace> drawlink action=%d", action->getKind());
-    switch(action->getKind())
+    msg("<trace> drawlink actionobj=%d", actionobj->getKind());
+    switch(actionobj->getKind())
     {
         case actionGoTo: {
             type = "GoTo";
@@ -1783,7 +1854,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         break;
         case actionGoToR: {
             type = "GoToR";
-            LinkGoToR*l = (LinkGoToR*)action;
+            LinkGoToR*l = (LinkGoToR*)actionobj;
 	    GString*g = l->getFileName();
 	    if(g)
              s = strdup(g->getCString());
@@ -1799,7 +1870,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         break;
         case actionNamed: {
             type = "Named";
-            LinkNamed*l = (LinkNamed*)action;
+            LinkNamed*l = (LinkNamed*)actionobj;
             GString*name = l->getName();
             if(name) {
                 s = strdup(name->lowerCase()->getCString());
@@ -1830,7 +1901,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         break;
         case actionLaunch: {
             type = "Launch";
-            LinkLaunch*l = (LinkLaunch*)action;
+            LinkLaunch*l = (LinkLaunch*)actionobj;
             GString * str = new GString(l->getFileName());
 	    GString * params = l->getParams();
 	    if(params)
@@ -1842,7 +1913,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         case actionURI: {
 	    char*url = 0;
             type = "URI";
-            LinkURI*l = (LinkURI*)action;
+            LinkURI*l = (LinkURI*)actionobj;
             GString*g = l->getURI();
             if(g) {
              url = g->getCString();
@@ -1852,7 +1923,7 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
         break;
         case actionUnknown: {
             type = "Unknown";
-            LinkUnknown*l = (LinkUnknown*)action;
+            LinkUnknown*l = (LinkUnknown*)actionobj;
             s = strdup("");
         }
         break;
@@ -1864,14 +1935,13 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 
     if(!s) s = strdup("-?-");
     
-    msg("<trace> drawlink s=%s", s);
-
     if(!gfxglobals->linkinfo && (page || s))
     {
         msg("<notice> File contains links");
         gfxglobals->linkinfo = 1;
     }
-    
+   
+    char*action = 0;
     if(page>0) {
         int t;
 	int lpage = -1;
@@ -1887,19 +1957,25 @@ void GFXOutputDev::processLink(Link *link, Catalog *catalog)
 
 	char buf[80];
 	sprintf(buf, "page%d", lpage);
-	device->drawlink(device, points, buf, 0);
+	action = buf;
     }
     else if(s)
     {
-        device->drawlink(device, points, s, 0);
+	action = s;
 	if(this->config_linkdatafile) {
 	    FILE*fi = fopen(config_linkdatafile, "ab+");
 	    fprintf(fi, "%s\n", s);
 	    fclose(fi);
 	}
     }
-        
-    msg("<verbose> \"%s\" link to \"%s\" (%d)", type, FIXNULL(s), page);
+    
+    this->last_link = new GFXLink(this->last_link, action, x1, y1, x2, y2);
+    if(!this->links) {
+	this->links = kdtree_new();
+    }
+    kdtree_add_box(this->links, x1,y1,x2,y2, this->last_link);
+
+    msg("<verbose> storing \"%s\" link to \"%s\"", type, FIXNULL(action));
     free(s);s=0;
 }
 

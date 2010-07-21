@@ -154,8 +154,8 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
     }
 
     outputDev->setDevice(dev);
-    pi->doc->displayPage((OutputDev*)outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, pi->config_print);
     pi->doc->processLinks((OutputDev*)outputDev, page->nr);
+    pi->doc->displayPage((OutputDev*)outputDev, page->nr, zoom*multiply, zoom*multiply, /*rotate*/0, true, true, pi->config_print);
     outputDev->finishPage();
     outputDev->setDevice(0);
     delete outputDev;

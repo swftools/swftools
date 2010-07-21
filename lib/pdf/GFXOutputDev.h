@@ -4,6 +4,7 @@
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../gfxtools.h"
+#include "../kdtree.h"
 
 #include "InfoOutputDev.h"
 #include "PDFDoc.h"
@@ -58,6 +59,8 @@ public:
   GFXOutputGlobals();
   ~GFXOutputGlobals();
 };
+
+class GFXLink;
 
 class GFXOutputDev:  public CommonOutputDev {
 public:
@@ -199,6 +202,7 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   //virtual void psXObject(Stream *psStream, Stream *level1Stream) {}
 
   virtual void setPageMap(int*pagemap, int pagemap_len);
+  void transformPoint(double x, double y, int*xout, int*yout);
 
   private:
   gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey);
@@ -262,6 +266,9 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   double last_char_x;
   double last_char_y;
   char last_char_was_space;
+    
+  GFXLink*last_link;
+  kdtree_t*links;
 
   /* config */
   int config_use_fontconfig;
@@ -286,5 +293,20 @@ class GFXGlobalParams:  public GlobalParams {
     ~GFXGlobalParams();
     virtual DisplayFontParam *getDisplayFont(GString *fontName);
 };
+
+class GFXLink {
+    double x1,y1,x2,y2;
+    const char*action;
+    int size;
+    int buf_size;
+    char*text;
+  public:
+    GFXLink*last;
+    void draw(GFXOutputDev*out, gfxdevice_t*dev);
+    void addchar(int unicode);
+    GFXLink(GFXLink*last, const char*action, double x1, double y1, double x2, double y2);
+    ~GFXLink();
+};
+
 
 #endif //__gfxoutputdev_h__
