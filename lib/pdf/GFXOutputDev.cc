@@ -662,6 +662,8 @@ GFXOutputDev::GFXOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->config_textonly = 0;
     this->page2page = 0;
     this->num_pages = 0;
+    this->links = 0;
+    this->last_link = 0;
   
     memset(states, 0, sizeof(states));
 };
