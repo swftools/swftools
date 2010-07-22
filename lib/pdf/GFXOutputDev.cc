@@ -1538,7 +1538,9 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 		    m2.tx = expected_x + (m.tx - expected_x - current_gfxfont->glyphs[space].advance*m.m00)/2;
 		    if(m2.tx < expected_x) m2.tx = expected_x;
 		    device->drawchar(device, current_gfxfont, space, &col, &m2);
-		    link->addchar(32);
+		    if(link) {
+			link->addchar(32);
+		    }
 		}
 	    }
 	    last_char_gfxfont = current_gfxfont;
