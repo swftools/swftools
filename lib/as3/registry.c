@@ -560,6 +560,8 @@ namespace_t access2namespace(U8 access, char*package)
 
 char* infotypename(slotinfo_t*s)
 {
+    if(!s) 
+	return "(unknown)";
     if(s->kind == INFOTYPE_CLASS) return "class";
     else if(s->kind == INFOTYPE_VAR) return "var";
     else if(s->kind == INFOTYPE_METHOD) return "function";

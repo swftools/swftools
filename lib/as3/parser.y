@@ -711,31 +711,30 @@ static variable_t* new_variable2(methodstate_t*method, const char*name, classinf
     }
 
     NEW(variable_t, v);
-    v->index = alloc_local();
     v->type = type;
     v->init = v->kill = init;
  
     if(name) {
-        if(!method->no_variable_scoping) 
-        {
+        if(!method->no_variable_scoping) {
             if(dict_contains(state->vars, name)) {
                 syntaxerror("variable %s already defined", name);
             }
+	    v->index = alloc_local();
             dict_put(state->vars, name, v);
-        }
-        if(method->no_variable_scoping && 
-           as3_pass==2 && 
-           dict_contains(state->method->allvars, name)) 
-        {
-            variable_t*v = dict_lookup(state->method->allvars, name);
-            if(v->type != type && (!v->type || v->type->kind!=INFOTYPE_UNRESOLVED)) {
-                syntaxerror("variable %s already defined.", name);
+        } else {
+	    if(as3_pass==2 && dict_contains(state->method->allvars, name)) {
+		variable_t*v = dict_lookup(state->method->allvars, name);
+		if(v->type != type && (!v->type || v->type->kind!=INFOTYPE_UNRESOLVED)) {
+		    syntaxerror("variable %s already defined.", name);
+		}
+		return v;
 	    }
-            return v;
-        }
+	    v->index = alloc_local();
+	}
         dict_put(state->method->allvars, name, v);
+    } else {
+	v->index = alloc_local();
     }
-
     return v;
 }
 static int new_variable(methodstate_t*method, const char*name, classinfo_t*type, char init, char maybeslot)
@@ -977,7 +976,6 @@ static void innerfunctions2vars(methodstate_t*m)
     methodstate_list_t*l = m->innerfunctions;
     while(l) {
         methodstate_t*m = l->methodstate;
-        
         variable_t* v = new_variable2(state->method, m->info->name, TYPE_FUNCTION(m->info), 0, 0);
         m->var_index = v->index;
         if(m->is_a_slot)
@@ -1448,7 +1446,10 @@ static void startfunction(modifiers_t*mod, enum yytokentype getset, char*name,
 
     if(as3_pass == 2) {
         state->method = dict_lookup(global->token2info, (void*)(ptroff_t)as3_tokencount);
-        state->method->variable_count = 0;
+      
+	if(!state->method->no_variable_scoping)
+	    state->method->variable_count = 0;
+
         parserassert(state->method);
                 
         if(state->cls) {
@@ -1673,6 +1674,10 @@ code_t*converttype(code_t*c, classinfo_t*from, classinfo_t*to)
         else if(TYPE_IS_NUMBER(to))
             return abc_convert_d(c);
         return abc_coerce2(c, &m);
+    }
+    /* allow conversion from string to number */
+    if(TYPE_IS_STRING(from) && TYPE_IS_NUMBER(to)) {
+        return abc_convert_d(c);
     }
 
     if(TYPE_IS_XMLLIST(to) && TYPE_IS_XML(from))
@@ -2221,7 +2226,7 @@ FOR_INIT : VOIDEXPRESSION
 //       (I don't see any easy way to revolve this conflict otherwise, as we
 //        can't touch VAR_READ without upsetting the precedence about "return")
 FOR_IN_INIT : "var" T_IDENTIFIER MAYBETYPE {
-    PASS1 $$=$2;new_variable(state->method, $2,0,1,0);
+    PASS1 $$=$2;new_variable(state->method, $2,$3,1,0);
     PASS2 $$=$2;new_variable(state->method, $2,$3,1,0);
 }
 FOR_IN_INIT : T_IDENTIFIER {
@@ -3575,6 +3580,10 @@ SUBNODE: X_IDENTIFIER
 	return mkcodenode(v);
     }
 };
+
+/* happens in preprocessor code */
+E : E "::" E {
+}
 
 E : E '.' ID_OR_NS "::" SUBNODE {
     $$ = get_descendants($1, $3, $5, 0, 0);

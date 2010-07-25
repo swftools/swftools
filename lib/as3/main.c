@@ -67,6 +67,7 @@ int main(int argn, char*argv[])
 #ifdef BISONDEBUG
     a3_debug = 1; //if bison was called with -t
 #endif
+    int width=20, height=10;
    
     as3_add_include_dir(getcwd(buf, 512));
 
@@ -81,6 +82,12 @@ int main(int argn, char*argv[])
         }
         if(!strcmp(argv[t], "-M")) {
             mainclass = argv[++t];
+        }
+        if(!strcmp(argv[t], "-X")) {
+            width=atoi(argv[++t]);
+        }
+        if(!strcmp(argv[t], "-Y")) {
+            height=atoi(argv[++t]);
         }
         if(!strcmp(argv[t], "-v")) {
             as3_verbosity++;
@@ -124,8 +131,8 @@ int main(int argn, char*argv[])
     swf.fileVersion = 9;
     swf.frameRate = 0x2500;
     swf.movieSize.xmin = swf.movieSize.ymin = 0;
-    swf.movieSize.xmax = 20*20;
-    swf.movieSize.ymax = 10*20;
+    swf.movieSize.xmax = width*20;
+    swf.movieSize.ymax = height*20;
 
 
     TAG*tag = swf.firstTag = swf_InsertTag(0, ST_SETBACKGROUNDCOLOR);
