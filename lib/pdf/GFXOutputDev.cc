@@ -1167,9 +1167,10 @@ void GFXOutputDev::endPage()
     }
     GFXLink*l = this->last_link;
     while(l) {
+	GFXLink*last = l->last;
 	l->draw(this,device);
 	delete l;
-	l = l->last;
+	l = last;
     }
     this->last_link = 0;
 }
