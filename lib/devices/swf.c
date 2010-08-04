@@ -2937,11 +2937,11 @@ static SWFFONT* gfxfont_to_swffont(gfxfont_t*font, const char* id, int version)
     swffont->layout->leading = bounds.ymax - bounds.ymin;
 
     /* if the font has proper ascent/descent values (>0) and those define
-       greater line spacing that what we estimated from the bounding boxes,
-       use the font's parameters */
-    if(font->ascent*20 > swffont->layout->ascent)
+       greater (but not overly large) line spacing than what we estimated 
+       from the bounding boxes, use the font's parameters */
+    if(font->ascent*20 > swffont->layout->ascent && font->ascent*20*2 < swffont->layout->ascent)
 	swffont->layout->ascent = font->ascent*20;
-    if(font->descent*20 > swffont->layout->descent)
+    if(font->descent*20 > swffont->layout->descent && font->descent*20*2 < swffont->layout->descent)
 	swffont->layout->descent = font->descent*20;
 
     swf_FontSort(swffont);
@@ -2984,6 +2984,12 @@ static void swf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	msg("<debug> |   Maxascii: %d", l->swffont->maxascii);
 	msg("<debug> |   Style: %d", l->swffont->style);
 	msg("<debug> |   Encoding: %d", l->swffont->encoding);
+	if(l->swffont->layout) {
+	    msg("<debug> |   Ascent: %.2f", l->swffont->layout->ascent / 20.0);
+	    msg("<debug> |   Descent: %.2f", l->swffont->layout->descent / 20.0);
+	    msg("<debug> |   Leading: %.2f", l->swffont->layout->leading / 20.0);
+	}
+
 	for(iii=0; iii<l->swffont->numchars;iii++) {
 	    msg("<debug> |   Glyph %d) name=%s, unicode=%d size=%d bbox=(%.2f,%.2f,%.2f,%.2f)\n", iii, l->swffont->glyphnames?l->swffont->glyphnames[iii]:"<nonames>", l->swffont->glyph2ascii[iii], l->swffont->glyph[iii].shape->bitlen, 
 		    l->swffont->layout->bounds[iii].xmin/20.0,

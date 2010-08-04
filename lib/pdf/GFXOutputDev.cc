@@ -1513,7 +1513,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 
     gfxbbox_t bbox;
     
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d>) CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, font->isCIDFont(), render, glyphid, current_gfxfont);
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d> '%c') CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, u, font->isCIDFont(), render, glyphid, current_gfxfont);
 
     if((render == RENDER_FILL && !config_drawonlyshapes) ||
        (render == RENDER_FILLSTROKE && state->getTransformedLineWidth()<1.0) ||
