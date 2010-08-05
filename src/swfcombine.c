@@ -1332,7 +1332,7 @@ int main(int argn, char *argv[])
 	    {
 		int ret;
 		fi = open(slave_filename[t], O_RDONLY|O_BINARY);
-		if(!fi) {
+		if(fi<0) {
 		    msg("<fatal> Failed to open %s\n", slave_filename[t]);
 		    exit(1);
 		}
