@@ -606,8 +606,10 @@ RUBY_CPPFLAGS
 RUBY_LIBS
 RUBY
 HAVE_PYTHON_IMAGING
+PYTHON_INSTALL_PATH
 PYTHON_INCLUDES
 PYTHON_LIB
+PYTHON_EXECUTABLE
 USE_GZIP
 VIDEO_CFLAGS
 VIDEO_LIBS
@@ -7024,8 +7026,8 @@ fi
 # ------------------------------------------------------------------
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python.h" >&5
-$as_echo_n "checking for Python.h... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python version" >&5
+$as_echo_n "checking for Python version... " >&6; }
 
 if test "x$PYTHON_LIB" '!=' "x" -a "x$PYTHON_INCLUDES" '!=' "x";then
     PY_VERSION=unknown
@@ -7075,26 +7077,40 @@ else
         fi
     done
 fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PY_VERSION" >&5
+$as_echo "$PY_VERSION" >&6; }
 
 if test "x$PY_VERSION" "!=" "x"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PY_VERSION" >&5
-$as_echo "$PY_VERSION" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python executable" >&5
+$as_echo_n "checking for Python executable... " >&6; }
+    if python$PY_VERSION -V 2>&5;then
+        PYTHON_EXECUTABLE=python$PY_VERSION
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXECUTABLE" >&5
+$as_echo "$PYTHON_EXECUTABLE" >&6; }
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
+$as_echo "failed" >&6; }
+    fi
+fi
+
+if test "x$PY_VERSION" "!=" "x" -a "x$PYTHON_EXECUTABLE" "!=" "x"; then
     export PYTHON_INCLUDES PYTHON_LIB
 
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we can compile the python test program" >&5
-$as_echo_n "checking whether we can compile the python test program... " >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we can compile the Python test program" >&5
+$as_echo_n "checking whether we can compile the Python test program... " >&6; }
 
     cat > conftest.c << EOF
-#include <Python.h>
+#   include <Python.h>
 
-int main()
-{
-    int ret;
-    ret = Py_Main(0, 0);
-    int x; // check also for gcc 2.95.x incompatibilities
-    return ret;
-}
+    int main()
+    {
+	int ret;
+	ret = Py_Main(0, 0);
+	int x; // check also for gcc 2.95.x incompatibilities
+	return ret;
+    }
 EOF
 
     ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
@@ -7109,18 +7125,39 @@ $as_echo "yes" >&6; }
 $as_echo "no" >&6; }
     fi
     rm -f conftest*
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python install path" >&5
+$as_echo_n "checking for Python install path... " >&6; }
+cat > _pypath.py << EOF
+import distutils
+import distutils.sysconfig
+import sys
+sys.stdout.write(distutils.sysconfig.get_python_lib(plat_specific=0,standard_lib=0))
+EOF
+    echo $PYTHON_EXECUTABLE _pypath.py 1>&5
+    if $PYTHON_EXECUTABLE _pypath.py >_pypath.txt 2>&5;then
+    	PYTHON_INSTALL_PATH=`cat _pypath.txt`
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_INSTALL_PATH" >&5
+$as_echo "$PYTHON_INSTALL_PATH" >&6; }
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
+$as_echo "failed" >&6; }
+    fi
+    #rm -f _pypath.txt _pypath.py
+
     if test "x$PYTHON_OK" = "xyes";then
         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python-Imaging" >&5
 $as_echo_n "checking for Python-Imaging... " >&6; }
     cat > conftest.c << EOF
-#include <Python.h>
-#include <Imaging.h>
+#   include <Python.h>
+#   include <Imaging.h>
 
-int main()
-{
-    Py_Main(0, 0);
-    return 0;
-}
+    int main()
+    {
+	Py_Main(0, 0);
+	return 0;
+    }
 EOF
         if test "$HAVE_PYTHON_IMAGING_LIB"; then
             ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
@@ -7147,9 +7184,6 @@ $as_echo "no" >&6; }
         fi
     fi
     rm -f conftest*
-else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: nope" >&5
-$as_echo "nope" >&6; }
 fi
 
 
