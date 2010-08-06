@@ -98,6 +98,8 @@ ${name}/lib/png.h \
 ${name}/lib/png.c \
 ${name}/lib/jpeg.h \
 ${name}/lib/jpeg.c \
+${name}/lib/kdtree.h \
+${name}/lib/kdtree.c \
 ${name}/lib/drawer.c \
 ${name}/lib/drawer.h \
 ${name}/lib/mem.c \
@@ -292,6 +294,8 @@ ${name}/lib/pdf/fonts.c \
 ${name}/lib/pdf/fonts.h \
 ${name}/lib/pdf/pdf.cc \
 ${name}/lib/pdf/pdf.h \
+${name}/lib/pdf/popplercompat.cc \
+${name}/lib/pdf/popplercompat.h \
 ${name}/lib/pdf/xpdf/Annot.cc \
 ${name}/lib/pdf/xpdf/Annot.h \
 ${name}/lib/pdf/xpdf/Array.cc \
@@ -443,7 +447,8 @@ ${name}/lib/pdf/xpdf/SplashXPathScanner.h"
 
 PYTHON="${name}/lib/python/Makefile.in \
 ${name}/lib/python/SWF.c \
-${name}/lib/python/gfx.c \
+${name}/lib/python/gfx2.c \
+${name}/lib/python/gfx3.c \
 ${name}/lib/python/image.c \
 ${name}/lib/python/image.h \
 ${name}/lib/python/primitives.c \
