@@ -1523,8 +1523,7 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 	int space = this->current_fontinfo->space_char;
 	if(config_extrafontdata && config_detectspaces && space>=0 && m.m00 && !m.m01) {
 	    /* space char detection */
-	    if(last_char_gfxfont == current_gfxfont && 
-	       last_char_y == m.ty &&
+	    if(last_char_y == m.ty &&
 	       !last_char_was_space) {
 		double expected_x = last_char_x + current_gfxfont->glyphs[last_char].advance*last_char_x_fontsize;
 		int space = this->current_fontinfo->space_char;
@@ -1545,7 +1544,6 @@ void GFXOutputDev::drawChar(GfxState *state, double x, double y,
 		}
 	    }
 	    last_char_x_fontsize = m.m00;
-	    last_char_gfxfont = current_gfxfont;
 	    last_char = glyphid;
 	    last_char_x = m.tx;
 	    last_char_y = m.ty;
@@ -1743,7 +1741,7 @@ void GFXOutputDev::startPage(int pageNum, GfxState *state)
     states[statepos].dashLength = 0;
     states[statepos].dashStart = 0;
     
-    this->last_char_gfxfont = 0;
+    this->last_char_y = 0;
 }
 
 void GFXLink::draw(GFXOutputDev*out, gfxdevice_t*dev)

@@ -261,7 +261,6 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   FontInfo*current_fontinfo;
   gfxmatrix_t current_font_matrix;
 
-  gfxfont_t* last_char_gfxfont;
   int last_char;
   double last_char_x;
   double last_char_y;
