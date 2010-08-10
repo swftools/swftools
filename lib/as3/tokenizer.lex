@@ -557,7 +557,7 @@ REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 [>]                          {c(); return m('>');}
 [=]                          {c(); return m('=');}
 {XMLID}                      {c(); handleRaw(yytext, yyleng);return T_IDENTIFIER;}
-{S}                          {l();}
+{S}                          {l(); handleRaw(yytext, yyleng);return T_STRING;}
 <<EOF>>                      {syntaxerror("unexpected end of file");}
 }
 
