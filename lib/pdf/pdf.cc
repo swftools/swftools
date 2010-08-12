@@ -22,7 +22,7 @@
 
 static double zoom = 72; /* xpdf: 86 */
 static int zoomtowidth = 0;
-static int multiply = 1;
+static double multiply = 1.0;
 static char* global_page_range = 0;
 
 static int globalparams_count=0;
@@ -131,11 +131,10 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
     outputDev->setClip(x1,y1,x2,y2);
 
     gfxdevice_t* middev=0;
-    if(multiply>1) {
+    if(multiply!=1.0) {
     	middev = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
 	gfxdevice_rescale_init(middev, 0x00000000, 0, 0, 1.0 / multiply);
         gfxdevice_rescale_setdevice(middev, dev);
-	middev->setparameter(middev, "protect", "1");
 	dev = middev;
     } 
 	
@@ -408,7 +407,7 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
     } else if(!strcmp(name, "jpegdpi") || !strcmp(name, "ppmdpi")) {
 	msg("<error> %s not supported anymore. Please use jpegsubpixels/ppmsubpixels");
     } else if(!strcmp(name, "multiply")) {
-        multiply = atoi(value);
+        multiply = atof(value);
     } else if(!strcmp(name, "help")) {
 	printf("\nPDF device global parameters:\n");
 	printf("fontdir=<dir>     a directory with additional fonts\n");
