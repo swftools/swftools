@@ -587,7 +587,7 @@ static void my_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t
         return;
     }
 }
-static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, consr char*text)
+static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     callback_python("drawlink", dev, "lss", line, action, text);
 }

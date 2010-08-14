@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
+#include <stdint.h>
 
 /*
          192
