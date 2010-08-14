@@ -928,9 +928,6 @@ void BitmapOutputDev::startPage(int pageNum, GfxState *state)
 void BitmapOutputDev::endPage()
 {
     msg("<verbose> endPage (BitmapOutputDev)");
-
-    /* notice: we're not fully done yet with this page- there might still be 
-       a few calls to drawLink() yet to come */
 }
 void BitmapOutputDev::finishPage()
 {
@@ -1801,7 +1798,6 @@ void BitmapOutputDev::drawForm(Ref id)
 void BitmapOutputDev::processLink(Link *link, Catalog *catalog)
 {
     msg("<debug> processLink");
-    flushEverything();
     gfxdev->processLink(link, catalog);
 }
 void BitmapOutputDev::flushEverything()
