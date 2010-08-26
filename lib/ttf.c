@@ -2429,6 +2429,14 @@ void ttf_destroy(ttf_t*ttf)
     free(ttf);
 }
 
+ttf_t* ttf_open(const char*filename)
+{
+    memfile_t*m = memfile_open(filename);
+    ttf_t*ttf = ttf_load(m->data, m->len);
+    memfile_close(m);
+    return ttf;
+}
+
 #ifdef MAIN
 int main(int argn, const char*argv[])
 {
