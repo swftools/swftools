@@ -4,7 +4,7 @@ top_srcdir = @top_srcdir@
 include ../Makefile.common
 
 programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) as3compile$(E) @PDF2SWF@ @PDF2PDF@
-opt_programs = swfbytes$(E)
+opt_programs = swfbytes$(E) ttftool$(E)
 
 all: $(programs)
 
@@ -40,6 +40,8 @@ swfbytes.$(O): swfbytes.c
 	$(C) swfbytes.c -o $@
 font2swf.$(O): font2swf.c
 	$(C) font2swf.c -o $@
+ttftool.$(O): ttftool.c
+	$(C) ttftool.c -o $@
 as3compile.$(O): as3compile.c
 	$(C) as3compile.c -o $@
 swfc.$(O): swfc.c parser.h ../lib/q.h
@@ -101,6 +103,9 @@ swfbbox$(E): swfbbox.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(STRIP) $@
 font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) font2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
+	$(STRIP) $@
+ttftool$(E): ttftool.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) ttftool.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
 as3compile$(E): as3compile.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) as3compile.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)

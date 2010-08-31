@@ -1,0 +1,18 @@
+Usage: %s [-n] fontfile.ttf
+
+Displays information about TrueType (ttf) font files.
+
+This tool converts jpeg image files into an SWF animation. It takes any
+number of input pictures, and converts them to SWF one-by-one, where every
+converted picture is a seperate frame in the target SWF.
+
+-n --name
+    Display the font name.
+-v --verbose
+    Increase verbosity.
+-V --version  
+    Print version information and exit
+
+.SH AUTHORS
+
+Matthias Kramm <kramm@quiss.org>
