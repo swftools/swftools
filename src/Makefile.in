@@ -64,7 +64,7 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 ../lib/libgfx$(A): ../lib/devices/*.c ../lib/gfxdevice.h ../lib/gfxtools.c ../lib/gfxfont.c
 	cd ../lib;$(MAKE) libgfx$(A);cd -
 
-../lib/libgfxswf$(A): ../lib/devices/swf.c
+../lib/libgfxswf$(A): ../lib/devices/swf.c ../lib/readers/swf.c
 	cd ../lib;$(MAKE) libgfxswf$(A);cd -
 
 # TODO: include the following rule only if lex is available

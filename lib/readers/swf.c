@@ -53,22 +53,17 @@ typedef struct _sprite
     int frameCount;
 } sprite_t;
 
-struct _render
+typedef struct _render
 {
     map16_t*id2char;
     gfxdevice_t*device;
     MATRIX m;
     int clips;
     int*clips_waiting;
-};
-typedef struct _render render_t;
 
+    placement_t*current_placement;
+} render_t;
 
-static void placement_free(placement_t*p)
-{
-    swf_PlaceObjectFree(&p->po);
-    free(p);
-}
 
 //---- object/depth handling ----
 
@@ -108,6 +103,29 @@ void map16_enumerate(map16_t*map, void (*f)(void*self, int id, void*data), void*
 	}
     }
 }
+//---- placements ----
+
+placement_t* placement_unit()
+{
+    placement_t*placement = rfx_calloc(sizeof(placement_t));
+    swf_GetPlaceObject(0, &placement->po);
+    return placement;
+}
+
+placement_t* placement_join(placement_t*p1, placement_t*p2)
+{
+    placement_t*placement = rfx_alloc(sizeof(placement_t));
+    *placement = *p1;
+    swf_MatrixJoin(&placement->po.matrix, &p1->po.matrix, &p2->po.matrix);
+    return placement;
+}
+
+static void placement_free(placement_t*p)
+{
+    swf_PlaceObjectFree(&p->po);
+    free(p);
+}
+
 //---- conversion stuff ----
 
 static void convertMatrix(MATRIX*from, gfxmatrix_t*to)
@@ -422,9 +440,6 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
     int frame = 1;
     int insprite = 0;
 
-    SWF*swf = rfx_calloc(sizeof(SWF));
-    swf->firstTag = startTag;
-
     for(;tag;tag = tag->next) {
 	if(tag->id == ST_DEFINESPRITE) {
 	    while(tag->id != ST_END)
@@ -439,12 +454,16 @@ static map16_t* extractFrame(TAG*startTag, int frame_to_extract)
             swf_GetPlaceObject(tag, &p->po);
 	    if(p->po.move) {
 		placement_t*old = (placement_t*)map16_get_id(depthmap, p->po.depth);
-		p->po.id = old->po.id;
-		map16_remove_id(depthmap, p->po.depth);
-		placement_free(p);
-	    } else {
-		map16_add_id(depthmap, p->po.depth, p);
+	
+		if(!(p->po.flags&PF_CHAR)) p->po.id = old->po.id;
+		if(!(p->po.flags&PF_MATRIX)) p->po.matrix = old->po.matrix;
+		if(!(p->po.flags&PF_CXFORM)) p->po.cxform = old->po.cxform;
+		if(!(p->po.flags&PF_RATIO)) p->po.ratio = old->po.ratio;
+
+		map16_remove_id(depthmap, old->po.depth);
+		placement_free(old);
 	    }
+	    map16_add_id(depthmap, p->po.depth, p);
 	}
 	if(tag->id == ST_REMOVEOBJECT ||
 	   tag->id == ST_REMOVEOBJECT2) {
@@ -494,9 +513,15 @@ void swf_ApplyMatrixToShape(SHAPE2*shape, MATRIX*m)
     SHAPELINE*line = shape->lines;
     while(line) {
 	SPOINT p;
+	
 	p.x = line->x; p.y = line->y;
 	p = swf_TurnPoint(p, m);
 	line->x = p.x; line->y = p.y;
+	
+	p.x = line->sx; p.y = line->sy;
+	p = swf_TurnPoint(p, m);
+	line->sx = p.x; line->sy = p.y;
+
 	line = line->next;
     }
 }
@@ -506,11 +531,22 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
     if(c->type == TYPE_SHAPE) {
 	SHAPE2 shape;
 	swf_ParseDefineShape(c->tag, &shape);
-	MATRIX m;
-	swf_MatrixJoin(&m, &r->m, &p->po.matrix);
+
+	MATRIX m,m2;
+	swf_MatrixJoin(&m2, &r->m, &r->current_placement->po.matrix);
+	swf_MatrixJoin(&m, &m2, &p->po.matrix);
+
 	swf_ApplyMatrixToShape(&shape, &m);
+
 	SHAPELINE*line = shape.lines;
 	int t;
+	
+	for(t=1;t<=shape.numlinestyles;t++) {
+	   gfxline_t*line = swfline_to_gfxline(shape.lines, t, -1);
+	   if(line) renderOutline(r, line, &shape.linestyles[t-1], &p->po.cxform);
+	   gfxline_free(line);
+	}
+
 	for(t=1;t<=shape.numfillstyles;t++) {
 	   gfxline_t*line;
 	   line = swfline_to_gfxline(shape.lines, -1, t);
@@ -527,11 +563,7 @@ static void renderCharacter(render_t*r, placement_t*p, character_t*c)
 	   if(line) renderFilled(r, line, &shape.fillstyles[t-1], &p->po.cxform);
 	   gfxline_free(line);*/
 	}
-	for(t=1;t<=shape.numlinestyles;t++) {
-	   gfxline_t*line = swfline_to_gfxline(shape.lines, t, -1);
-	   if(line) renderOutline(r, line, &shape.linestyles[t-1], &p->po.cxform);
-	   gfxline_free(line);
-	}
+	
     } else if(c->type == TYPE_TEXT) {
         TAG* tag = c->tag;
         textcallbackblock_t info;
@@ -555,17 +587,23 @@ static void placeObject(void*self, int id, void*data)
     render_t*r = (render_t*)self;
     placement_t*p = (placement_t*)data;
     character_t*c = map16_get_id(r->id2char, p->po.id);
+    
     if(!c)  {
         fprintf(stderr, "Error: ID %d unknown\n", p->po.id);
         return;
     }
+    
     if(c->type == TYPE_SPRITE) {
+	placement_t*oldp = r->current_placement;
+	r->current_placement = placement_join(oldp, p);
+
         int*old_clips_waiting = r->clips_waiting;
         r->clips_waiting = rfx_calloc(sizeof(r->clips_waiting[0])*65536);
 
         sprite_t* s = (sprite_t*)c->data;
 
-        map16_t* depths = extractFrame(c->tag->next, s->frameCount>0? p->age % s->frameCount : 0);
+	TAG*spritetags = c->tag->next;
+        map16_t* depths = extractFrame(spritetags, s->frameCount>0? p->age % s->frameCount : 0);
         map16_enumerate(depths, placeObject, r);
        
         int t;
@@ -577,9 +615,12 @@ static void placeObject(void*self, int id, void*data)
         }
         free(r->clips_waiting);
         r->clips_waiting = old_clips_waiting;
-        return;
+
+	placement_free(r->current_placement);
+	r->current_placement = oldp;
+    } else {
+	renderCharacter(r, p, c);
     }
-    renderCharacter(r, p, c);
 }
 
 void swfpage_destroy(gfxpage_t*swf_page)
@@ -600,6 +641,7 @@ void swfpage_render(gfxpage_t*page, gfxdevice_t*output)
     r.device = output;
     r.m = pi->m;
     r.clips_waiting = malloc(sizeof(r.clips_waiting[0])*65536);
+    r.current_placement = placement_unit();
     memset(r.clips_waiting, 0, sizeof(r.clips_waiting[0])*65536);
 
     int t;
