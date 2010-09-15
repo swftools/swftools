@@ -932,8 +932,9 @@ void BitmapOutputDev::endPage()
 void BitmapOutputDev::finishPage()
 {
     msg("<verbose> finishPage (BitmapOutputDev)");
+    
+    flushEverything();
     gfxdev->endPage();
-   
     flushEverything();
 
     /* splash will now destroy alpha, and paint the 
