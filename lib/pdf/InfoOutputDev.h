@@ -78,6 +78,8 @@ public:
     double lastx,lasty;
     int lastchar;
     int lastadvance;
+    
+    float m00,m01,m10,m11;
 
     double ascender,descender;
 
@@ -96,6 +98,7 @@ public:
 };
 
 extern char*getFontID(GfxFont*font);
+extern gfxmatrix_t gfxmatrix_from_state(GfxState*state);
 
 class InfoOutputDev: public OutputDev 
 {
@@ -104,6 +107,7 @@ class InfoOutputDev: public OutputDev
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
     Page *page;
+    gfxmatrix_t current_font_matrix;
 
     public:
     int x1,y1,x2,y2;
@@ -120,6 +124,7 @@ class InfoOutputDev: public OutputDev
     virtual ~InfoOutputDev(); 
     virtual GBool useTilingPatternFill();
     virtual GBool upsideDown();
+    virtual GBool needNonText();
     virtual GBool useDrawChar();
     virtual GBool interpretType3Chars();
     virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
@@ -149,6 +154,8 @@ class InfoOutputDev: public OutputDev
 			  double dx, double dy,
 			  double originX, double originY,
 			  CharCode code, int nBytes, Unicode *u, int uLen);
+
+    virtual void updateFontMatrix(GfxState*state);
 
     virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,

@@ -1420,29 +1420,10 @@ char* makeStringPrintable(char*str)
     tmp_printstr[len] = 0;
     return tmp_printstr;
 }
+
 void GFXOutputDev::updateFontMatrix(GfxState*state)
 {
-    double* ctm = state->getCTM();
-    double fontSize = state->getFontSize();
-    double*textMat = state->getTextMat();
-
-    /*  taking the absolute value of horizScaling seems to be required for
-	some italic fonts. FIXME: SplashOutputDev doesn't need this- why? */
-    double hscale = fabs(state->getHorizScaling());
-   
-    // from xpdf-3.02/SplashOutputDev:updateFont
-    double mm11 = textMat[0] * fontSize * hscale;
-    double mm12 = textMat[1] * fontSize * hscale;
-    double mm21 = textMat[2] * fontSize;
-    double mm22 = textMat[3] * fontSize;
-
-    // multiply with ctm, like state->getFontTransMat() does
-    this->current_font_matrix.m00 = (ctm[0]*mm11 + ctm[2]*mm12) / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.m01 = (ctm[1]*mm11 + ctm[3]*mm12) / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.m10 = (ctm[0]*mm21 + ctm[2]*mm22) / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.m11 = (ctm[1]*mm21 + ctm[3]*mm22) / INTERNAL_FONT_SIZE;
-    this->current_font_matrix.tx = 0;
-    this->current_font_matrix.ty = 0;
+    this->current_font_matrix = gfxmatrix_from_state(state);
 }
 
 void GFXOutputDev::beginString(GfxState *state, GString *s) 

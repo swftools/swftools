@@ -310,6 +310,7 @@ void InfoOutputDev::startPage(int pageNum, GfxState *state)
     this->y1 = (int)y1;
     this->x2 = (int)x2;
     this->y2 = (int)y2;
+    memset(&this->current_font_matrix, 0, sizeof(this->current_font_matrix));
     msg("<verbose> Generating info structure for page %d", pageNum);
 }
 void InfoOutputDev::endPage()
@@ -355,6 +356,45 @@ char*getFontID(GfxFont*font)
 	sprintf(buf, "%s-%d-%d", fname, ref->num, ref->gen);
     }
     return strdup(buf);
+}
+
+gfxmatrix_t gfxmatrix_from_state(GfxState*state)
+{
+    double* ctm = state->getCTM();
+    double fontSize = state->getFontSize();
+    double*textMat = state->getTextMat();
+
+    /*  taking the absolute value of horizScaling seems to be required for
+	some italic fonts. FIXME: SplashOutputDev doesn't need this- why? */
+    double hscale = fabs(state->getHorizScaling());
+   
+    // from xpdf-3.02/SplashOutputDev:updateFont
+    double mm11 = textMat[0] * fontSize * hscale;
+    double mm12 = textMat[1] * fontSize * hscale;
+    double mm21 = textMat[2] * fontSize;
+    double mm22 = textMat[3] * fontSize;
+
+    // multiply with ctm, like state->getFontTransMat() does
+    gfxmatrix_t m;
+    m.m00 = (ctm[0]*mm11 + ctm[2]*mm12) / INTERNAL_FONT_SIZE;
+    m.m01 = (ctm[1]*mm11 + ctm[3]*mm12) / INTERNAL_FONT_SIZE;
+    m.m10 = (ctm[0]*mm21 + ctm[2]*mm22) / INTERNAL_FONT_SIZE;
+    m.m11 = (ctm[1]*mm21 + ctm[3]*mm22) / INTERNAL_FONT_SIZE;
+    m.tx = 0;
+    m.ty = 0;
+    return m;
+}
+
+void InfoOutputDev::updateFontMatrix(GfxState*state)
+{
+    this->current_font_matrix = gfxmatrix_from_state(state);
+}
+
+GBool InfoOutputDev::needNonText() 
+{ 
+    /* this switches off certain expensive operations, like
+       pattern fill and forms */
+    return gFalse; 
 }
 
 void InfoOutputDev::updateFont(GfxState *state) 
