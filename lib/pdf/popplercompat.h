@@ -42,4 +42,28 @@ char* mktmpname(char*ptr);
   #define POPPLER_RAXIAL_MIN_MAX_ARG
 #endif
 
+#ifdef HAVE_POPPLER
+  #include <goo/GooString.h>
+  #include <goo/gfile.h>
+#else
+  #include "xpdf/config.h"
+  #include "gfile.h"
+  #include "GString.h"
+#endif
+#include "Object.h"
+#include "Stream.h"
+#include "Array.h"
+#include "Dict.h"
+#include "XRef.h"
+#include "Catalog.h"
+#include "Page.h"
+#include "PDFDoc.h"
+#include "Error.h"
+#include "Link.h"
+#include "OutputDev.h"
+#include "GfxFont.h"
+#include "GfxState.h"
+//#include "NameToUnicodeTable.h"
+#include "GlobalParams.h"
+
 #endif

@@ -1,15 +1,16 @@
-#ifndef __gfxoutputdev_h__
-#define __gfxoutputdev_h__
+#ifndef __vectorgraphicsoutputdev_h__
+#define __vectorgraphicsoutputdev_h__
 
 #include "../gfxdevice.h"
 #include "../gfxsource.h"
 #include "../gfxtools.h"
 #include "../kdtree.h"
 
+#include "CommonOutputDev.h"
 #include "InfoOutputDev.h"
+#include "CharOutputDev.h"
 #include "PDFDoc.h"
 #include "GlobalParams.h"
-#include "CommonOutputDev.h"
 
 class GFXOutputState {
     public:
@@ -37,45 +38,26 @@ class GFXOutputState {
     GfxState*state;
 };
 
-typedef struct _feature
-{
-    char*string;
-    struct _feature*next;
-} feature_t;
-
 void addGlobalFont(const char*filename);
 void addGlobalLanguageDir(const char*dir);
 void addGlobalFontDir(const char*dirname);
 
-class GFXOutputGlobals {
-public:
-  feature_t*featurewarnings;
-
-  int textmodeinfo; // did we write "Text will be rendered as polygon" yet?
-  int jpeginfo; // did we write "File contains jpegs" yet?
-  int pbminfo; // did we write "File contains jpegs" yet?
-  int linkinfo; // did we write "File contains links" yet?
-
-  GFXOutputGlobals();
-  ~GFXOutputGlobals();
-};
-
 class GFXLink;
+  
+void drawchar_callback(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
 
-class GFXOutputDev:  public CommonOutputDev {
+class VectorGraphicOutputDev:  public CommonOutputDev {
 public:
   gfxdevice_t* device;
 
-  GFXOutputDev(InfoOutputDev*info, PDFDoc*doc);
-  virtual ~GFXOutputDev() ;
+  VectorGraphicOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2);
+  virtual ~VectorGraphicOutputDev() ;
 
   virtual void setDevice(gfxdevice_t*dev);
-  virtual void setMove(int x,int y);
-  virtual void setClip(int x1,int y1,int x2,int y2);
   virtual void setParameter(const char*key, const char*value);
   
   // Start a page.
-  virtual void startPage(int pageNum, GfxState *state);
+  virtual void beginPage(GfxState *state, int pageNum);
   virtual void endPage();
 
   //----- get info about output device
@@ -87,8 +69,6 @@ public:
   // Does this device use drawChar() or drawString()?
   virtual GBool useDrawChar();
   
-  virtual GBool interpretType3Chars();
-  
   //virtual GBool useShadedFills() { return gTrue; }
 
   //----- link borders
@@ -99,20 +79,9 @@ public:
   virtual void restoreState(GfxState *state) ;
 
   //----- update graphics state
-
   virtual void updateLineDash(GfxState *state);
   virtual void updateFont(GfxState *state);
   virtual void updateFontMatrix(GfxState *state);
-  virtual void updateFillColor(GfxState *state);
-  virtual void updateStrokeColor(GfxState *state);
-  virtual void updateLineWidth(GfxState *state);
-  virtual void updateLineJoin(GfxState *state);
-  virtual void updateLineCap(GfxState *state);
-  virtual void updateFillOpacity(GfxState *state);
-  virtual void updateStrokeOpacity(GfxState *state);
-  virtual void updateFillOverprint(GfxState *state);
-  virtual void updateStrokeOverprint(GfxState *state);
-  virtual void updateTransfer(GfxState *state);
   
   //----- path painting
   virtual void stroke(GfxState *state) ;
@@ -193,21 +162,8 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   virtual void drawForm(Ref id);
   virtual GBool needNonText();
 
-  //virtual void dump();
-  //virtual void beginStringOp(GfxState *state);
-  //virtual void drawString(GfxState *state, GString *s);
-  //virtual void endStringOp(GfxState *state);
-  //virtual GBool getVectorAntialias() { return gFalse; }
-  //virtual void setVectorAntialias(GBool vaa) {}
-  //virtual void psXObject(Stream *psStream, Stream *level1Stream) {}
-
-  virtual void setPageMap(int*pagemap, int pagemap_len);
-  void transformPoint(double x, double y, int*xout, int*yout);
-
   private:
   gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey);
-
-  void transformXY(GfxState*state, double x, double y, double*nx, double*ny);
 
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,
@@ -218,42 +174,13 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   void clipToGfxLine(GfxState *state, gfxline_t*line, char evenodd);
   void fillGfxLine(GfxState *state, gfxline_t*line, char evenodd);
 
-  gfxfont_t* createGfxFont(GfxFont*xpdffont, FontInfo*src);
-
-  void showfeature(const char*feature,char fully, char warn);
-  void warnfeature(const char*feature,char fully);
-  void infofeature(const char*feature);
-  
-  char* searchFont(const char*name);
-  char* substituteFont(GfxFont*gfxFont, char*oldname);
-  char* writeEmbeddedFontToFile(XRef*ref, GfxFont*font);
-
-  /* for page mapping */
-  int* page2page;
-  int num_pages;
-
-
   int currentpage;
   char outer_clip_box; //whether the page clip box is still on
-  InfoOutputDev*info;
   GFXOutputState states[64];
   int statepos;
 
-  PDFDoc*doc;
-  XRef*xref;
-
   int type3active; // are we between beginType3()/endType3()?
-
   GfxState *laststate;
-
-  int user_movex,user_movey;
-  int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
-
-  /* upper left corner of clipping rectangle (cropbox)- needs to be
-     added to all drawing coordinates to give the impression that all
-     pages start at (0,0)*/
-  int clipmovex;
-  int clipmovey;
 
   gfxline_t* current_text_stroke;
   gfxline_t* current_text_clip;
@@ -261,52 +188,23 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   FontInfo*current_fontinfo;
   gfxmatrix_t current_font_matrix;
 
-  int last_char;
-  double last_char_x;
-  double last_char_y;
-  double last_char_x_fontsize;
-  char last_char_was_space;
-    
-  GFXLink*last_link;
-  kdtree_t*links;
-
   /* config */
-  int config_use_fontconfig;
   int config_break_on_warning;
   int config_remapunicode;
   int config_transparent;
-  int config_extrafontdata;
   int config_convertgradients;
   int config_disable_polygon_conversion;
   int config_multiply;
-  int config_bigchar;
   int config_drawonlyshapes;
-  int config_detectspaces;
   int config_textonly;
-  char* config_linkdatafile;
-  double config_fontquality;
+
+  gfxdevice_t char_output_dev;
+  CharOutputDev*charDev;
+  friend void drawchar_callback(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+  gfxfont_t*gfxfont_from_callback;
+  int glyphnr_from_callback;
+  gfxcolor_t textcolor_from_callback;
+  gfxmatrix_t textmatrix_from_callback;
 };
 
-class GFXGlobalParams:  public GlobalParams {
-    public:
-    GFXGlobalParams();
-    ~GFXGlobalParams();
-    virtual DisplayFontParam *getDisplayFont(GString *fontName);
-};
-
-class GFXLink {
-    double x1,y1,x2,y2;
-    const char*action;
-    int size;
-    int buf_size;
-    char*text;
-  public:
-    GFXLink*last;
-    void draw(GFXOutputDev*out, gfxdevice_t*dev);
-    void addchar(int unicode);
-    GFXLink(GFXLink*last, const char*action, double x1, double y1, double x2, double y2);
-    ~GFXLink();
-};
-
-
-#endif //__gfxoutputdev_h__
+#endif //__vectorgraphicsoutputdev_h__

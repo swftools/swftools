@@ -21,7 +21,7 @@
 #include <memory.h>
 #include <assert.h>
 #include "BitmapOutputDev.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 
 #ifdef HAVE_POPPLER
   #include "splash/SplashBitmap.h"
@@ -53,7 +53,8 @@ ClipState::ClipState()
     this->written = 0;
 }
 
-BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
+BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
+:CommonOutputDev(info, doc, page2page, num_pages, x, y, x1, y1, x2, y2)
 {
     this->info = info;
     this->doc = doc;
@@ -75,7 +76,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->booltextdev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
 
     /* device for handling texts and links */
-    this->gfxdev = new GFXOutputDev(info, this->doc);
+    this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
 
     this->rgbdev->startDoc(this->xref);
     this->boolpolydev->startDoc(this->xref);
@@ -149,30 +150,12 @@ void BitmapOutputDev::setDevice(gfxdevice_t*dev)
 {
     this->dev = dev;
 }
-void BitmapOutputDev::setMove(int x,int y)
-{
-    this->gfxdev->setMove(x,y);
-    this->user_movex = x;
-    this->user_movey = y;
-}
-void BitmapOutputDev::setClip(int x1,int y1,int x2,int y2)
-{
-    this->gfxdev->setClip(x1,y1,x2,y2);
-    this->user_clipx1 = x1;
-    this->user_clipy1 = y1;
-    this->user_clipx2 = x2;
-    this->user_clipy2 = y2;
-}
 void BitmapOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key, "extrafontdata")) {
 	this->config_extrafontdata = atoi(value);
     }
     this->gfxdev->setParameter(key, value);
-}
-void BitmapOutputDev::setPageMap(int*page2page, int num_pages)
-{
-    this->gfxdev->setPageMap(page2page, num_pages);
 }
 
 void writeBitmap(SplashBitmap*bitmap, char*filename);
@@ -871,7 +854,7 @@ GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
     return gTrue;
 }
 
-void BitmapOutputDev::startPage(int pageNum, GfxState *state)
+void BitmapOutputDev::beginPage(GfxState *state, int pageNum)
 {
     PDFRectangle *r = this->page->getCropBox();
     double x1,y1,x2,y2;

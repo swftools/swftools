@@ -155,7 +155,7 @@ class InfoOutputDev: public OutputDev
 			  double originX, double originY,
 			  CharCode code, int nBytes, Unicode *u, int uLen);
 
-    virtual void updateFontMatrix(GfxState*state);
+    virtual void updateTextMat(GfxState*state);
 
     virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,

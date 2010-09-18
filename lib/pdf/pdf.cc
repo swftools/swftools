@@ -12,7 +12,7 @@
 #endif
 #include "GlobalParams.h"
 #include "InfoOutputDev.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 #include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
 #include "../mem.h"
@@ -105,15 +105,16 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 
     CommonOutputDev*outputDev = 0;
     if(pi->config_full_bitmap_optimizing) {
-	FullBitmapOutputDev*d = new FullBitmapOutputDev(pi->info, pi->doc);
+	FullBitmapOutputDev*d = new FullBitmapOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     } else if(pi->config_bitmap_optimizing) {
-	BitmapOutputDev*d = new BitmapOutputDev(pi->info, pi->doc);
+	BitmapOutputDev*d = new BitmapOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     } else {
-	GFXOutputDev*d = new GFXOutputDev(pi->info, pi->doc);
+	CharOutputDev*d = new CharOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     }
+
     /* pass global parameters to PDF driver*/
     gfxparam_t*p = i->parameters->params;
     while(p) {
@@ -125,10 +126,6 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 	outputDev->setParameter(p->key, p->value);
 	p = p->next;
     }
-
-    outputDev->setPageMap(pi->pagemap, pi->pagemap_pos);
-    outputDev->setMove(x,y);
-    outputDev->setClip(x1,y1,x2,y2);
 
     gfxdevice_t* middev=0;
     if(multiply!=1.0) {

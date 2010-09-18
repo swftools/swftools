@@ -385,7 +385,7 @@ gfxmatrix_t gfxmatrix_from_state(GfxState*state)
     return m;
 }
 
-void InfoOutputDev::updateFontMatrix(GfxState*state)
+void InfoOutputDev::updateTextMat(GfxState*state)
 {
     this->current_font_matrix = gfxmatrix_from_state(state);
 }

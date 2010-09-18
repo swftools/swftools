@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <memory.h>
 #include "FullBitmapOutputDev.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 
 #ifdef HAVE_POPPLER
   #include "splash/SplashBitmap.h"
@@ -40,7 +40,8 @@
 static SplashColor splash_white = {255,255,255};
 static SplashColor splash_black = {0,0,0};
     
-FullBitmapOutputDev::FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
+FullBitmapOutputDev::FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
+:CommonOutputDev(info, doc, page2page, num_pages, x, y, x1, y1, x2, y2)
 {
     this->doc = doc;
     this->xref = doc->getXRef();
@@ -51,7 +52,7 @@ FullBitmapOutputDev::FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->rgbdev = new SplashOutputDev(splashModeRGB8, 1, gFalse, splash_white, gTrue, gTrue);
   
     /* device for handling links */
-    this->gfxdev = new GFXOutputDev(info, this->doc);
+    this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
 
     this->rgbdev->startDoc(this->xref);
 }
@@ -78,28 +79,10 @@ void FullBitmapOutputDev::setDevice(gfxdevice_t*dev)
     this->dev = dev;
     gfxdev->setDevice(dev);
 }
-void FullBitmapOutputDev::setMove(int x,int y)
-{
-    this->user_movex = x;
-    this->user_movey = y;
-    gfxdev->setMove(x,y);
-}
-void FullBitmapOutputDev::setClip(int x1,int y1,int x2,int y2)
-{
-    this->user_clipx1 = x1;
-    this->user_clipy1 = y1;
-    this->user_clipx2 = x2;
-    this->user_clipy2 = y2;
-    gfxdev->setClip(x1,y1,x2,y2);
-}
+
 void FullBitmapOutputDev::setParameter(const char*key, const char*value)
 {
 }
-void FullBitmapOutputDev::setPageMap(int*pagemap, int pagemap_len)
-{
-    gfxdev->setPageMap(pagemap, pagemap_len);
-}
-
 static void getBitmapBBox(Guchar*alpha, int width, int height, int*xmin, int*ymin, int*xmax, int*ymax)
 {
     *ymin = -1;
@@ -213,7 +196,7 @@ GBool FullBitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
     return gTrue;
 }
 
-void FullBitmapOutputDev::startPage(int pageNum, GfxState *state)
+void FullBitmapOutputDev::beginPage(GfxState *state, int pageNum)
 {
     double x1,y1,x2,y2;
     PDFRectangle *r = page->getCropBox();

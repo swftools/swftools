@@ -21,6 +21,7 @@
 #define __commonoutputdev_h__
 
 #include "OutputDev.h"
+#include "InfoOutputDev.h"
 #include "../gfxdevice.h"
 
 #define RENDER_FILL 0
@@ -29,17 +30,47 @@
 #define RENDER_INVISIBLE 3
 #define RENDER_CLIP 4
 
+typedef struct _feature
+{
+    char*string;
+    struct _feature*next;
+} feature_t;
+
+class GFXOutputGlobals {
+public:
+  feature_t*featurewarnings;
+
+  int textmodeinfo; // did we write "Text will be rendered as polygon" yet?
+  int jpeginfo; // did we write "File contains jpegs" yet?
+  int pbminfo; // did we write "File contains jpegs" yet?
+  int linkinfo; // did we write "File contains links" yet?
+
+  GFXOutputGlobals();
+  ~GFXOutputGlobals();
+};
+extern GFXOutputGlobals* getGfxGlobals();
+
+extern void warnfeature(const char*feature,char fully);
+extern void infofeature(const char*feature);
+
 class CommonOutputDev: public OutputDev
 {
     public:
+    CommonOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2);
+
     virtual void setDevice(gfxdevice_t*dev) = 0;
-    virtual void setMove(int x,int y) = 0;
-    virtual void setClip(int x1,int y1,int x2,int y2) = 0;
     virtual void setParameter(const char*key, const char*value) = 0;
-    virtual void setPageMap(int*pagemap, int pagemap_len) = 0;
+
+    virtual void startPage(int pageNum, GfxState*state);
+    virtual void beginPage(GfxState*state, int page) = 0;
   
     virtual void setPage(Page *page) { this->page = page; }
     virtual void finishPage() {};
+
+    virtual void transformXY(GfxState*state, double x, double y, double*nx, double*ny);
+    virtual void transformPoint(double x, double y, int*xout, int*yout);
+
+    virtual GBool interpretType3Chars();
 
     virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
 			       int rotate, GBool useMediaBox, GBool crop,
@@ -54,5 +85,22 @@ class CommonOutputDev: public OutputDev
 
     protected:
     Page *page;
+    PDFDoc* doc;
+    XRef* xref;
+    InfoOutputDev* info;
+    
+    int user_movex,user_movey;
+    int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
+    
+    /* upper left corner of clipping rectangle (cropbox)- needs to be
+       added to all drawing coordinates to give the impression that all
+       pages start at (0,0)*/
+    int clipmovex;
+    int clipmovey;
+  
+    /* for page mapping */
+    int* page2page;
+    int num_pages;
+
 };
 #endif //__deviceinterface_h__

@@ -25,7 +25,7 @@
 #include "../gfxtools.h"
 
 #include "../../config.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 #include "InfoOutputDev.h"
 #include "PDFDoc.h"
 #include "CommonOutputDev.h"
@@ -45,17 +45,14 @@ struct ClipState
 
 class BitmapOutputDev: public CommonOutputDev {
 public:
-    BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc);
+    BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2);
     virtual ~BitmapOutputDev();
 
     virtual void dbg_newdata(char*newdata);
    
     // CommonOutputDev:
     virtual void setDevice(gfxdevice_t*dev);
-    virtual void setMove(int x,int y);
-    virtual void setClip(int x1,int y1,int x2,int y2);
     virtual void setParameter(const char*key, const char*value);
-    virtual void setPageMap(int*page2page, int pagemap_size);
 
     // OutputDev:
     virtual GBool upsideDown();
@@ -73,7 +70,7 @@ public:
 			       GBool (*abortCheckCbk)(void *data) = NULL,
 			       void *abortCheckCbkData = NULL);
 
-    virtual void startPage(int pageNum, GfxState *state);
+    virtual void beginPage(GfxState *state, int pageNum);
     virtual void endPage();
     virtual void finishPage();
 
@@ -210,8 +207,6 @@ private:
 
     SplashPath*bboxpath;
 
-    PDFDoc*doc;
-    XRef*xref;
     SplashOutputDev*rgbdev;
     SplashOutputDev*clip0dev;
     SplashOutputDev*clip1dev;
@@ -227,16 +222,12 @@ private:
     SplashBitmap*staletextbitmap;
 
     gfxdevice_t* gfxoutput;
-    GFXOutputDev*gfxdev;
-    InfoOutputDev*info;
+    CharOutputDev*gfxdev;
     gfxdevice_t*dev;
 
-    int movex, movey;
     int width, height;
 
-    int user_movex, user_movey;
-    int user_clipx1, user_clipy1;
-    int user_clipx2, user_clipy2;
+    int movex, movey;
 
     //ClipState*clipstates;
 };
