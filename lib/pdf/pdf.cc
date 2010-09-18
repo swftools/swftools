@@ -15,6 +15,7 @@
 #include "CharOutputDev.h"
 #include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
+#include "VectorGraphicOutputDev.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER
@@ -41,6 +42,7 @@ typedef struct _pdf_doc_internal
 {
     char config_bitmap_optimizing;
     char config_full_bitmap_optimizing;
+    char config_only_text;
     char config_print;
     gfxparams_t* parameters;
 
@@ -110,8 +112,11 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
     } else if(pi->config_bitmap_optimizing) {
 	BitmapOutputDev*d = new BitmapOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
-    } else {
+    } else if(pi->config_only_text) {
 	CharOutputDev*d = new CharOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
+	outputDev = (CommonOutputDev*)d;
+    } else {
+	VectorGraphicOutputDev*d = new VectorGraphicOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     }
 
@@ -257,7 +262,9 @@ void pdf_doc_setparameter(gfxdocument_t*gfx, const char*name, const char*value)
     } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
         i->config_full_bitmap_optimizing = atoi(value);
     } else if(!strcmp(name, "asprint")) {
-        i->config_print = 1;
+        i->config_print = atoi(value);
+    } else if(!strcmp(name, "onlytext")) {
+        i->config_only_text = atoi(value);
     } else {
         gfxparams_store(i->parameters, name, value);
     }

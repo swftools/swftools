@@ -109,6 +109,7 @@ VectorGraphicOutputDev::VectorGraphicOutputDev(InfoOutputDev*info, PDFDoc*doc, i
     memset(&this->char_output_dev, 0, sizeof(gfxdevice_t));
     this->char_output_dev.internal = this;
     this->char_output_dev.drawchar = drawchar_callback;
+    this->char_output_dev.addfont = addfont_callback;
   
     memset(states, 0, sizeof(states));
 };
@@ -135,6 +136,7 @@ void VectorGraphicOutputDev::setParameter(const char*key, const char*value)
 void VectorGraphicOutputDev::setDevice(gfxdevice_t*dev)
 {
     this->device = dev;
+    charDev->setDevice(dev);
 }
 
 //void VectorGraphicOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) {printf("void VectorGraphicOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str, int width, int height, GBool invert, GBool inlineImg) \n");}
@@ -698,6 +700,9 @@ static gfxline_t* mkEmptyGfxShape(double x, double y)
     return line;
 }
     
+void addfont_callback(gfxdevice_t*dev, gfxfont_t*font)
+{
+}
 void drawchar_callback(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
     VectorGraphicOutputDev*self = (VectorGraphicOutputDev*)dev->internal;
@@ -716,6 +721,7 @@ void VectorGraphicOutputDev::drawChar(GfxState *state, double x, double y,
     if(((render == RENDER_FILL) ||
        (render == RENDER_FILLSTROKE && state->getTransformedLineWidth()<1.0) ||
        (render == RENDER_INVISIBLE))) {
+	charDev->drawChar(state, x, y, dx, dy, originX, originY, charid, nBytes, _u, uLen);
 	return;
     }
 	
@@ -726,8 +732,10 @@ void VectorGraphicOutputDev::drawChar(GfxState *state, double x, double y,
     this->gfxfont_from_callback = 0;
     this->glyphnr_from_callback = 0;
     charDev->drawChar(state, x, y, dx, dy, originX, originY, charid, nBytes, _u, uLen);
+    charDev->setDevice(device);
+
     if(!gfxfont_from_callback)  {
-	msg("<warning> CharOutputDev wasn't able to draw char %d", charid);
+	// some chars are ignored by CharOutputDev
 	return;
     }
     gfxline_t*glyph = gfxfont_from_callback->glyphs[glyphnr_from_callback].line;

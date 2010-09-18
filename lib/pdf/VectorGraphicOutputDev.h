@@ -45,6 +45,7 @@ void addGlobalFontDir(const char*dirname);
 class GFXLink;
   
 void drawchar_callback(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+void addfont_callback(gfxdevice_t*dev, gfxfont_t*font);
 
 class VectorGraphicOutputDev:  public CommonOutputDev {
 public:
