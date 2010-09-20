@@ -36,7 +36,7 @@ splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState
 xpdf_include = @xpdf_include@
 
 popplercompat.$(O): popplercompat.cc
-	$(C) popplercompat.cc -o $@
+	$(C) -I ./ $(xpdf_include) popplercompat.cc -o $@
 fonts.$(O): fonts.c
 	$(C) fonts.c -o $@
 font_filter.$(O): font_filter.c
