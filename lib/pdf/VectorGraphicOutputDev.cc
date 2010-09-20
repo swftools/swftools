@@ -702,6 +702,8 @@ static gfxline_t* mkEmptyGfxShape(double x, double y)
     
 void addfont_callback(gfxdevice_t*dev, gfxfont_t*font)
 {
+    VectorGraphicOutputDev*self = (VectorGraphicOutputDev*)dev->internal;
+    self->device->addfont(self->device, font);
 }
 void drawchar_callback(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix)
 {

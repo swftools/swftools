@@ -202,6 +202,7 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   gfxdevice_t char_output_dev;
   CharOutputDev*charDev;
   friend void drawchar_callback(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*color, gfxmatrix_t*matrix);
+  friend void addfont_callback(gfxdevice_t*dev, gfxfont_t*font);
   gfxfont_t*gfxfont_from_callback;
   int glyphnr_from_callback;
   gfxcolor_t textcolor_from_callback;

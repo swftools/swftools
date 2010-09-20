@@ -800,13 +800,6 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
     
     msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d> '%c') CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, u, font->isCIDFont(), render, glyphid, current_gfxfont);
 
-    if(!((render == RENDER_FILL) ||
-	 (render == RENDER_FILLSTROKE && state->getTransformedLineWidth()<1.0) ||
-	 (render == RENDER_INVISIBLE))) {
-	/* we don't draw vector data */
-	return;
-    }
-    
     int space = this->current_fontinfo->space_char;
     if(config_extrafontdata && config_detectspaces && space>=0 && m.m00 && !m.m01) {
 	/* space char detection */
