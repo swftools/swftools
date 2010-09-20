@@ -77,13 +77,12 @@ public:
 
     double lastx,lasty;
     int lastchar;
-    int lastadvance;
-    
-    float m00,m01,m10,m11;
+    double lastadvance;
 
     double ascender,descender;
 
     void grow(int size);
+    void resetPositioning();
 
     GfxFont*font;
     double max_size;
@@ -106,6 +105,7 @@ class InfoOutputDev: public OutputDev
     FontInfo* currentfont;
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
+    char previous_was_char;
     Page *page;
     gfxmatrix_t current_font_matrix;
 
@@ -116,7 +116,10 @@ class InfoOutputDev: public OutputDev
     int num_jpeg_images;
     int num_fonts;
     int num_polygons;
-    int num_textfields;
+    int num_chars;
+    int num_layers;
+    int num_text_breaks;
+    double average_char_size;
 
     void dumpfonts(gfxdevice_t*dev);
 

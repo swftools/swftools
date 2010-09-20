@@ -19,11 +19,14 @@ InfoOutputDev::InfoOutputDev(XRef*xref)
     num_links = 0;
     num_jpeg_images = 0;
     num_ppm_images = 0;
-    num_textfields = 0;
+    num_chars = 0;
     num_fonts = 0;
     num_polygons= 0;
+    num_layers = 0;
+    num_text_breaks = 0;
     currentfont = 0;
     currentglyph = 0;
+    previous_was_char = 0;
     id2font = new GHash(1);
     SplashColor white = {255,255,255};
     splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
@@ -62,13 +65,11 @@ FontInfo::FontInfo(char*id)
     this->glyphs = 0;
     this->kerning = 0;
     this->splash_font = 0;
-    this->lastchar = -1;
-    this->lastx = 0;
-    this->lasty = 0;
     this->gfxfont = 0;
     this->space_char = -1;
     this->ascender = 0;
     this->descender = 0;
+    resetPositioning();
 }
 FontInfo::~FontInfo()
 {
@@ -98,6 +99,14 @@ FontInfo::~FontInfo()
 	free(kerning);
 	kerning=0;
     }
+}
+
+void FontInfo::resetPositioning()
+{
+    this->lastchar = -1;
+    this->lastx = 0;
+    this->lasty = 0;
+    this->lastadvance = 0;
 }
 
 static int findSpace(gfxfont_t*font)
@@ -134,7 +143,7 @@ static int addSpace(gfxfont_t*font)
     gfxglyph_t*g = &font->glyphs[font->num_glyphs-1];
     memset(g, 0, sizeof(*g));
     g->unicode = 32;
-    g->advance = fabs(font->ascent + font->descent)*2 / 3;
+    g->advance = fabs(font->ascent + font->descent) / 5.0;
     if(font->max_unicode > 32)
 	font->unicode2glyph[32] = font->num_glyphs-1;
 #if 0
@@ -222,7 +231,11 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	if(!d) continue;
 	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
 	    if(m) {
-		kerning_size++;
+		double adv_char = src->glyphs[t]->advance;
+		int adv_kerning = (int)(ptroff_t)m->first->key;
+		if(fabs(adv_char - adv_kerning)>0.5) {
+		    kerning_size++;
+		}
 	    }
 	}
     }
@@ -234,10 +247,14 @@ static gfxfont_t* createGfxFont(FontInfo*src)
 	if(!d) continue;
 	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
 	    if(m) {
-		font->kerning[pos].c1 = src->glyphs[t]->glyphid;
-		font->kerning[pos].c2 = src->glyphs[(int)(ptroff_t)key]->glyphid;
-		font->kerning[pos].advance = (int)(ptroff_t)m->first->key;
-		pos++;
+		double adv_char = src->glyphs[t]->advance;
+		int adv_kerning = (int)(ptroff_t)m->first->key;
+		if(fabs(adv_char - adv_kerning)>0.5) {
+		    font->kerning[pos].c1 = src->glyphs[t]->glyphid;
+		    font->kerning[pos].c2 = src->glyphs[(int)(ptroff_t)key]->glyphid;
+		    font->kerning[pos].advance = (int)(ptroff_t)m->first->key;
+		    pos++;
+		}
 	    }
 	}
     }
@@ -312,9 +329,19 @@ void InfoOutputDev::startPage(int pageNum, GfxState *state)
     this->y2 = (int)y2;
     memset(&this->current_font_matrix, 0, sizeof(this->current_font_matrix));
     msg("<verbose> Generating info structure for page %d", pageNum);
+    num_links = 0;
+    num_jpeg_images = 0;
+    num_ppm_images = 0;
+    num_chars = 0;
+    num_fonts = 0;
+    num_polygons= 0;
+    num_layers = 0;
+    average_char_size = 0;
 }
 void InfoOutputDev::endPage()
 {
+    if(num_chars) 
+	average_char_size /= num_chars;
 }
 void InfoOutputDev::drawLink(Link *link, Catalog *catalog) 
 {
@@ -365,7 +392,7 @@ gfxmatrix_t gfxmatrix_from_state(GfxState*state)
     double*textMat = state->getTextMat();
 
     /*  taking the absolute value of horizScaling seems to be required for
-	some italic fonts. FIXME: SplashOutputDev doesn't need this- why? */
+       some italic fonts. FIXME: SplashOutputDev doesn't need this- why? */
     double hscale = fabs(state->getHorizScaling());
    
     // from xpdf-3.02/SplashOutputDev:updateFont
@@ -410,8 +437,10 @@ void InfoOutputDev::updateFont(GfxState *state)
     }
     char*id = getFontID(font);
 
-    if(currentfont)
+    if(currentfont) {
 	currentfont->splash_font = 0;
+	currentfont->resetPositioning();
+    }
 
     currentfont = (FontInfo*)id2font->lookup(id);
     if(!currentfont) {
@@ -423,11 +452,13 @@ void InfoOutputDev::updateFont(GfxState *state)
 	num_fonts++;
     }
 
-    state->setCTM(1.0,0,0,1.0,0,0);
-    splash->updateCTM(state, 0,0,0,0,0,0);
-    state->setTextMat(1.0,0,0,1.0,0,0);
-    state->setFont(font, 1024.0);
-    splash->doUpdateFont(state);
+    GfxState* state2 = state->copy();
+    state2->setPath(0);
+    state2->setCTM(1.0,0,0,1.0,0,0);
+    splash->updateCTM(state2, 0,0,0,0,0,0);
+    state2->setTextMat(1.0,0,0,1.0,0,0);
+    state2->setFont(font, 1024.0);
+    splash->doUpdateFont(state2);
     currentfont->splash_font = splash->getCurrentFont();
     if(currentfont->splash_font) {
         currentfont->ascender = currentfont->splash_font->ascender;
@@ -435,17 +466,42 @@ void InfoOutputDev::updateFont(GfxState *state)
     } else {
         currentfont->ascender = currentfont->descender = 0;
     }
-
+    delete state2;
     free(id);
+}
+
+static char path_is_rectangular(GfxState* state)
+{
+    GfxPath * path = state->getPath();
+    int num = path->getNumSubpaths();
+    if(num!=1) return 0;
+    GfxSubpath*subpath = path->getSubpath(0);
+    int subnum = path->getSubpath(0)->getNumPoints();
+
+    if(subnum>5) return 0;
+    int s;
+    for(s=1;s<subnum;s++) {
+	if(subpath->getCurve(s)) 
+	    return 0;
+	if(subpath->getX(s) != subpath->getX(s-1) &&
+           subpath->getY(s) != subpath->getY(s-1)) {
+	    return 0;
+	}
+    }
+    return 1;
 }
 
 void InfoOutputDev::fill(GfxState *state)
 {
+    if(!path_is_rectangular(state))
+	previous_was_char=0;
     num_polygons++;
 }
 
 void InfoOutputDev::eoFill(GfxState *state)
 {
+    if(!path_is_rectangular(state))
+	previous_was_char=0;
     num_polygons++;
 }
 
@@ -466,14 +522,20 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     double lenx = sqrt(m11*m11 + m12*m12);
     double leny = sqrt(m21*m21 + m22*m22);
     double len = lenx>leny?lenx:leny;
+
     if(!currentfont || !currentfont->splash_font) {
 	return; //error
     }
     if(currentfont && currentfont->max_size < len) {
 	currentfont->max_size = len;
     }
-    
-    num_textfields++;
+
+    average_char_size += fmax(lenx,leny);
+    num_chars++;
+
+    if(!previous_was_char)
+	num_layers++;
+    previous_was_char=1;
 
     currentfont->grow(code+1);
     GlyphInfo*g = currentfont->glyphs[code];
@@ -493,8 +555,8 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
 	if(xshift>=0 && xshift > g->advance_max) {
 	    g->advance_max = xshift;
 	}
-	int advance = (int)xshift;
-	if(advance>=0 && advance<g->advance*4 && advance!=currentfont->lastadvance) {
+	if(xshift>=0 && xshift <= currentfont->lastadvance * 1.5) {
+	    int advance = (int)round(xshift);
 	    int c1 = currentfont->lastchar;
 	    int c2 = code;
 	    dict_t*d = currentfont->kerning[c1];
@@ -508,12 +570,14 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
 	    }
 	    mtf_increase(k, (void*)(ptroff_t)advance);
 	}
+    } else {
+	num_text_breaks++;
     }
 
     currentfont->lastx = x;
     currentfont->lasty = y;
     currentfont->lastchar = code;
-    currentfont->lastadvance = (int)(g->advance+0.5);
+    currentfont->lastadvance = g->advance;
 }
 
 GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double dx, double dy, CharCode code, Unicode *u, int uLen)
@@ -601,6 +665,7 @@ void InfoOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   POPPLER_INTERPOLATE
 			   GBool inlineImg) 
 {
+    previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
     OutputDev::drawImageMask(state,ref,str,width,height,invert, POPPLER_INTERPOLATE_ARG inlineImg);
@@ -610,6 +675,7 @@ void InfoOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       POPPLER_INTERPOLATE
 		       int *maskColors, GBool inlineImg)
 {
+    previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
     OutputDev::drawImage(state,ref,str,width,height,colorMap, POPPLER_INTERPOLATE_ARG maskColors,inlineImg);
@@ -623,6 +689,7 @@ void InfoOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				GBool maskInvert
 				POPPLER_MASK_INTERPOLATE)
 {
+    previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
     OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap, POPPLER_INTERPOLATE_ARG maskStr,maskWidth,maskHeight,maskInvert POPPLER_MASK_INTERPOLATE_ARG);
@@ -637,6 +704,7 @@ void InfoOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *st
 				    GfxImageColorMap *maskColorMap
 				    POPPLER_MASK_INTERPOLATE)
 {
+    previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
     OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap, POPPLER_INTERPOLATE_ARG maskStr,maskWidth,maskHeight,maskColorMap POPPLER_MASK_INTERPOLATE_ARG);

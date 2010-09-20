@@ -160,6 +160,7 @@ void BitmapOutputDev::setParameter(const char*key, const char*value)
        this->config_skewedtobitmap = atoi(value);
     } else if(!strcmp(key, "alphatobitmap")) {
        this->config_alphatobitmap = atoi(value);
+    }
 
     this->gfxdev->setParameter(key, value);
 }

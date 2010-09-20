@@ -507,7 +507,6 @@ CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int 
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
     this->config_bigchar=0;
-    this->config_remapunicode=0;
     this->config_extrafontdata = 0;
     this->config_detectspaces = 1;
     this->config_linkdatafile = 0;
@@ -523,9 +522,7 @@ CharOutputDev::~CharOutputDev()
 
 void CharOutputDev::setParameter(const char*key, const char*value)
 {
-    if(!strcmp(key,"remapunicode")) {
-        this->config_remapunicode = atoi(value);
-    } else if(!strcmp(key,"detectspaces")) {
+    if(!strcmp(key,"detectspaces")) {
         this->config_detectspaces = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
