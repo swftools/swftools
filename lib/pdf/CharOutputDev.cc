@@ -510,6 +510,7 @@ CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int 
     this->config_remapunicode=0;
     this->config_extrafontdata = 0;
     this->config_detectspaces = 1;
+    this->config_linkdatafile = 0;
     this->page2page = 0;
     this->num_pages = 0;
     this->links = 0;
