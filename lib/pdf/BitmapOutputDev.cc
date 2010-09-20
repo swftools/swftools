@@ -91,6 +91,8 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     
     this->config_extrafontdata = 0;
     this->config_optimizeplaincolorfills = 0;
+    this->config_skewedtobitmap = 0;
+    this->config_alphatobitmap = 0;
     this->bboxpath = 0;
     //this->clipdev = 0;
     //this->clipstates = 0;
@@ -154,7 +156,11 @@ void BitmapOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key, "extrafontdata")) {
 	this->config_extrafontdata = atoi(value);
-    }
+    } else if(!strcmp(key, "skewedtobitmap")) {
+       this->config_skewedtobitmap = atoi(value);
+    } else if(!strcmp(key, "alphatobitmap")) {
+       this->config_alphatobitmap = atoi(value);
+
     this->gfxdev->setParameter(key, value);
 }
 
@@ -1497,16 +1503,30 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 {
     msg("<debug> drawChar render=%d", state->getRender());
 
+    char render_as_bitmap = 0;
+
+    if(config_skewedtobitmap) {
+       double*ctm = state->getCTM();
+       double*tm = state->getTextMat();
+       double m00 = ctm[0]*tm[0] + ctm[2]*tm[1];
+       double m01 = ctm[1]*tm[0] + ctm[3]*tm[1];
+       double m10 = ctm[0]*tm[2] + ctm[2]*tm[3];
+       double m11 = ctm[1]*tm[2] + ctm[3]*tm[3];
+        if(m00<0) render_as_bitmap = 1;
+        if(m10<0) render_as_bitmap = 1;
+    }
+    if(config_alphatobitmap) {
+       double opaq = state->getFillOpacity();
+       if(opaq < 0.9)
+           render_as_bitmap = 1;
+    }
+
     if(state->getRender()&RENDER_CLIP) {
 	//char is just a clipping boundary
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-    } else if(state->getRender()&RENDER_STROKE) {
-	// we're drawing as stroke
-	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else if(rgbbitmap != rgbdev->getBitmap()) {
 	// we're doing softmasking or transparency grouping
 	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
@@ -1516,13 +1536,14 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clearClips();
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+        
+	x-=originX;
+        y-=originY;
    
 	/* calculate the bbox of this character */
 	int x1 = (int)x, x2 = (int)x+1, y1 = (int)y, y2 = (int)y+1;
         SplashFont*font = clip0dev->getCurrentFont();
 	SplashPath*path = font?font->getGlyphPath(code):NULL;
-        x-=originX;
-        y-=originY;
 	if(path) {
 	    path->offset((SplashCoord)x, (SplashCoord)y);
 	    int t;
@@ -1531,6 +1552,10 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		Guchar f;
 		path->getPoint(t,&xx,&yy,&f);
 		state->transform(xx,yy,&xx,&yy);
+		if(!t) {
+		    x1=x2=(int)xx;
+		    y1=y2=(int)yy;
+		}
 		if(xx<x1) x1=(int)xx;
 		if(yy<y1) y1=(int)yy;
 		if(xx>=x2) x2=(int)xx+1;
@@ -1539,15 +1564,17 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    delete(path);path=0;
 	}
 
+	char char_is_outside = (x1+movex<0 || y1+movey<0 || x2+movex>this->width || y2+movey>this->height);
+
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
 	   text */
-	if(clip0and1differ(x1,y1,x2,y2)) {
+	if(char_is_outside || render_as_bitmap || (state->getRender()&3) || clip0and1differ(x1,y1,x2,y2)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    checkNewBitmap(x1,y1,x2,y2);
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    if(config_extrafontdata) {
+	    if(config_extrafontdata && !char_is_outside) {
 		int oldrender = state->getRender();
 		state->setRender(3); //invisible
 		gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);

@@ -201,6 +201,8 @@ private:
 
     char config_extrafontdata;
     char config_optimizeplaincolorfills;
+    char config_skewedtobitmap;
+    char config_alphatobitmap;
 
     int layerstate;
     GBool emptypage;
