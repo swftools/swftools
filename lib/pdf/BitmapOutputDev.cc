@@ -1343,8 +1343,6 @@ void BitmapOutputDev::stroke(GfxState *state)
     dbg_newdata("stroke");
 }
 
-extern gfxcolor_t getFillColor(GfxState * state);
-
 char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*rgbbitmap, int x1, int y1, int x2, int y2)
 {
     int width = boolpoly->getWidth();
@@ -1352,7 +1350,7 @@ char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*r
     if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
 	return 0;
     }
-    gfxcolor_t color = getFillColor(state);
+    gfxcolor_t color = gfxstate_getfillcolor(state);
     SplashColorPtr rgb = rgbbitmap->getDataPtr() 
 	               + (y1*width+x1)*sizeof(SplashColor);
     int width8 = (width+7)/8;

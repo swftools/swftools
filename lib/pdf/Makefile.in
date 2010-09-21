@@ -10,7 +10,7 @@ all: ../libgfxpdf$(A)
 
 libgfxpdf: ../libgfxpdf$(A)
 
-libgfxpdf_objects = VectorGraphicOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) CharOutputDev.$(O) CommonOutputDev.$(O) InfoOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O) font_filter.$(O) bbox.$(O) popplercompat.$(O)
+libgfxpdf_objects = VectorGraphicOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) CharOutputDev.$(O) CommonOutputDev.$(O) InfoOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O) bbox.$(O) popplercompat.$(O)
 
 xpdf_in_source = @xpdf_in_source@
 
@@ -39,8 +39,6 @@ popplercompat.$(O): popplercompat.cc
 	$(C) -I ./ $(xpdf_include) popplercompat.cc -o $@
 fonts.$(O): fonts.c
 	$(C) fonts.c -o $@
-font_filter.$(O): font_filter.c
-	$(C) font_filter.c -o $@
 bbox.$(O): bbox.c
 	$(C) bbox.c -o $@
 cmyk.$(O): cmyk.cc

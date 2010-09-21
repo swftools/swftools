@@ -68,7 +68,6 @@ public:
   gfxline_t* current_text_clip;
   gfxfont_t* current_gfxfont;
   FontInfo*current_fontinfo;
-  gfxmatrix_t current_font_matrix;
 
   int last_char;
   double last_char_x;

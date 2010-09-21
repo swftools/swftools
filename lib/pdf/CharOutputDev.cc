@@ -678,18 +678,6 @@ void CharOutputDev::endPage()
 
 static inline double sqr(double x) {return x*x;}
 
-static gfxcolor_t getFillColor(GfxState * state)
-{
-    GfxRGB rgb;
-    double opaq = state->getFillOpacity();
-    state->getFillRGB(&rgb);
-    gfxcolor_t col;
-    col.r = colToByte(rgb.r);
-    col.g = colToByte(rgb.g);
-    col.b = colToByte(rgb.b);
-    col.a = (unsigned char)(opaq*255);
-    return col;
-}
 GBool CharOutputDev::upsideDown() 
 {
     return gTrue;
@@ -730,7 +718,6 @@ char* makeStringPrintable(char*str)
 
 void CharOutputDev::updateTextMat(GfxState*state)
 {
-    this->current_font_matrix = gfxmatrix_from_state(state);
 }
 
 void CharOutputDev::beginString(GfxState *state, GString *s) 
@@ -755,14 +742,13 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 			CharCode charid, int nBytes, Unicode *_u, int uLen)
 {
     if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
-	msg("<error> Invalid charid %d for font (%d characters)", charid, current_fontinfo?current_fontinfo->num_glyphs:0);
+	msg("<error> Invalid charid %c (%d) for font %p (%d characters)", charid, charid, current_fontinfo, current_fontinfo?current_fontinfo->num_glyphs:0);
 	return;
     }
-  
     CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
 
     int render = state->getRender();
-    gfxcolor_t col = getFillColor(state);
+    gfxcolor_t col = gfxstate_getfillcolor(state);
 
     GFXLink*link = 0;
     if(links) {
@@ -789,7 +775,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 
     Unicode u = uLen?(_u[0]):0;
 
-    gfxmatrix_t m = this->current_font_matrix;
+    gfxmatrix_t m = current_fontinfo->get_gfxmatrix(state);
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
     //m.tx += originX; m.ty += originY;
 
@@ -861,7 +847,7 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
     
     if(config_extrafontdata && current_fontinfo) {
 
-	gfxmatrix_t m = this->current_font_matrix;
+	gfxmatrix_t m = gfxmatrix_from_state(state);
 	this->transformXY(state, 0, 0, &m.tx, &m.ty);
 
 	/*m.m00*=INTERNAL_FONT_SIZE;
@@ -870,7 +856,7 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 	m.m11*=INTERNAL_FONT_SIZE;*/
 
 	if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
-	    msg("<error> Invalid charid %d for font", charid);
+	    msg("<error> Invalid charid %d for font %p", charid, current_fontinfo);
 	    return gFalse;
 	}
 	gfxcolor_t col={0,0,0,0};
@@ -1165,7 +1151,7 @@ void CharOutputDev::updateFont(GfxState *state)
 	return; 
     }
 
-    this->current_fontinfo = this->info->getFont(id);
+    this->current_fontinfo = this->info->getFontInfo(state);
 
     if(!this->current_fontinfo) {
 	msg("<error> Internal Error: no fontinfo for font %s", id);

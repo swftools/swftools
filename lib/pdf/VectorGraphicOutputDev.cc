@@ -572,22 +572,9 @@ void VectorGraphicOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int 
 	gfxline_free(line2);
 }
 
-gfxcolor_t getFillColor(GfxState * state)
-{
-    GfxRGB rgb;
-    double opaq = state->getFillOpacity();
-    state->getFillRGB(&rgb);
-    gfxcolor_t col;
-    col.r = colToByte(rgb.r);
-    col.g = colToByte(rgb.g);
-    col.b = colToByte(rgb.b);
-    col.a = (unsigned char)(opaq*255);
-    return col;
-}
-
 void VectorGraphicOutputDev::fillGfxLine(GfxState *state, gfxline_t*line, char evenodd) 
 {
-    gfxcolor_t col = getFillColor(state);
+    gfxcolor_t col = gfxstate_getfillcolor(state);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         msg("<trace> %sfill %02x%02x%02x%02x", evenodd?"eo":"", col.r, col.g, col.b, col.a);
@@ -1465,7 +1452,7 @@ void VectorGraphicOutputDev::fill(GfxState *state)
 {
     if(config_textonly) {return;}
 
-    gfxcolor_t col = getFillColor(state);
+    gfxcolor_t col = gfxstate_getfillcolor(state);
     dbg("fill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
     GfxPath * path = state->getPath();
@@ -1483,7 +1470,7 @@ void VectorGraphicOutputDev::eoFill(GfxState *state)
 {
     if(config_textonly) {return;}
 
-    gfxcolor_t col = getFillColor(state);
+    gfxcolor_t col = gfxstate_getfillcolor(state);
     dbg("eofill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
     GfxPath * path = state->getPath();

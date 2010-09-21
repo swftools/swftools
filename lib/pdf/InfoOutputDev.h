@@ -64,15 +64,26 @@ struct GlyphInfo
     double advance_max;
 };
 
+typedef struct _fontclass {
+    float m00,m01,m10,m11;
+    char*id;
+    unsigned char alpha;
+} fontclass_t;
+
 class FontInfo
 {
     gfxfont_t*gfxfont;
+    fontclass_t*fontclass;
 
     char*id;
+    double scale;
+    
+    gfxfont_t* createGfxFont();
 public:
-    FontInfo(char*id);
+    FontInfo(fontclass_t*fontclass);
     ~FontInfo();
 
+    gfxmatrix_t get_gfxmatrix(GfxState*state);
     gfxfont_t* getGfxFont();
 
     double lastx,lasty;
@@ -90,7 +101,6 @@ public:
     GlyphInfo**glyphs;
     dict_t**kerning;
 
-    SplashFont*splash_font;
     char seen;
     int space_char;
     float average_advance;
@@ -101,13 +111,15 @@ extern gfxmatrix_t gfxmatrix_from_state(GfxState*state);
 
 class InfoOutputDev: public OutputDev 
 {
-    GHash* id2font;
-    FontInfo* currentfont;
     GlyphInfo* currentglyph;
     SplashOutputDev*splash;
     char previous_was_char;
     Page *page;
-    gfxmatrix_t current_font_matrix;
+
+    dict_t*fontcache;
+    FontInfo*last_font;
+    FontInfo*current_type3_font;
+    SplashFont*current_splash_font;
 
     public:
     int x1,y1,x2,y2;
@@ -122,6 +134,7 @@ class InfoOutputDev: public OutputDev
     double average_char_size;
 
     void dumpfonts(gfxdevice_t*dev);
+    FontInfo* getFontInfo(GfxState*state);
 
     InfoOutputDev(XRef*xref);
     virtual ~InfoOutputDev(); 
@@ -139,7 +152,6 @@ class InfoOutputDev: public OutputDev
     virtual void startPage(int pageNum, GfxState *state);
     virtual void endPage();
     virtual void drawLink(Link *link, Catalog *catalog);
-    virtual double getMaximumFontSize(char*id);
     virtual void updateFont(GfxState *state);
   
     virtual void saveState(GfxState *state);
@@ -184,8 +196,9 @@ class InfoOutputDev: public OutputDev
 				      int maskWidth, int maskHeight,
 				      GfxImageColorMap *maskColorMap
 				      POPPLER_MASK_INTERPOLATE);
-
-    virtual FontInfo* getFont(char*id);
+    private:
+    
+    FontInfo* getOrCreateFontInfo(GfxState*state);
 };
 
 #endif //__infooutputdev_h__

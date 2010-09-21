@@ -1,6 +1,7 @@
 #include "popplercompat.h"
 #include "CommonOutputDev.h"
 #include "../log.h"
+#include "../gfxdevice.h"
 
 int config_break_on_warning = 0;
 
@@ -119,4 +120,18 @@ GFXOutputGlobals* getGfxGlobals()
 	gfxglobals = new GFXOutputGlobals();
     return gfxglobals;
 }
+
+gfxcolor_t gfxstate_getfillcolor(GfxState * state)
+{
+    GfxRGB rgb;
+    double opaq = state->getFillOpacity();
+    state->getFillRGB(&rgb);
+    gfxcolor_t col;
+    col.r = colToByte(rgb.r);
+    col.g = colToByte(rgb.g);
+    col.b = colToByte(rgb.b);
+    col.a = (unsigned char)(opaq*255);
+    return col;
+}
+
 

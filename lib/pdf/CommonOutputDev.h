@@ -53,6 +53,8 @@ extern GFXOutputGlobals* getGfxGlobals();
 extern void warnfeature(const char*feature,char fully);
 extern void infofeature(const char*feature);
 
+gfxcolor_t gfxstate_getfillcolor(GfxState * state);
+
 class CommonOutputDev: public OutputDev
 {
     public:

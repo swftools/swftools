@@ -378,6 +378,10 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 extern int config_addspace;
 extern int config_fontquality;
 extern int config_bigchar;
+extern int config_marker_glyph;
+extern int config_normalize_fonts;
+extern int config_remove_font_transforms;
+extern int config_remove_invisible_outlines;
 
 static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 {
@@ -393,6 +397,14 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 	gfxparams_store(i->parameters, "detectspaces", "0");
     } else if(!strcmp(name, "detectspaces")) {
 	config_addspace = atoi(value);
+    } else if(!strcmp(name, "marker_glyph")) {
+	config_marker_glyph = atoi(value);
+    } else if(!strcmp(name, "normalize_fonts")) {
+	config_normalize_fonts = atoi(value);
+    } else if(!strcmp(name, "remove_font_transforms")) {
+	config_remove_font_transforms = atoi(value);
+    } else if(!strcmp(name, "remove_invisible_outlines")) {
+	config_remove_invisible_outlines = atoi(value);
     } else if(!strcmp(name, "fontquality")) {
 	config_fontquality = atoi(value);
     } else if(!strcmp(name, "bigchar")) {
