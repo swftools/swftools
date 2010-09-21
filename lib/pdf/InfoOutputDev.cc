@@ -168,6 +168,11 @@ FontInfo::~FontInfo()
     free(glyphs);glyphs=0;
     if(this->gfxfont)
         gfxfont_free(this->gfxfont);
+
+    if(this->fontclass) {
+	fontclass_type.free(this->fontclass);
+	this->fontclass=0;
+    }
    
     if(kerning) {
 	for(t=0;t<num_glyphs;t++) {
@@ -704,7 +709,9 @@ FontInfo* InfoOutputDev::getFontInfo(GfxState*state)
     fontclass_t fontclass;
     gfxmatrix_t m = gfxmatrix_from_state(state);
     font_classify(&fontclass, &m, id, &col);
-    return (FontInfo*)dict_lookup(this->fontcache, &fontclass);
+    FontInfo*result = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
+    free(id);
+    return result;
 }
 
 gfxmatrix_t FontInfo::get_gfxmatrix(GfxState*state)

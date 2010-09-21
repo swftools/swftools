@@ -652,6 +652,7 @@ void VectorGraphicOutputDev::finish()
 VectorGraphicOutputDev::~VectorGraphicOutputDev() 
 {
     finish();
+    delete charDev;charDev=0;
 };
 GBool VectorGraphicOutputDev::upsideDown() 
 {

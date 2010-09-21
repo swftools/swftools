@@ -1139,10 +1139,12 @@ void CharOutputDev::updateFont(GfxState *state)
 	return; 
     }  
     char*id = getFontID(gfxFont);
-    msg("<verbose> Updating font to %s", id);
+    msg("<verbose> Updating font to %s", FIXNULL(id));
     if(gfxFont->getType() == fontType3) {
 	infofeature("Type3 fonts");
 	if(!config_extrafontdata) {
+	    if(id)
+		free(id);
 	    return;
 	}
     }
