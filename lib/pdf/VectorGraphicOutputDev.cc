@@ -445,10 +445,16 @@ GBool VectorGraphicOutputDev::needNonText()
 void VectorGraphicOutputDev::endPage() 
 {
     msg("<verbose> endPage (VectorGraphicOutputDev)");
+    charDev->endPage(); // link postprocessing
     if(outer_clip_box) {
 	device->endclip(device);
 	outer_clip_box = 0;
     }
+}
+void VectorGraphicOutputDev::setDefaultCTM(double *ctm)
+{
+    charDev->setDefaultCTM(ctm);
+    OutputDev::setDefaultCTM(ctm);
 }
 
 static inline double sqr(double x) {return x*x;}

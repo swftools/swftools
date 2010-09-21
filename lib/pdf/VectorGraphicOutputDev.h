@@ -74,6 +74,7 @@ public:
 
   //----- link borders
   virtual void processLink(Link *link, Catalog *catalog);
+  virtual void setDefaultCTM(double *ctm);
 
   //----- save/restore graphics state
   virtual void saveState(GfxState *state) ;
@@ -93,7 +94,7 @@ public:
   virtual void clip(GfxState *state) ;
   virtual void eoClip(GfxState *state) ;
   virtual void clipToStrokePath(GfxState *state);
- 
+  
   //----- shaded fills
   virtual GBool useTilingPatternFill();
   virtual GBool useShadedFills();
