@@ -131,6 +131,7 @@ void VectorGraphicOutputDev::setParameter(const char*key, const char*value)
     } else if(!strcmp(key,"disable_polygon_conversion")) {
         this->config_disable_polygon_conversion = atoi(value);
     }
+    this->charDev->setParameter(key, value);
 }
   
 void VectorGraphicOutputDev::setDevice(gfxdevice_t*dev)
