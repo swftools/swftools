@@ -115,8 +115,6 @@ InfoOutputDev::~InfoOutputDev()
     }
     dict_destroy(this->fontcache);this->fontcache=0;
 
-    printf("%d fonts\n", num_fonts);
-
     delete splash;splash=0;
 }
 
