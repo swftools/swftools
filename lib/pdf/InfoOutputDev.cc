@@ -12,6 +12,7 @@
 #include <math.h>
 #include <assert.h>
 
+int config_poly2bitmap_pass1  = 0;
 int config_skewedtobitmap_pass1 = 0;
 int config_addspace = 1;
 int config_fontquality = 10;
@@ -224,18 +225,18 @@ static int addSpace(gfxfont_t*font)
 	if(font->glyphs[t].unicode==32)
 	    font->glyphs[t].unicode=0;
     }
-    font->num_glyphs++;
-    font->glyphs = (gfxglyph_t*)realloc(font->glyphs, sizeof(gfxglyph_t)*font->num_glyphs);
-    gfxglyph_t*g = &font->glyphs[font->num_glyphs-1];
+    // createGfxFont reserves space for up to two extra characters, so we don't need to realloc.
+    int space_glyph = font->num_glyphs++;
+    gfxglyph_t*g = &font->glyphs[space_glyph];
     memset(g, 0, sizeof(*g));
     g->unicode = 32;
     g->advance = fabs(font->ascent + font->descent) / 5.0;
     if(font->max_unicode > 32)
-	font->unicode2glyph[32] = font->num_glyphs-1;
+	font->unicode2glyph[32] = space_glyph;
 #if 0
     g->line = gfxline_makerectangle(0, -font->ascent, g->advance, font->descent);
 #endif
-    return font->num_glyphs-1;
+    return space_glyph;
 }
 
 static void transform_glyph(gfxglyph_t*g, fontclass_t*mm, double scale)
@@ -278,7 +279,7 @@ gfxfont_t* FontInfo::createGfxFont()
 {
     gfxfont_t*font = (gfxfont_t*)rfx_calloc(sizeof(gfxfont_t));
 
-    font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*(this->num_glyphs+1));
+    font->glyphs = (gfxglyph_t*)malloc(sizeof(gfxglyph_t)*(this->num_glyphs+2));
     memset(font->glyphs, 0, sizeof(gfxglyph_t)*this->num_glyphs);
     font->id = 0;
     int t;
@@ -393,17 +394,6 @@ gfxfont_t* FontInfo::createGfxFont()
 	}
     }
 
-    /* optionally append a marker glyph */
-    if(config_marker_glyph) {
-	gfxglyph_t*g = &font->glyphs[font->num_glyphs++];
-	g->name = 0;
-	g->unicode = config_marker_glyph;
-	g->advance = 2048;
-	g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
-	g->line->type = gfx_moveTo;
-	g->line->x = g->advance;
-    }
-    
     int kerning_size = 0;
     for(t=0;t<this->num_glyphs;t++) {
 	dict_t* d = this->kerning[t];
@@ -474,6 +464,18 @@ gfxfont_t* FontInfo::getGfxFont()
 	    msg("<debug> Appending space char to font %s, position %d, width %f", this->gfxfont->id, this->space_char, this->gfxfont->glyphs[this->space_char].advance);
 	}
 	gfxfont_fix_unicode(this->gfxfont);
+    
+	/* optionally append a marker glyph */
+	if(config_marker_glyph) {
+	    msg("<debug> Appending marker char to font %s, position %d, unicode %d", this->gfxfont->id, this->gfxfont->num_glyphs, config_marker_glyph);
+	    gfxglyph_t*g = &this->gfxfont->glyphs[this->gfxfont->num_glyphs++];
+	    g->name = 0;
+	    g->unicode = config_marker_glyph;
+	    g->advance = 2048;
+	    g->line = (gfxline_t*)rfx_calloc(sizeof(gfxline_t));
+	    g->line->type = gfx_moveTo;
+	    g->line->x = g->advance;
+	}
     }
     return this->gfxfont;
 }
@@ -677,8 +679,13 @@ gfxcolor_t gfxstate_getfontcolor(GfxState*state)
        text_matrix_is_skewed(state)) {
     	col.a = 0;
     }
-
     if(state->getRender() == RENDER_INVISIBLE) {
+	col.a = 0;
+    }
+    if(config_poly2bitmap_pass1 && (state->getRender()&3)) {
+	/* with poly2bitmap, stroke or stroke+fill characters are drawn
+	   to the bitmap and potentially overlaid with a transparent character.
+	   duplicate that logic here. */
 	col.a = 0;
     }
     return col;
