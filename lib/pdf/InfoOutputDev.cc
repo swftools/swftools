@@ -670,6 +670,10 @@ int font_classify(fontclass_t*out, gfxmatrix_t*in, const char*id, gfxcolor_t* co
 
 gfxcolor_t gfxstate_getfontcolor(GfxState*state)
 {
+    /* FIXME: instead of duplicating BitmapOutputDev's and VectorOutputDev's transparent
+              character logic here, we should move this code to CommonOutputDev and
+	      call it from all three places */
+
     gfxcolor_t col = gfxstate_getfillcolor(state);
     /* HACK: if skewedtobitmap is on, weirdly rotated characters will 
        be drawn transparently in BitmapOutputDev. In order to anticipate this,
