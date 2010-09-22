@@ -73,13 +73,13 @@ typedef struct _fontclass {
 class FontInfo
 {
     gfxfont_t*gfxfont;
-    fontclass_t*fontclass;
 
     char*id;
     double scale;
     
     gfxfont_t* createGfxFont();
 public:
+    fontclass_t*fontclass;
     FontInfo(fontclass_t*fontclass);
     ~FontInfo();
 

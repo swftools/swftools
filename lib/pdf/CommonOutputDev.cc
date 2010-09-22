@@ -134,4 +134,14 @@ gfxcolor_t gfxstate_getfillcolor(GfxState * state)
     return col;
 }
 
+bool text_matrix_is_skewed(GfxState * state)
+{
+    double*ctm = state->getCTM();
+    double*tm = state->getTextMat();
+    double m00 = ctm[0]*tm[0] + ctm[2]*tm[1];
+    double m01 = ctm[1]*tm[0] + ctm[3]*tm[1];
+    double m10 = ctm[0]*tm[2] + ctm[2]*tm[3];
+    double m11 = ctm[1]*tm[2] + ctm[3]*tm[3];
+    return (m00<0 || m10<0);
+}
 

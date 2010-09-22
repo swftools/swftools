@@ -1505,19 +1505,14 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
     char render_as_bitmap = 0;
 
     if(config_skewedtobitmap) {
-       double*ctm = state->getCTM();
-       double*tm = state->getTextMat();
-       double m00 = ctm[0]*tm[0] + ctm[2]*tm[1];
-       double m01 = ctm[1]*tm[0] + ctm[3]*tm[1];
-       double m10 = ctm[0]*tm[2] + ctm[2]*tm[3];
-       double m11 = ctm[1]*tm[2] + ctm[3]*tm[3];
-        if(m00<0) render_as_bitmap = 1;
-        if(m10<0) render_as_bitmap = 1;
+	if(text_matrix_is_skewed(state)) {
+	    render_as_bitmap = 1;
+	}
     }
     if(config_alphatobitmap) {
-       double opaq = state->getFillOpacity();
-       if(opaq < 0.9)
-           render_as_bitmap = 1;
+	double opaq = state->getFillOpacity();
+	if(opaq < 0.9)
+	    render_as_bitmap = 1;
     }
 
     if(state->getRender()&RENDER_CLIP) {

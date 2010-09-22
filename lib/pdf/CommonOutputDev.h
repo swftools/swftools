@@ -54,6 +54,7 @@ extern void warnfeature(const char*feature,char fully);
 extern void infofeature(const char*feature);
 
 gfxcolor_t gfxstate_getfillcolor(GfxState * state);
+bool text_matrix_is_skewed(GfxState * state);
 
 class CommonOutputDev: public OutputDev
 {

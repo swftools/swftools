@@ -12,6 +12,7 @@
 #include <math.h>
 #include <assert.h>
 
+int config_skewedtobitmap_pass1 = 0;
 int config_addspace = 1;
 int config_fontquality = 10;
 int config_bigchar = 0;
@@ -665,14 +666,32 @@ int font_classify(fontclass_t*out, gfxmatrix_t*in, const char*id, gfxcolor_t* co
     return 1;
 }
 
-FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
+gfxcolor_t gfxstate_getfontcolor(GfxState*state)
 {
     gfxcolor_t col = gfxstate_getfillcolor(state);
+    /* HACK: if skewedtobitmap is on, weirdly rotated characters will 
+       be drawn transparently in BitmapOutputDev. In order to anticipate this,
+       we duplicate the logic here */
+    if(config_remove_invisible_outlines && 
+       config_skewedtobitmap_pass1 && 
+       text_matrix_is_skewed(state)) {
+    	col.a = 0;
+    }
+
+    if(state->getRender() == RENDER_INVISIBLE) {
+	col.a = 0;
+    }
+    return col;
+}
+
+FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
+{
+    gfxcolor_t col = gfxstate_getfontcolor(state);
     GfxFont*font = state->getFont();
     char*id = getFontID(font);
-   
-    fontclass_t fontclass;
     gfxmatrix_t m = gfxmatrix_from_state(state);
+    
+    fontclass_t fontclass;
     font_classify(&fontclass, &m, id, &col);
 
     FontInfo* fontinfo = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
@@ -701,7 +720,7 @@ FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
 
 FontInfo* InfoOutputDev::getFontInfo(GfxState*state)
 {
-    gfxcolor_t col = gfxstate_getfillcolor(state);
+    gfxcolor_t col = gfxstate_getfontcolor(state);
     GfxFont*font = state->getFont();
     char*id = getFontID(font);
     fontclass_t fontclass;

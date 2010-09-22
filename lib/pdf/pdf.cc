@@ -375,6 +375,7 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 
 
 /* shortcut to InfoOutputDev.cc */
+extern int config_skewedtobitmap_pass1;
 extern int config_addspace;
 extern int config_fontquality;
 extern int config_bigchar;
@@ -401,6 +402,8 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 	config_marker_glyph = atoi(value);
     } else if(!strcmp(name, "normalize_fonts")) {
 	config_normalize_fonts = atoi(value);
+    } else if(!strcmp(name, "skewedtobitmap")) {
+	config_skewedtobitmap_pass1 = atoi(value);
     } else if(!strcmp(name, "remove_font_transforms")) {
 	config_remove_font_transforms = atoi(value);
     } else if(!strcmp(name, "remove_invisible_outlines")) {
