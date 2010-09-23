@@ -69,12 +69,16 @@ public:
   gfxfont_t* current_gfxfont;
   FontInfo*current_fontinfo;
 
+  // state variables for space char detection
   int last_char;
   double last_char_x;
   double last_char_y;
   double last_char_x_fontsize;
+  double last_char_y_fontsize;
   double last_char_advance;
   double last_average_advance;
+  double last_ascent;
+  double last_descent;
   char last_char_was_space;
     
   GFXLink*last_link;

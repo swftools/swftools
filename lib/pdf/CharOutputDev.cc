@@ -786,7 +786,10 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
     int space = this->current_fontinfo->space_char;
     if(config_extrafontdata && config_detectspaces && space>=0 && m.m00 && !m.m01) {
 	/* space char detection */
-	if(last_char_y == m.ty &&
+	//bool different_y = last_char_y - m.ty;
+	bool different_y = m.ty < last_char_y - last_ascent*last_char_y_fontsize
+	                || m.ty > last_char_y + last_descent*last_char_y_fontsize;
+	if(!different_y && 
 	   !last_char_was_space) {
 	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
 	    int space = this->current_fontinfo->space_char;
@@ -816,9 +819,12 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	last_average_advance = this->current_fontinfo->average_advance;
 	last_char_advance = current_gfxfont->glyphs[glyphid].advance;
 	last_char_x_fontsize = m.m00;
+	last_char_y_fontsize = -m.m11;
 	last_char = glyphid;
 	last_char_x = m.tx;
 	last_char_y = m.ty;
+	last_ascent = current_gfxfont->ascent;
+	last_descent = fmax(current_gfxfont->descent, current_gfxfont->ascent/3);
 	last_char_was_space = GLYPH_IS_SPACE(&current_gfxfont->glyphs[glyphid]);
     }
     device->drawchar(device, current_gfxfont, glyphid, &col, &m);
@@ -892,7 +898,7 @@ void CharOutputDev::endType3Char(GfxState *state)
 void CharOutputDev::beginPage(GfxState *state, int pageNum)
 {
     this->currentpage = pageNum;
-    this->last_char_y = 0;
+    this->last_char_was_space = 1;
 }
 
 void GFXLink::draw(CharOutputDev*out, gfxdevice_t*dev)
