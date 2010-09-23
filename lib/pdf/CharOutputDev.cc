@@ -788,15 +788,22 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	/* space char detection */
 	if(last_char_y == m.ty &&
 	   !last_char_was_space) {
-	    double expected_x = last_char_x + current_gfxfont->glyphs[last_char].advance*last_char_x_fontsize;
+	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
 	    int space = this->current_fontinfo->space_char;
-	    float width = this->current_fontinfo->average_advance;
-	    if(m.tx - expected_x >= m.m00*width*4/10) {
+	    float width = fmax(m.m00*this->current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
+	    if(m.tx - expected_x >= width*4/10) {
 		msg("<debug> There's a %f pixel gap between char %d and char %d (expected no more than %f), I'm inserting a space here", 
 			m.tx-expected_x, 
 			last_char, glyphid,
-			width*m.m00*4/10
+			width*4/10
 			);
+#ifdef VISUALIZE_CHAR_GAPS
+		bbox = gfxline_getbbox(current_gfxfont->glyphs[glyphid].line);
+		gfxline_t*rect = gfxline_makerectangle(last_char_x,m.ty,m.tx,m.ty+10);
+		gfxcolor_t red = {255,255,0,0};
+		device->fill(device, rect, &red);
+		gfxline_free(rect);
+#endif
 		gfxmatrix_t m2 = m;
 		m2.tx = expected_x + (m.tx - expected_x - current_gfxfont->glyphs[space].advance*m.m00)/2;
 		if(m2.tx < expected_x) m2.tx = expected_x;
@@ -806,6 +813,8 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 		}
 	    }
 	}
+	last_average_advance = this->current_fontinfo->average_advance;
+	last_char_advance = current_gfxfont->glyphs[glyphid].advance;
 	last_char_x_fontsize = m.m00;
 	last_char = glyphid;
 	last_char_x = m.tx;
