@@ -585,8 +585,7 @@ void gfxfont_add_unicode2glyph(gfxfont_t*font)
 	
 	for(t=0;t<font->num_glyphs;t++) {
 	    int u = font->glyphs[t].unicode;
-	    if(u>=0) {
-		assert(font->unicode2glyph[u]<0); // we took care of duplicates, right?
+	    if(u>=0 && font->unicode2glyph[u]<0) {
 		assert(u<font->max_unicode);
 		font->unicode2glyph[u] = t;
 	    }
