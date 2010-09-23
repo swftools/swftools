@@ -375,6 +375,7 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 
 
 /* shortcut to InfoOutputDev.cc */
+extern int config_unique_unicode;
 extern int config_poly2bitmap_pass1;
 extern int config_skewedtobitmap_pass1;
 extern int config_addspace;
@@ -399,6 +400,8 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 	gfxparams_store(i->parameters, "detectspaces", "0");
     } else if(!strcmp(name, "detectspaces")) {
 	config_addspace = atoi(value);
+    } else if(!strcmp(name, "unique_unicode")) {
+	config_unique_unicode = atoi(value);
     } else if(!strcmp(name, "poly2bitmap")) {
         config_poly2bitmap_pass1 = atoi(value);
     } else if(!strcmp(name, "marker_glyph")) {

@@ -12,6 +12,7 @@
 #include <math.h>
 #include <assert.h>
 
+int config_unique_unicode = 1;
 int config_poly2bitmap_pass1  = 0;
 int config_skewedtobitmap_pass1 = 0;
 int config_addspace = 1;
@@ -463,7 +464,8 @@ gfxfont_t* FontInfo::getGfxFont()
 	    this->space_char = addSpace(this->gfxfont);
 	    msg("<debug> Appending space char to font %s, position %d, width %f", this->gfxfont->id, this->space_char, this->gfxfont->glyphs[this->space_char].advance);
 	}
-	gfxfont_fix_unicode(this->gfxfont);
+	if(config_unique_unicode)
+	    gfxfont_fix_unicode(this->gfxfont);
     
 	/* optionally append a marker glyph */
 	if(config_marker_glyph) {
