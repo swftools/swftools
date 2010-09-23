@@ -1531,15 +1531,14 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         
-	x-=originX;
-        y-=originY;
-   
 	/* calculate the bbox of this character */
-	int x1 = (int)x, x2 = (int)x+1, y1 = (int)y, y2 = (int)y+1;
+	double x0,y0;
+	this->transformXY(state, x-originX, y-originY, &x0, &y0);
+	int x1 = (int)x0, x2 = (int)x0+1, y1 = (int)y0, y2 = (int)y0+1;
         SplashFont*font = clip0dev->getCurrentFont();
 	SplashPath*path = font?font->getGlyphPath(code):NULL;
 	if(path) {
-	    path->offset((SplashCoord)x, (SplashCoord)y);
+	    path->offset((SplashCoord)x0, (SplashCoord)y0);
 	    int t;
 	    for(t=0;t<path->getLength();t++) {
 		double xx,yy;
