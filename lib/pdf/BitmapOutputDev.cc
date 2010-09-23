@@ -1538,7 +1538,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
         SplashFont*font = clip0dev->getCurrentFont();
 	SplashPath*path = font?font->getGlyphPath(code):NULL;
 	if(path) {
-	    path->offset((SplashCoord)x0, (SplashCoord)y0);
+	    path->offset((SplashCoord)x, (SplashCoord)y);
 	    int t;
 	    for(t=0;t<path->getLength();t++) {
 		double xx,yy;
