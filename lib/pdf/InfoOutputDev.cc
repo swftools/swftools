@@ -464,8 +464,7 @@ gfxfont_t* FontInfo::getGfxFont()
 	    this->space_char = addSpace(this->gfxfont);
 	    msg("<debug> Appending space char to font %s, position %d, width %f", this->gfxfont->id, this->space_char, this->gfxfont->glyphs[this->space_char].advance);
 	}
-	if(config_unique_unicode)
-	    gfxfont_fix_unicode(this->gfxfont);
+	gfxfont_fix_unicode(this->gfxfont, config_unique_unicode);
     
 	/* optionally append a marker glyph */
 	if(config_marker_glyph) {

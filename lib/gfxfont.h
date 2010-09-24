@@ -35,7 +35,7 @@ extern "C" {
 gfxfont_t* gfxfont_load(const char*id, const char*filename, unsigned int flags, double quality);
 void gfxfont_save(gfxfont_t*font, const char*filename);
 void gfxfont_save_eot(gfxfont_t*font, const char*filename);
-void gfxfont_fix_unicode(gfxfont_t*font);
+void gfxfont_fix_unicode(gfxfont_t*font, char remove_duplicates);
 void gfxfont_free(gfxfont_t*font);
 void gfxfont_add_unicode2glyph(gfxfont_t*font);
 

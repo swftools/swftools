@@ -68,7 +68,7 @@ static gfxresult_t*pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    font->descent = old->descent;
 	l = l->next;
     }
-    gfxfont_fix_unicode(font);
+    gfxfont_fix_unicode(font, 0);
     return out->finish(out);
 }
 

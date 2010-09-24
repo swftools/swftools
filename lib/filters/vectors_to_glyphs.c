@@ -98,7 +98,7 @@ static void make_font(internal_t*i)
 	pos++;
 	g = g->next;
     }
-    gfxfont_fix_unicode(i->font);
+    gfxfont_fix_unicode(i->font, 1);
 }
 
 static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix, gfxdevice_t*out)

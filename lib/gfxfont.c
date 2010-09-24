@@ -529,7 +529,7 @@ static inline int invalid_unicode(int u)
 {
     return (u<32 || (u>=0xd800 && u<0xf900));
 }
-void gfxfont_fix_unicode(gfxfont_t*font)
+void gfxfont_fix_unicode(gfxfont_t*font, char remove_duplicates)
 {
     int t;
 
@@ -549,7 +549,9 @@ void gfxfont_fix_unicode(gfxfont_t*font)
     for(t=0;t<font->num_glyphs;t++) {
 	int u = font->glyphs[t].unicode;
 	if(u>=0) {
-	    if(used[u] || invalid_unicode(u)) {
+	    if(remove_duplicates && used[u]) {
+		u = font->glyphs[t].unicode = 0xe000 + remap_pos++;
+	    } if(invalid_unicode(u)) {
 		u = font->glyphs[t].unicode = 0xe000 + remap_pos++;
 	    } else {
 		used[u] = 1;
