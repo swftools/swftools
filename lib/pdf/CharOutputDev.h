@@ -67,7 +67,6 @@ public:
   gfxline_t* current_text_stroke;
   gfxline_t* current_text_clip;
   gfxfont_t* current_gfxfont;
-  FontInfo*current_fontinfo;
 
   // state variables for space char detection
   int last_char;

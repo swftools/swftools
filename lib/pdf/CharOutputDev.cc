@@ -503,7 +503,6 @@ CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int 
     this->type3active = 0;
     this->xref = 0;
     this->current_gfxfont = 0;
-    this->current_fontinfo = 0;
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
     this->config_bigchar=0;
@@ -741,6 +740,13 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 			double originX, double originY,
 			CharCode charid, int nBytes, Unicode *_u, int uLen)
 {
+    FontInfo*current_fontinfo = this->info->getFontInfo(state);
+    if(!current_fontinfo->seen) {
+	dumpFontInfo("<verbose>", state->getFont());
+	current_gfxfont = current_fontinfo->getGfxFont();
+	device->addfont(device, current_gfxfont);
+    }
+    
     if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
 	msg("<error> Invalid charid %c (%d) for font %p (%d characters)", charid, charid, current_fontinfo, current_fontinfo?current_fontinfo->num_glyphs:0);
 	return;
@@ -783,7 +789,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
     
     msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d> '%c') CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, u, font->isCIDFont(), render, glyphid, current_gfxfont);
 
-    int space = this->current_fontinfo->space_char;
+    int space = current_fontinfo->space_char;
     if(config_extrafontdata && config_detectspaces && space>=0 && m.m00 && !m.m01) {
 	/* space char detection */
 	//bool different_y = last_char_y - m.ty;
@@ -792,8 +798,8 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	if(!different_y && 
 	   !last_char_was_space) {
 	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
-	    int space = this->current_fontinfo->space_char;
-	    float width = fmax(m.m00*this->current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
+	    int space = current_fontinfo->space_char;
+	    float width = fmax(m.m00*current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
 	    if(m.tx - expected_x >= width*4/10) {
 		msg("<debug> There's a %f pixel gap between char %d and char %d (expected no more than %f), I'm inserting a space here", 
 			m.tx-expected_x, 
@@ -816,7 +822,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 		}
 	    }
 	}
-	last_average_advance = this->current_fontinfo->average_advance;
+	last_average_advance = current_fontinfo->average_advance;
 	last_char_advance = current_gfxfont->glyphs[glyphid].advance;
 	last_char_x_fontsize = m.m00;
 	last_char_y_fontsize = -m.m11;
@@ -860,7 +866,9 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
     msg("<debug> beginType3Char %d u=%d", charid, uLen?u[0]:0);
     type3active = 1;
     
-    if(config_extrafontdata && current_fontinfo) {
+    if(config_extrafontdata) {
+
+	FontInfo*current_fontinfo = info->getFontInfo(state);
 
 	gfxmatrix_t m = gfxmatrix_from_state(state);
 	this->transformXY(state, 0, 0, &m.tx, &m.ty);
@@ -1153,35 +1161,14 @@ void CharOutputDev::updateFont(GfxState *state)
     if (!gfxFont) {
 	return; 
     }  
+    
     char*id = getFontID(gfxFont);
     msg("<verbose> Updating font to %s", FIXNULL(id));
+    free(id);id=0;
+
     if(gfxFont->getType() == fontType3) {
 	infofeature("Type3 fonts");
-	if(!config_extrafontdata) {
-	    if(id)
-		free(id);
-	    return;
-	}
     }
-    if(!id) {
-	msg("<error> Internal Error: FontID is null");
-	return; 
-    }
-
-    this->current_fontinfo = this->info->getFontInfo(state);
-
-    if(!this->current_fontinfo) {
-	msg("<error> Internal Error: no fontinfo for font %s", id);
-	return;
-    }
-    if(!this->current_fontinfo->seen) {
-	dumpFontInfo("<verbose>", gfxFont);
-    }
-
-    current_gfxfont = this->current_fontinfo->getGfxFont();
-    device->addfont(device, current_gfxfont);
-    free(id);
-    
     updateTextMat(state);
 }
 

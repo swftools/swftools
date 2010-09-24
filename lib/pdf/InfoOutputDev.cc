@@ -670,6 +670,15 @@ int font_classify(fontclass_t*out, gfxmatrix_t*in, const char*id, gfxcolor_t* co
     return 1;
 }
 
+void fontclass_print(fontclass_t*cls)
+{
+    printf("[%f %f %f %f] %s alpha=%d\n", 
+	    cls->m00, cls->m01, cls->m10, cls->m11,
+	    cls->id,
+	    cls->alpha
+	    );
+}
+
 gfxcolor_t gfxstate_getfontcolor(GfxState*state)
 {
     /* FIXME: instead of duplicating BitmapOutputDev's and VectorOutputDev's transparent
@@ -881,9 +890,9 @@ GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 
     fontclass_t fontclass;
     char*id = getFontID(font);
-    gfxmatrix_t zero = {0,0,0,0,0,0}; /* FIXME: can type 3 chars be transformed? */
+    gfxmatrix_t m = gfxmatrix_from_state(state);
     gfxcolor_t col = gfxstate_getfillcolor(state);
-    font_classify(&fontclass, &zero, id, &col);
+    font_classify(&fontclass, &m, id, &col);
 
     FontInfo* fontinfo = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
     if(!fontinfo) {
