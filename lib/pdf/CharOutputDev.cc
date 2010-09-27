@@ -741,16 +741,18 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 			CharCode charid, int nBytes, Unicode *_u, int uLen)
 {
     FontInfo*current_fontinfo = this->info->getFontInfo(state);
+
+    if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
+	msg("<error> Invalid charid %d for font %p (%d characters)", charid, current_fontinfo, current_fontinfo?current_fontinfo->num_glyphs:0);
+	return;
+    }
+
     if(!current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", state->getFont());
 	current_gfxfont = current_fontinfo->getGfxFont();
 	device->addfont(device, current_gfxfont);
     }
     
-    if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
-	msg("<error> Invalid charid %c (%d) for font %p (%d characters)", charid, charid, current_fontinfo, current_fontinfo?current_fontinfo->num_glyphs:0);
-	return;
-    }
     CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
 
     int render = state->getRender();
@@ -879,7 +881,7 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 	m.m11*=INTERNAL_FONT_SIZE;*/
 
 	if(!current_fontinfo || (unsigned)charid >= current_fontinfo->num_glyphs || !current_fontinfo->glyphs[charid]) {
-	    msg("<error> Invalid charid %d for font %p", charid, current_fontinfo);
+	    msg("<error> Invalid type3 charid %d for font %p", charid, current_fontinfo);
 	    return gFalse;
 	}
 	gfxcolor_t col={0,0,0,0};

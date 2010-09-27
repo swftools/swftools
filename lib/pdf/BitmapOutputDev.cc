@@ -1514,9 +1514,12 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	if(opaq < 0.9)
 	    render_as_bitmap = 1;
     }
+    if((state->getRender()&3)) {
+	render_as_bitmap = 1;
+    }
 
     if(state->getRender()&RENDER_CLIP) {
-	//char is just a clipping boundary
+	//char is, amongst others, a clipping boundary
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
@@ -1562,12 +1565,15 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
 	   text */
-	if(char_is_outside || render_as_bitmap || (state->getRender()&3) || clip0and1differ(x1,y1,x2,y2)) {
+	if(char_is_outside || render_as_bitmap || clip0and1differ(x1,y1,x2,y2)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    checkNewBitmap(x1,y1,x2,y2);
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    if(config_extrafontdata && !char_is_outside) {
+	    if(config_extrafontdata && render_as_bitmap) {
+		/* we draw invisible glyphs on top of the bitmap text for text selection.
+		   We don't do this for clipped text, though- there's no way the pass 1 font
+		   logic would know that the text will end up being clipped */
 		int oldrender = state->getRender();
 		state->setRender(3); //invisible
 		gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
