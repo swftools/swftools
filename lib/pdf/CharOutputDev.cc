@@ -502,7 +502,6 @@ CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int 
 {
     this->type3active = 0;
     this->xref = 0;
-    this->current_gfxfont = 0;
     this->current_text_stroke = 0;
     this->current_text_clip = 0;
     this->config_bigchar=0;
@@ -747,9 +746,9 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	return;
     }
 
+    gfxfont_t*current_gfxfont = current_fontinfo->getGfxFont();
     if(!current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", state->getFont());
-	current_gfxfont = current_fontinfo->getGfxFont();
 	device->addfont(device, current_gfxfont);
     }
     
@@ -871,6 +870,7 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
     if(config_extrafontdata) {
 
 	FontInfo*current_fontinfo = info->getFontInfo(state);
+	gfxfont_t*current_gfxfont = current_fontinfo->getGfxFont();
 
 	gfxmatrix_t m = gfxmatrix_from_state(state);
 	this->transformXY(state, 0, 0, &m.tx, &m.ty);
