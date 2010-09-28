@@ -705,15 +705,24 @@ gfxcolor_t gfxstate_getfontcolor(GfxState*state)
     return col;
 }
 
+static inline fontclass_t fontclass_from_state(GfxState*state)
+{
+    fontclass_t cls;
+    gfxcolor_t col = gfxstate_getfontcolor(state);
+    char*id = getFontID(state->getFont());
+    gfxmatrix_t m = gfxmatrix_from_state(state);
+    font_classify(&cls, &m, id, &col);
+    return cls;
+}
+static inline void fontclass_clear(fontclass_t*cls)
+{
+    free(cls->id);cls->id=0;
+}
+
 FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
 {
-    gfxcolor_t col = gfxstate_getfontcolor(state);
     GfxFont*font = state->getFont();
-    char*id = getFontID(font);
-    gfxmatrix_t m = gfxmatrix_from_state(state);
-    
-    fontclass_t fontclass;
-    font_classify(&fontclass, &m, id, &col);
+    fontclass_t fontclass = fontclass_from_state(state);
 
     FontInfo* fontinfo = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
     if(!fontinfo) {
@@ -735,20 +744,19 @@ FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
     }
 
     this->last_font = fontinfo;
-    free(id);
+    fontclass_clear(&fontclass);
     return fontinfo;
 }
 
 FontInfo* InfoOutputDev::getFontInfo(GfxState*state)
 {
-    gfxcolor_t col = gfxstate_getfontcolor(state);
-    GfxFont*font = state->getFont();
-    char*id = getFontID(font);
-    fontclass_t fontclass;
-    gfxmatrix_t m = gfxmatrix_from_state(state);
-    font_classify(&fontclass, &m, id, &col);
+    fontclass_t fontclass = fontclass_from_state(state);
     FontInfo*result = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
-    free(id);
+    if(!result) {
+	printf("NOT FOUND: ");
+	fontclass_print(&fontclass);
+    }
+    fontclass_clear(&fontclass);
     return result;
 }
 
@@ -887,21 +895,17 @@ GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 
     current_splash_font = 0;
 
-    fontclass_t fontclass;
-    char*id = getFontID(font);
-    gfxmatrix_t m = gfxmatrix_from_state(state);
-    gfxcolor_t col = gfxstate_getfillcolor(state);
-    font_classify(&fontclass, &m, id, &col);
-
+    fontclass_t fontclass = fontclass_from_state(state);
     FontInfo* fontinfo = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
     if(!fontinfo) {
 	fontinfo = new FontInfo(&fontclass);
+	fontclass_print(&fontclass);
 	dict_put(this->fontcache, &fontclass, fontinfo);
 	fontinfo->font = font;
 	fontinfo->max_size = 0;
 	num_fonts++;
     }
-    free(id);id=0;
+    fontclass_clear(&fontclass);
 
     current_type3_font = fontinfo;
     fontinfo->grow(code+1);
