@@ -870,6 +870,10 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
     if(config_extrafontdata) {
 
 	FontInfo*current_fontinfo = info->getFontInfo(state);
+	if(!current_fontinfo) {
+	    msg("<error> Couldn't find font info");
+	    return gFalse;
+	}
 	gfxfont_t*current_gfxfont = current_fontinfo->getGfxFont();
 
 	gfxmatrix_t m = gfxmatrix_from_state(state);
