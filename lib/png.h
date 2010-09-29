@@ -32,6 +32,7 @@ int png_getdimensions(const char*sname, unsigned*destwidth, unsigned*destheight)
 void png_write_palette_based(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors);
 
 void png_write(const char*filename, unsigned char*data, unsigned width, unsigned height);
+void png_write_quick(const char*filename, unsigned char*data, unsigned width, unsigned height);
 void png_write_palette_based_2(const char*filename, unsigned char*data, unsigned width, unsigned height);
 
 #ifdef __cplusplus
