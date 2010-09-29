@@ -179,9 +179,6 @@ private:
 
     CharOutputDev*gfxdev;
     gfxdevice_t*dev;
-
-    int movex, movey;
-    int width, height;
 };
 
 #endif

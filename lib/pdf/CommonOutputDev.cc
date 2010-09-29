@@ -11,12 +11,11 @@ CommonOutputDev::CommonOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     this->doc = doc;
     this->xref = doc->getXRef();
 
-    this->user_movex = x;
-    this->user_movey = y;
-    
     if(x2<x1) {int x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {int y3=y1;y1=y2;y2=y3;}
 
+    this->user_movex = x;
+    this->user_movey = y;
     this->user_clipx1 = x1;
     this->user_clipy1 = y1;
     this->user_clipx2 = x2;
@@ -31,24 +30,31 @@ void CommonOutputDev::startPage(int pageNum, GfxState*state)
     state->transform(r->x2,r->y2,&x2,&y2);
     if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
     if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-    this->clipmovex = -(int)x1;
-    this->clipmovey = -(int)y1;
+    
+    this->movex = -(int)x1 - this->user_clipx1 + this->user_movex;
+    this->movey = -(int)y1 - this->user_clipy1 + this->user_movey;
 
+    if(this->user_clipx1|this->user_clipy1|this->user_clipx2|this->user_clipy2) {
+	this->width = this->user_clipx2 - this->user_clipx1;
+	this->height = this->user_clipy2 - this->user_clipy1;
+    } else {
+	this->width = x2-x1;
+	this->height = y2-y1;
+    }
     beginPage(state, pageNum);
 }
 
 void CommonOutputDev::transformXY(GfxState*state, double x, double y, double*nx, double*ny)
 {
     state->transform(x,y,nx,ny);
-    *nx += user_movex;
-    *ny += user_movey;
+    *nx += movex;
+    *ny += movey;
 }
-
-void CommonOutputDev::transformPoint(double x, double y, int*xout, int*yout)
+void CommonOutputDev::transformXY_stateless(double x, double y, int*xout, int*yout)
 {
     cvtUserToDev(x, y, xout, yout);
-    *xout += user_movex;
-    *yout += user_movey;
+    *xout += movex;
+    *yout += movey;
 }
     
 GBool CommonOutputDev::interpretType3Chars() 

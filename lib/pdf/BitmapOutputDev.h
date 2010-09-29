@@ -227,10 +227,6 @@ private:
     CharOutputDev*gfxdev;
     gfxdevice_t*dev;
 
-    int width, height;
-
-    int movex, movey;
-
     //ClipState*clipstates;
 };
 

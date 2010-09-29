@@ -70,8 +70,8 @@ class CommonOutputDev: public OutputDev
     virtual void setPage(Page *page) { this->page = page; }
     virtual void finishPage() {};
 
-    virtual void transformXY(GfxState*state, double x, double y, double*nx, double*ny);
-    virtual void transformPoint(double x, double y, int*xout, int*yout);
+    void transformXY(GfxState*state, double x, double y, double*nx, double*ny);
+    void transformXY_stateless(double x, double y, int*xout, int*yout);
 
     virtual GBool interpretType3Chars();
 
@@ -91,19 +91,19 @@ class CommonOutputDev: public OutputDev
     PDFDoc* doc;
     XRef* xref;
     InfoOutputDev* info;
-    
+
+    /* if set, will use a user bounding box instead of the PDF's bounding box */
     int user_movex,user_movey;
     int user_clipx1,user_clipx2,user_clipy1,user_clipy2;
     
-    /* upper left corner of clipping rectangle (cropbox)- needs to be
-       added to all drawing coordinates to give the impression that all
-       pages start at (0,0)*/
-    int clipmovex;
-    int clipmovey;
+    /* movex,movey is the upper left corner of clipping rectangle (cropbox)- 
+       this needs to be added to all drawing coordinates to give the 
+       impression that all pages start at (0,0)*/
+    int movex, movey;
+    int width, height;
   
     /* for page mapping */
     int* page2page;
     int num_pages;
-
 };
 #endif //__deviceinterface_h__

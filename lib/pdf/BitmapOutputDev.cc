@@ -548,7 +548,7 @@ static void clearBooleanBitmap(SplashBitmap*btm, int x1, int y1, int x2, int y2)
 
 void BitmapOutputDev::dbg_newdata(char*newdata)
 {
-    if(0) {
+    if(0) { //!strcmp(newdata,"text")) {
         char filename1[80];
         char filename2[80];
         char filename3[80];
@@ -637,6 +637,50 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     clearBooleanBitmap(boolpolybitmap, x1, y1, x2, y2);
 
     return ret;
+}
+
+void scan_bitmap(SplashBitmap*bitmap)
+{
+    int width = bitmap->getWidth();
+    int width8 = (width+7)/8;
+    int height = bitmap->getHeight();
+
+    int x,y;
+    int x1=width,y1=height,x2=0,y2=0;
+    for(y=0;y<height;y++) {
+	Guchar*b = bitmap->getDataPtr() + y*width8;
+	for(x=0;x<width8;x++) {
+	    if(b[x]) {
+		if(y<y1) y1=y;
+		if(y>y2) y2=y;
+		int x8;
+		for(x8=0;x8<8;x8++) {
+		    if((b[x]<<x8)&0x80)
+			break;
+		}
+		x = x*8 + x8;
+		if(x<x1) x1 = x;
+		break;
+	    }
+	}
+	for(x=width8-1;x>=0;x--) {
+	    if(b[x]) {
+		int x8;
+		for(x8=7;x8>=0;x8--) {
+		    if((b[x]<<x8)&0x80)
+			break;
+		}
+		x = x*8 + x8;
+		if(x>x2) x2 = x;
+		break;
+	    }
+	}
+    }
+    if(x1>x2 || y1>y2) {
+	printf("bitmap is empty\n");
+    } else {
+	printf("bounding box of bitmap is %d,%d,%d,%d\n", x1, y1, x2, y2);
+    }
 }
 
 //void checkNewText() {
@@ -863,25 +907,6 @@ GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
 
 void BitmapOutputDev::beginPage(GfxState *state, int pageNum)
 {
-    PDFRectangle *r = this->page->getCropBox();
-    double x1,y1,x2,y2;
-    state->transform(r->x1,r->y1,&x1,&y1);
-    state->transform(r->x2,r->y2,&x2,&y2);
-    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
-    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-    
-    this->movex = -(int)x1 - user_movex;
-    this->movey = -(int)y1 - user_movey;
-    
-    if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
-        x1 = user_clipx1;
-        x2 = user_clipx2;
-        y1 = user_clipy1;
-        y2 = user_clipy2;
-    }
-    this->width = (int)(x2-x1);
-    this->height = (int)(y2-y1);
-
     rgbdev->startPage(pageNum, state);
     boolpolydev->startPage(pageNum, state);
     booltextdev->startPage(pageNum, state);
@@ -1560,7 +1585,18 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    delete(path);path=0;
 	}
 
-	char char_is_outside = (x1+movex<0 || y1+movey<0 || x2+movex>this->width || y2+movey>this->height);
+	double xtmp0,ytmp0;
+	double xtmp1,ytmp1;
+	double basex,basey;
+	this->transformXY(state, 1, 0, &xtmp0, &ytmp0);
+	this->transformXY(state, 0, 1, &xtmp1, &ytmp1);
+	this->transformXY(state, 0, 0, &basex, &basey);
+
+	printf("%3.2f %3.2f %3.2f\n", xtmp0-basex, ytmp0-basey, basex);
+	printf("%3.2f %3.2f %3.2f\n", xtmp1-basex, ytmp1-basey, basey);
+	printf("Char at %f,%f has bounding box %d,%d,%d,%d (page size: %dx%d)\n", 
+		x,y, x1,y1,x2,y2, this->width, this->height);
+	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
@@ -1580,10 +1616,16 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		state->setRender(oldrender);
 	    }
 	} else {
+	    x1 = 0 + movex;
+	    y1 = 0 + movey;
+	    x2 = this->width + movex;
+	    y2 = this->height + movey;
 
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+	    scan_bitmap(booltextbitmap);
+
 	    checkNewText(x1,y1,x2,y2);
 	    /* use polygonal output device to do the actual text handling */
 	    gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);

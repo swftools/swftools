@@ -198,25 +198,6 @@ GBool FullBitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
 
 void FullBitmapOutputDev::beginPage(GfxState *state, int pageNum)
 {
-    double x1,y1,x2,y2;
-    PDFRectangle *r = page->getCropBox();
-    state->transform(r->x1,r->y1,&x1,&y1);
-    state->transform(r->x2,r->y2,&x2,&y2);
-    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
-    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-    
-    this->movex = -(int)x1 - user_movex;
-    this->movey = -(int)y1 - user_movey;
-    
-    if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
-        x1 = user_clipx1;
-        x2 = user_clipx2;
-        y1 = user_clipy1;
-        y2 = user_clipy2;
-    }
-    this->width = (int)(x2-x1);
-    this->height = (int)(y2-y1);
-
     msg("<debug> startPage");
     rgbdev->startPage(pageNum, state);
     gfxdev->startPage(pageNum, state);

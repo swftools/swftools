@@ -784,7 +784,6 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 
     gfxmatrix_t m = current_fontinfo->get_gfxmatrix(state);
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
-    //m.tx += originX; m.ty += originY;
 
     gfxbbox_t bbox;
     
@@ -918,8 +917,8 @@ void CharOutputDev::beginPage(GfxState *state, int pageNum)
 void GFXLink::draw(CharOutputDev*out, gfxdevice_t*dev)
 {
     int x1,y1,x2,y2;
-    out->transformPoint(this->x1, this->y1, &x1, &y1);
-    out->transformPoint(this->x2, this->y2, &x2, &y2);
+    out->transformXY_stateless(this->x1, this->y1, &x1, &y1);
+    out->transformXY_stateless(this->x2, this->y2, &x2, &y2);
 
     gfxline_t points[5];
     points[0].type = gfx_moveTo;

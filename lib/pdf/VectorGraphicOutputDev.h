@@ -60,7 +60,13 @@ public:
   // Start a page.
   virtual void beginPage(GfxState *state, int pageNum);
   virtual void endPage();
-
+    
+  virtual GBool checkPageSlice(Page *page, double hDPI, double vDPI,
+			       int rotate, GBool useMediaBox, GBool crop,
+			       int sliceX, int sliceY, int sliceW, int sliceH,
+			       GBool printing, Catalog *catalog,
+			       GBool (*abortCheckCbk)(void *data) = NULL,
+			       void *abortCheckCbkData = NULL);
   //----- get info about output device
 
   // Does this device use upside-down coordinates?
@@ -165,7 +171,7 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   virtual GBool needNonText();
 
   private:
-  gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey);
+  gfxline_t* gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed);
 
   void drawGeneralImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height, GfxImageColorMap*colorMap, GBool invert,

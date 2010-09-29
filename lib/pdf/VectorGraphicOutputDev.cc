@@ -189,7 +189,7 @@ void gfxPath_dump(GfxPath*path)
     }
 }
 
-gfxline_t* VectorGraphicOutputDev::gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed, int user_movex, int user_movey)
+gfxline_t* VectorGraphicOutputDev::gfxPath_to_gfxline(GfxState*state, GfxPath*path, int closed)
 {
     int num = path->getNumSubpaths();
     int s,t;
@@ -607,7 +607,7 @@ void VectorGraphicOutputDev::clip(GfxState *state)
 {
     GfxPath * path = state->getPath();
     msg("<trace> clip");
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
     if(!config_disable_polygon_conversion) {
 	gfxline_t*line2 = gfxpoly_circular_to_evenodd(line, DEFAULT_GRID);
 	gfxline_free(line);
@@ -620,14 +620,14 @@ void VectorGraphicOutputDev::clip(GfxState *state)
 void VectorGraphicOutputDev::eoClip(GfxState *state) 
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line = gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    gfxline_t*line = gfxPath_to_gfxline(state, path, 1);
     clipToGfxLine(state, line, 1);
     gfxline_free(line);
 }
 void VectorGraphicOutputDev::clipToStrokePath(GfxState *state)
 {
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
 
     if(getLogLevel() >= LOGLEVEL_TRACE)  {
         double width = state->getTransformedLineWidth();
@@ -828,60 +828,52 @@ void VectorGraphicOutputDev::endType3Char(GfxState *state)
     charDev->endType3Char(state);
 }
 
+GBool VectorGraphicOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
+			   int rotate, GBool useMediaBox, GBool crop,
+			   int sliceX, int sliceY, int sliceW, int sliceH,
+			   GBool printing, Catalog *catalog,
+			   GBool (*abortCheckCbk)(void *data),
+			   void *abortCheckCbkData)
+{
+    this->setPage(page);
+    charDev->setPage(page);
+    return gTrue;
+}
+
+
 void VectorGraphicOutputDev::beginPage(GfxState *state, int pageNum)
 {
     this->currentpage = pageNum;
-    double x1,y1,x2,y2;
     int rot = doc->getPageRotate(1);
     gfxcolor_t white = {255,255,255,255};
     gfxcolor_t black = {255,0,0,0};
     laststate = state;
     gfxline_t clippath[5];
-    PDFRectangle *r = this->page->getCropBox();
 
-    state->transform(r->x1,r->y1,&x1,&y1); //x1 += user_movex; y1 += user_movey;
-    state->transform(r->x2,r->y2,&x2,&y2); //x2 += user_movex; y2 += user_movey;
-
-    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
-    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-
-    /* apply user clip box */
-    if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
-        /*if(user_clipx1 > x1)*/ x1 = user_clipx1;
-        /*if(user_clipx2 < x2)*/ x2 = user_clipx2;
-        /*if(user_clipy1 > y1)*/ y1 = user_clipy1;
-        /*if(user_clipy2 < y2)*/ y2 = user_clipy2;
-	msg("<verbose> Using user clip box %f/%f/%f/%f",x1,y1,x2,y2);
-    } else {
-        x1 += this->clipmovex;
-        y1 += this->clipmovey;
-        x2 += this->clipmovex;
-        y2 += this->clipmovey;
-    }
-
-    //msg("<verbose> Bounding box is (%f,%f)-(%f,%f) [shifted by %d/%d]", x1,y1,x2,y2, user_movex, user_movey);
-    
-    msg("<notice> processing PDF page %d (%dx%d:%d:%d) (move:%d:%d)", pageNum, (int)x2-(int)x1,(int)y2-(int)y1, (int)x1, (int)y1, user_movex + clipmovex, user_movey + clipmovey);
+    msg("<notice> processing PDF page %d (%dx%d:%d:%d)", pageNum, this->width, this->height, -this->movex, -this->movey);
     if(rot!=0)
         msg("<verbose> page is rotated %d degrees", rot);
 
-    clippath[0].type = gfx_moveTo;clippath[0].x = x1; clippath[0].y = y1; clippath[0].next = &clippath[1];
-    clippath[1].type = gfx_lineTo;clippath[1].x = x2; clippath[1].y = y1; clippath[1].next = &clippath[2];
-    clippath[2].type = gfx_lineTo;clippath[2].x = x2; clippath[2].y = y2; clippath[2].next = &clippath[3];
-    clippath[3].type = gfx_lineTo;clippath[3].x = x1; clippath[3].y = y2; clippath[3].next = &clippath[4];
-    clippath[4].type = gfx_lineTo;clippath[4].x = x1; clippath[4].y = y1; clippath[4].next = 0;
+    clippath[0].type = gfx_moveTo;clippath[0].x = 0;     clippath[0].y = 0;      clippath[0].next = &clippath[1];
+    clippath[1].type = gfx_lineTo;clippath[1].x = width; clippath[1].y = 0;      clippath[1].next = &clippath[2];
+    clippath[2].type = gfx_lineTo;clippath[2].x = width; clippath[2].y = height; clippath[2].next = &clippath[3];
+    clippath[3].type = gfx_lineTo;clippath[3].x = 0;     clippath[3].y = height; clippath[3].next = &clippath[4];
+    clippath[4].type = gfx_lineTo;clippath[4].x = 0;     clippath[4].y = 0;      clippath[4].next = 0;
+
     device->startclip(device, clippath); outer_clip_box = 1;
     if(!config_transparent) {
         device->fill(device, clippath, &white);
     }
-    states[statepos].clipbbox.xmin = x1;
-    states[statepos].clipbbox.ymin = x1;
-    states[statepos].clipbbox.xmax = x2;
-    states[statepos].clipbbox.ymax = y2;
+    states[statepos].clipbbox.xmin = 0;
+    states[statepos].clipbbox.ymin = 0;
+    states[statepos].clipbbox.xmax = this->width;
+    states[statepos].clipbbox.ymax = this->height;
     
     states[statepos].dashPattern = 0;
     states[statepos].dashLength = 0;
     states[statepos].dashStart = 0;
+    
+    charDev->startPage(pageNum, state);
 }
 
 void VectorGraphicOutputDev::saveState(GfxState *state) {
@@ -1451,7 +1443,7 @@ void VectorGraphicOutputDev::stroke(GfxState *state)
     dbg("stroke");
 
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 0, user_movex + clipmovex, user_movey + clipmovey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 0);
     strokeGfxline(state, line, 0);
     gfxline_free(line);
 }
@@ -1464,7 +1456,7 @@ void VectorGraphicOutputDev::fill(GfxState *state)
     dbg("fill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
     if(!config_disable_polygon_conversion) {
         gfxline_t*line2 = gfxpoly_circular_to_evenodd(line, DEFAULT_GRID);
         gfxline_free(line);
@@ -1482,7 +1474,7 @@ void VectorGraphicOutputDev::eoFill(GfxState *state)
     dbg("eofill %02x%02x%02x%02x",col.r,col.g,col.b,col.a);
 
     GfxPath * path = state->getPath();
-    gfxline_t*line= gfxPath_to_gfxline(state, path, 1, user_movex + clipmovex, user_movey + clipmovey);
+    gfxline_t*line= gfxPath_to_gfxline(state, path, 1);
     fillGfxLine(state, line, 1);
     gfxline_free(line);
 }
