@@ -1624,7 +1624,6 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    scan_bitmap(booltextbitmap);
 
 	    checkNewText(x1,y1,x2,y2);
 	    /* use polygonal output device to do the actual text handling */
