@@ -335,7 +335,7 @@ gfxfont_t* FontInfo::createGfxFont()
 	    if(this->glyphs[t]->advance>0) {
 		glyph->advance = this->glyphs[t]->advance;
 	    } else {
-		glyph->advance = xmax;
+		glyph->advance = fmax(xmax, 0);
 	    }
 	    if(config_bigchar) {
 		double max = this->glyphs[t]->advance_max;
