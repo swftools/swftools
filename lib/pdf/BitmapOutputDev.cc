@@ -1585,17 +1585,6 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    delete(path);path=0;
 	}
 
-	double xtmp0,ytmp0;
-	double xtmp1,ytmp1;
-	double basex,basey;
-	this->transformXY(state, 1, 0, &xtmp0, &ytmp0);
-	this->transformXY(state, 0, 1, &xtmp1, &ytmp1);
-	this->transformXY(state, 0, 0, &basex, &basey);
-
-	printf("%3.2f %3.2f %3.2f\n", xtmp0-basex, ytmp0-basey, basex);
-	printf("%3.2f %3.2f %3.2f\n", xtmp1-basex, ytmp1-basey, basey);
-	printf("Char at %f,%f has bounding box %d,%d,%d,%d (page size: %dx%d)\n", 
-		x,y, x1,y1,x2,y2, this->width, this->height);
 	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
