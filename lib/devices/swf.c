@@ -116,6 +116,7 @@ typedef struct _swfoutput_internal
     int config_disable_polygon_conversion;
     int config_normalize_polygon_positions;
     int config_alignfonts;
+    double config_override_line_widths;
     double config_remove_small_polygons;
     char config_disablelinks;
     RGBA config_linkcolor;
@@ -281,6 +282,7 @@ static swfoutput_internal* init_internal_struct()
     i->config_filloverlap=0;
     i->config_protect=0;
     i->config_bboxvars=0;
+    i->config_override_line_widths=0;
     i->config_showclipshapes=0;
     i->config_minlinewidth=0.05;
     i->config_caplinewidth=1;
@@ -2121,6 +2123,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_noclips = atoi(value);
     } else if(!strcmp(name, "dumpfonts")) {
 	i->config_dumpfonts = atoi(value);
+    } else if(!strcmp(name, "override_line_widths")) {
+	i->config_override_line_widths = atof(value);
     } else if(!strcmp(name, "animate")) {
 	i->config_animate = atoi(value);
     } else if(!strcmp(name, "linknameurl")) {
@@ -2637,6 +2641,10 @@ static void swf_stroke(gfxdevice_t*dev, gfxline_t*line, gfxcoord_t width, gfxcol
     int has_dots = gfxline_has_dots(line);
     gfxbbox_t r = gfxline_getbbox(line);
     int is_outside_page = !is_inside_page(dev, r.xmin, r.ymin) || !is_inside_page(dev, r.xmax, r.ymax);
+
+    if(i->config_override_line_widths) {
+	width = i->config_override_line_widths;
+    }
 
     /* TODO: * split line into segments, and perform this check for all segments */
 
