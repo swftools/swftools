@@ -3,13 +3,16 @@
 #include <math.h>
 #include "../mem.h"
 #include "../types.h"
-#include "../MD5.h"
 #include "poly.h"
 #include "active.h"
 #include "xrow.h"
 #include "wind.h"
 #include "convert.h"
 #include "heap.h"
+
+#ifdef HAVE_MD5
+#include "MD5.h"
+#endif
 
 static gfxpoly_t*current_polygon = 0;
 void gfxpoly_fail(char*expr, char*file, int line, const char*function)
@@ -19,6 +22,8 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
 	exit(1);
     }
 
+    char filename[32+4+1];
+#ifdef HAVE_MD5
     void*md5 = initialize_md5();
    
     int s,t;
@@ -30,10 +35,12 @@ void gfxpoly_fail(char*expr, char*file, int line, const char*function)
 	}
     }
     unsigned char h[16];
-    char filename[32+4+1];
     finish_md5(md5, h);
     sprintf(filename, "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.ps",
 	    h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],h[8],h[9],h[10],h[11],h[12],h[13],h[14],h[15]);
+#else
+    sprintf(filename, "%d", time(0));
+#endif
 
     fprintf(stderr, "assert(%s) failed in %s in line %d: %s\n", expr, file, line, function);
     fprintf(stderr, "I'm saving a debug file \"%s\" to the current directory.\n", filename);
