@@ -68,6 +68,8 @@ void gfxline_optimize(gfxline_t*line);
 void gfxdraw_cubicTo(gfxdrawer_t*draw, double c1x, double c1y, double c2x, double c2y, double x, double y, double quality);
 void gfxdraw_conicTo(gfxdrawer_t*draw, double cx, double cy, double tox, double toy, double quality);
 
+gfxline_t*gfxline_fromstring(const char*string);
+
 gfxbbox_t gfxline_getbbox(gfxline_t*line);
 gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y);
 void gfxbbox_intersect(gfxbbox_t*box1, gfxbbox_t*box2);

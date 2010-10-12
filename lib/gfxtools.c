@@ -26,6 +26,7 @@
 #include <math.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 #include "gfxtools.h"
 #include "gfxfont.h"
 #include "jpeg.h"
@@ -335,6 +336,64 @@ void gfxtool_draw_dashed_line(gfxdrawer_t*d, gfxline_t*line, float*r, float phas
 	}
     }
 }
+
+static char* getToken(const char**p)
+{
+    const char*start;
+    char*result;
+    while(**p && strchr(" ,()\t\n\r", **p)) {
+	(*p)++;
+    } 
+    start = *p;
+    if (strchr("LMlm", **p) && (isdigit(*(*p+1))||strchr("+-", *(*p+1)))) {
+	(*p)++;
+    } else while(**p && !strchr(" ,()\t\n\r", **p)) {
+	(*p)++;
+    }
+    result = (char*)malloc((*p)-start+1);
+    memcpy(result,start,(*p)-start+1);
+    result[(*p)-start] = 0;
+    return result;
+}
+
+static float getFloat(const char** p)
+{
+    char* token = getToken(p);
+    float result = atof(token);
+    free(token);
+    return result;
+}
+
+gfxline_t*gfxline_fromstring(const char*string)
+{
+    gfxdrawer_t d;
+    gfxdrawer_target_gfxline(&d);
+
+    const char*p = string;
+    while(*p) {
+	char*token = getToken(&p);
+	if(!token)
+	    break;
+	if (!*token) {
+	    free(token);
+	    break;
+	}
+	if(!strcmp(token, "M")) {
+	    d.moveTo(&d, getFloat(&p), getFloat(&p));
+	} else if(!strncmp(token, "L", 1)) {
+	    d.lineTo(&d, getFloat(&p), getFloat(&p));
+	} else if(!strncmp(token, "C", 1)) {
+	    gfxdraw_cubicTo(&d, getFloat(&p), getFloat(&p), getFloat(&p), getFloat(&p), getFloat(&p), getFloat(&p), 0.9);
+	} else if(!strncmp(token, "z", 1)) {
+	    //ignore
+	} else    
+	    fprintf(stderr, "gfxdraw: Warning: unknown primitive '%s'\n", token);
+	free(token);
+    }
+    gfxline_t*line = d.result(&d);
+    return line;
+}
+
 
 gfxline_t * gfxline_clone(gfxline_t*line)
 {
