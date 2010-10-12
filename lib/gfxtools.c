@@ -379,11 +379,21 @@ gfxline_t*gfxline_fromstring(const char*string)
 	    break;
 	}
 	if(!strcmp(token, "M")) {
-	    d.moveTo(&d, getFloat(&p), getFloat(&p));
+	    double x = getFloat(&p);
+	    double y = getFloat(&p);
+	    d.moveTo(&d, x, y);
 	} else if(!strncmp(token, "L", 1)) {
-	    d.lineTo(&d, getFloat(&p), getFloat(&p));
+	    double x = getFloat(&p);
+	    double y = getFloat(&p);
+	    d.lineTo(&d, x, y);
 	} else if(!strncmp(token, "C", 1)) {
-	    gfxdraw_cubicTo(&d, getFloat(&p), getFloat(&p), getFloat(&p), getFloat(&p), getFloat(&p), getFloat(&p), 0.9);
+	    double x1 = getFloat(&p);
+	    double y1 = getFloat(&p);
+	    double x2 = getFloat(&p);
+	    double y2 = getFloat(&p);
+	    double x3 = getFloat(&p);
+	    double y3 = getFloat(&p);
+	    gfxdraw_cubicTo(&d, x1,y1, x2,y2, x3,y3, 0.9);
 	} else if(!strncmp(token, "z", 1)) {
 	    //ignore
 	} else    
