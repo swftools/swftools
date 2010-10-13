@@ -201,6 +201,7 @@ typedef struct _ttf {
 
 
 ttf_t*ttf_new();
+ttf_t* ttf_open(const char*filename);
 void ttf_reduce(ttf_t*ttf);
 ttf_t*ttf_load(void*data, int length);
 ttf_table_t*ttf_addtable(ttf_t*ttf, U32 tag);

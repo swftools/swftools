@@ -36,6 +36,11 @@ void gfximage_save_png(gfximage_t*image, const char*filename)
     png_write(filename, (void*)image->data, image->width, image->height);
 }
 
+void gfximage_save_png_quick(gfximage_t*image, const char*filename)
+{
+    png_write_quick(filename, (void*)image->data, image->width, image->height);
+}
+
 typedef struct scale_lookup {
     int pos;
     unsigned int weight;

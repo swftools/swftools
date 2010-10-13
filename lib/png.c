@@ -1272,7 +1272,7 @@ static int png_apply_specific_filter_8(int filtermode, unsigned char*dest, unsig
 {
     int pos2 = 0;
     int pos = 0;
-    unsigned srcwidth = width;
+    int srcwidth = width;
     int x;
     if(filtermode == 0) {
 	for(x=0;x<width;x++) {
@@ -1315,7 +1315,7 @@ static int png_apply_specific_filter_32(int filtermode, unsigned char*dest, unsi
 {
     int pos2 = 0;
     int pos = 0;
-    unsigned srcwidth = width*4;
+    int srcwidth = width*4;
     int x;
     if(filtermode == 0) {
 	for(x=0;x<width;x++) {
@@ -1403,7 +1403,7 @@ static int png_find_best_filter(unsigned char*src, unsigned width, int bpp, int 
     make_num_bits_table();
     
     int num_filters = y>0?5:2; //don't apply y-direction filter in first line
-
+    
     int bytes_per_pixel = bpp>>3;
     int w = width*bytes_per_pixel;
     int back_x = bytes_per_pixel;
@@ -1523,7 +1523,7 @@ int png_apply_filter_32(unsigned char*dest, unsigned char*src, unsigned width, i
     return png_apply_filter(dest, src, width, y, 32);
 }
 
-EXPORT void png_write_palette_based(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors)
+static void png_write_palette_based2(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors, int compression)
 {
     FILE*fi;
     int crc;
@@ -1545,7 +1545,11 @@ EXPORT void png_write_palette_based(const char*filename, unsigned char*data, uns
 
     make_crc32_table();
 
-    if(!numcolors) {
+    if(numcolors>256) {
+	bpp = 32;
+	cols = 0;
+	format = 5;
+    } else if(!numcolors) {
 	int num = png_get_number_of_palette_entries((COL*)data, width, height, palette, &has_alpha);
 	if(num<=255) {
 	    //printf("image has %d different colors (alpha=%d)\n", num, has_alpha);
@@ -1618,7 +1622,7 @@ EXPORT void png_write_palette_based(const char*filename, unsigned char*data, uns
     zs.opaque = Z_NULL;
     zs.next_out = writebuf;
     zs.avail_out = ZLIB_BUFFER_SIZE;
-    ret = deflateInit(&zs, Z_BEST_COMPRESSION);
+    ret = deflateInit(&zs, compression);
     if (ret != Z_OK) {
 	fprintf(stderr, "error in deflateInit(): %s", zs.msg?zs.msg:"unknown");
 	return;
@@ -1689,11 +1693,19 @@ EXPORT void png_write_palette_based(const char*filename, unsigned char*data, uns
     fclose(fi);
 }
 
+EXPORT void png_write_palette_based(const char*filename, unsigned char*data, unsigned width, unsigned height, int numcolors)
+{
+    png_write_palette_based2(filename, data, width, height, numcolors, Z_BEST_COMPRESSION);
+}
 EXPORT void png_write(const char*filename, unsigned char*data, unsigned width, unsigned height)
 {
-    png_write_palette_based(filename, data, width, height, 0);
+    png_write_palette_based2(filename, data, width, height, 0, Z_BEST_COMPRESSION);
+}
+EXPORT void png_write_quick(const char*filename, unsigned char*data, unsigned width, unsigned height)
+{
+    png_write_palette_based2(filename, data, width, height, 257, Z_NO_COMPRESSION);
 }
 EXPORT void png_write_palette_based_2(const char*filename, unsigned char*data, unsigned width, unsigned height)
 {
-    png_write_palette_based(filename, data, width, height, 256);
+    png_write_palette_based2(filename, data, width, height, 256, Z_BEST_COMPRESSION);
 }

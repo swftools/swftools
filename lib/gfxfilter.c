@@ -171,7 +171,7 @@ static void passthrough_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, g
 static void passthrough_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
 {
     internal_t*i = (internal_t*)dev->internal;
-    i->out->drawlink(i->out, line, text, action);
+    i->out->drawlink(i->out, line, action, text);
 }
 static void passthrough_endpage(gfxdevice_t*dev)
 {

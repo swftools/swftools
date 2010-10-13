@@ -219,6 +219,7 @@ static void dumpImage(writer_t*w, state_t*state, gfximage_t*img)
     free(image);
 #endif
     w->write(w, compressdata, compressdata_size);
+    free(compressdata);
 #else
     w->write(w, img->data, img->width*img->height*sizeof(gfxcolor_t));
 #endif
@@ -247,6 +248,7 @@ static gfximage_t readImage(reader_t*r, state_t*state)
 # else
     uncompress((void*)img.data, &size, compressdata, compressdata_size);
 # endif
+    free(compressdata);
 
 # ifdef FILTER_IMAGES
     int y;
@@ -657,8 +659,8 @@ static void record_drawlink(struct _gfxdevice*dev, gfxline_t*line, const char*ac
     msg("<trace> record: %08x DRAWLINK\n", dev);
     writer_writeU8(&i->w, OP_DRAWLINK);
     dumpLine(&i->w, &i->state, line);
-    writer_writeString(&i->w, action);
-    writer_writeString(&i->w, text);
+    writer_writeString(&i->w, action?action:"");
+    writer_writeString(&i->w, text?text:"");
 }
 
 /* ------------------------------- replaying --------------------------------- */
@@ -821,7 +823,7 @@ static void replay(struct _gfxdevice*dev, gfxdevice_t*out, reader_t*r, gfxfontli
 		if(i && !font) {
 		    font = gfxfontlist_findfont(i->fontlist, id);
 		}
-		msg("<trace> replay: DRAWCHAR font=%s glyph=%d", id, glyph);
+		msg("<trace> replay: DRAWCHAR font=%s glyph=%d (flags=%d)", id, glyph, flags);
 		out->drawchar(out, font, glyph, &color, &matrix);
 		if(id)
 		    free(id);

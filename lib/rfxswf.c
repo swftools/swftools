@@ -45,7 +45,6 @@
 #endif
 
 #include "./bitio.h"
-#include "./MD5.h"
 #include "./os.h"
 
 // internal constants
@@ -1028,6 +1027,7 @@ int swf_SetCXForm(TAG * t,CXFORM * cx,U8 alpha)
 
 void  swf_SetPassword(TAG * t, const char * password)
 {
+#ifdef HAVE_MD5
     /* WARNING: crypt_md5 is not reentrant */
     char salt[3];
     char* md5string;
@@ -1048,6 +1048,9 @@ void  swf_SetPassword(TAG * t, const char * password)
 
     swf_SetU16(t,0);
     swf_SetString(t, md5string);
+#else
+    fprintf(stderr, "Error: No MD5 compiled in");
+#endif
 } 
 
 void swf_SetString(TAG*t, const char* s) 
@@ -1061,6 +1064,7 @@ void swf_SetString(TAG*t, const char* s)
 
 int swf_VerifyPassword(TAG * t, const char * password)
 {
+#ifdef HAVE_MD5
     char*md5string1, *md5string2;
     char*x;
     char*salt;
@@ -1095,6 +1099,10 @@ int swf_VerifyPassword(TAG * t, const char * password)
     if(strcmp(md5string1, md5string2) != 0)
 	return 0;
     return 1;
+#else
+    fprintf(stderr, "Error: No MD5 compiled in");
+    return 1;
+#endif
 }
 
 // Tag List Manipulating Functions

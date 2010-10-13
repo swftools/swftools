@@ -10,7 +10,7 @@ all: ../libgfxpdf$(A)
 
 libgfxpdf: ../libgfxpdf$(A)
 
-libgfxpdf_objects = GFXOutputDev.$(O) InfoOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O) bbox.$(O) popplercompat.$(O)
+libgfxpdf_objects = VectorGraphicOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) CharOutputDev.$(O) CommonOutputDev.$(O) InfoOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O) bbox.$(O) popplercompat.$(O)
 
 xpdf_in_source = @xpdf_in_source@
 
@@ -36,15 +36,19 @@ splash_objects = xpdf/SplashOutputDev.$(O) xpdf/SplashFont.$(O) xpdf/SplashState
 xpdf_include = @xpdf_include@
 
 popplercompat.$(O): popplercompat.cc
-	$(C) popplercompat.cc -o $@
+	$(C) -I ./ $(xpdf_include) popplercompat.cc -o $@
 fonts.$(O): fonts.c
 	$(C) fonts.c -o $@
 bbox.$(O): bbox.c
 	$(C) bbox.c -o $@
 cmyk.$(O): cmyk.cc
 	$(CC) -I ./ $(xpdf_include) cmyk.cc -o $@
-GFXOutputDev.$(O): GFXOutputDev.cc GFXOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h
-	$(CC) -I ./ $(xpdf_include) GFXOutputDev.cc -o $@
+CommonOutputDev.$(O): CommonOutputDev.cc InfoOutputDev.h
+	$(CC) -I ./ $(xpdf_include) CommonOutputDev.cc -o $@
+VectorGraphicOutputDev.$(O): VectorGraphicOutputDev.cc VectorGraphicOutputDev.h CharOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h
+	$(CC) -I ./ $(xpdf_include) VectorGraphicOutputDev.cc -o $@
+CharOutputDev.$(O): CharOutputDev.cc CharOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h
+	$(CC) -I ./ $(xpdf_include) CharOutputDev.cc -o $@
 InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
 	$(CC) -I ./ $(xpdf_include) InfoOutputDev.cc -o $@
 BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
@@ -55,7 +59,7 @@ FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOut
 	$(CC) -I ./ $(xpdf_include) FullBitmapOutputDev.cc -o $@
 DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ $(xpdf_include) DummyOutputDev.cc -o $@
-pdf.$(O): pdf.cc GFXOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h InfoOutputDev.h
+pdf.$(O): pdf.cc VectorGraphicOutputDev.h CharOutputDev.h InfoOutputDev.h CommonOutputDev.h BitmapOutputDev.h FullBitmapOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ $(xpdf_include) pdf.cc -o $@
 
 XPDFOK = xpdf/Gfx.cc

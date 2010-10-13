@@ -249,6 +249,8 @@ ${name}/lib/gfxpoly/xrow.h \
 ${name}/lib/gfxpoly/heap.h \
 ${name}/lib/pdf/bbox.c \
 ${name}/lib/pdf/bbox.h \
+${name}/lib/kdtree.c \
+${name}/lib/kdtree.h \
 ${name}/lib/devices/ocr.h \
 ${name}/lib/devices/ocr.c \
 ${name}/lib/devices/swf.h \
@@ -279,6 +281,8 @@ ${name}/lib/filters/alpha.c \
 ${name}/lib/filters/one_big_font.c \
 ${name}/lib/filters/vectors_to_glyphs.c \
 ${name}/lib/filters/remove_font_transforms.c \
+${name}/lib/pdf/popplercompat.cc \
+${name}/lib/pdf/popplercompat.h \
 ${name}/lib/pdf/GFXOutputDev.h \
 ${name}/lib/pdf/GFXOutputDev.cc \
 ${name}/lib/pdf/BitmapOutputDev.h \

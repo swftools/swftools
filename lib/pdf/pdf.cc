@@ -12,9 +12,10 @@
 #endif
 #include "GlobalParams.h"
 #include "InfoOutputDev.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 #include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
+#include "VectorGraphicOutputDev.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER
@@ -41,6 +42,7 @@ typedef struct _pdf_doc_internal
 {
     char config_bitmap_optimizing;
     char config_full_bitmap_optimizing;
+    char config_only_text;
     char config_print;
     gfxparams_t* parameters;
 
@@ -105,15 +107,19 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 
     CommonOutputDev*outputDev = 0;
     if(pi->config_full_bitmap_optimizing) {
-	FullBitmapOutputDev*d = new FullBitmapOutputDev(pi->info, pi->doc);
+	FullBitmapOutputDev*d = new FullBitmapOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     } else if(pi->config_bitmap_optimizing) {
-	BitmapOutputDev*d = new BitmapOutputDev(pi->info, pi->doc);
+	BitmapOutputDev*d = new BitmapOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
+	outputDev = (CommonOutputDev*)d;
+    } else if(pi->config_only_text) {
+	CharOutputDev*d = new CharOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     } else {
-	GFXOutputDev*d = new GFXOutputDev(pi->info, pi->doc);
+	VectorGraphicOutputDev*d = new VectorGraphicOutputDev(pi->info, pi->doc, pi->pagemap, pi->pagemap_pos, x, y, x1, y1, x2, y2);
 	outputDev = (CommonOutputDev*)d;
     }
+
     /* pass global parameters to PDF driver*/
     gfxparam_t*p = i->parameters->params;
     while(p) {
@@ -125,10 +131,6 @@ static void render2(gfxpage_t*page, gfxdevice_t*dev, int x,int y, int x1,int y1,
 	outputDev->setParameter(p->key, p->value);
 	p = p->next;
     }
-
-    outputDev->setPageMap(pi->pagemap, pi->pagemap_pos);
-    outputDev->setMove(x,y);
-    outputDev->setClip(x1,y1,x2,y2);
 
     gfxdevice_t* middev=0;
     if(multiply!=1.0) {
@@ -260,7 +262,9 @@ void pdf_doc_setparameter(gfxdocument_t*gfx, const char*name, const char*value)
     } else if(!strcmp(name, "bitmapfonts") || !strcmp(name, "bitmap")) {
         i->config_full_bitmap_optimizing = atoi(value);
     } else if(!strcmp(name, "asprint")) {
-        i->config_print = 1;
+        i->config_print = atoi(value);
+    } else if(!strcmp(name, "onlytext")) {
+        i->config_only_text = atoi(value);
     } else {
         gfxparams_store(i->parameters, name, value);
     }
@@ -371,9 +375,16 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
 
 
 /* shortcut to InfoOutputDev.cc */
+extern int config_unique_unicode;
+extern int config_poly2bitmap_pass1;
+extern int config_skewedtobitmap_pass1;
 extern int config_addspace;
 extern int config_fontquality;
 extern int config_bigchar;
+extern int config_marker_glyph;
+extern int config_normalize_fonts;
+extern int config_remove_font_transforms;
+extern int config_remove_invisible_outlines;
 
 static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 {
@@ -389,6 +400,20 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 	gfxparams_store(i->parameters, "detectspaces", "0");
     } else if(!strcmp(name, "detectspaces")) {
 	config_addspace = atoi(value);
+    } else if(!strcmp(name, "unique_unicode")) {
+	config_unique_unicode = atoi(value);
+    } else if(!strcmp(name, "poly2bitmap")) {
+        config_poly2bitmap_pass1 = atoi(value);
+    } else if(!strcmp(name, "marker_glyph")) {
+	config_marker_glyph = atoi(value);
+    } else if(!strcmp(name, "normalize_fonts")) {
+	config_normalize_fonts = atoi(value);
+    } else if(!strcmp(name, "skewedtobitmap")) {
+	config_skewedtobitmap_pass1 = atoi(value);
+    } else if(!strcmp(name, "remove_font_transforms")) {
+	config_remove_font_transforms = atoi(value);
+    } else if(!strcmp(name, "remove_invisible_outlines")) {
+	config_remove_invisible_outlines = atoi(value);
     } else if(!strcmp(name, "fontquality")) {
 	config_fontquality = atoi(value);
     } else if(!strcmp(name, "bigchar")) {

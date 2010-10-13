@@ -25,7 +25,7 @@
 #include "../gfxtools.h"
 
 #include "../../config.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 #include "InfoOutputDev.h"
 #include "PDFDoc.h"
 #include "CommonOutputDev.h"
@@ -36,15 +36,12 @@
 
 class FullBitmapOutputDev: public CommonOutputDev {
 public:
-    FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc);
+    FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2);
     virtual ~FullBitmapOutputDev();
    
     // CommonOutputDev:
     virtual void setDevice(gfxdevice_t*dev);
-    virtual void setMove(int x,int y);
-    virtual void setClip(int x1,int y1,int x2,int y2);
     virtual void setParameter(const char*key, const char*value);
-    virtual void setPageMap(int*pagemap, int pagemap_len);
 
     // OutputDev:
     virtual GBool upsideDown();
@@ -62,7 +59,7 @@ public:
 			       GBool (*abortCheckCbk)(void *data) = NULL,
 			       void *abortCheckCbkData = NULL);
 
-    virtual void startPage(int pageNum, GfxState *state);
+    virtual void beginPage(GfxState *state, int pageNum);
     virtual void endPage();
 
     virtual void saveState(GfxState *state);
@@ -178,19 +175,10 @@ public:
 private:
     void flushBitmap();
     char config_extrafontdata;
-    PDFDoc*doc;
-    XRef*xref;
     SplashOutputDev*rgbdev;
 
-    GFXOutputDev*gfxdev;
+    CharOutputDev*gfxdev;
     gfxdevice_t*dev;
-
-    int movex, movey;
-    int width, height;
-
-    int user_movex, user_movey;
-    int user_clipx1, user_clipy1;
-    int user_clipx2, user_clipy2;
 };
 
 #endif

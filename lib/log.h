@@ -44,7 +44,13 @@ extern void initLog(char* pLogDir, int fileloglevel, char* servAddr, char* logPo
 extern void setConsoleLogging(int level);
 extern void setFileLogging(char*filename, int level, char append);
 
-extern void msg(const char* logFormat, ...);
+extern int maxloglevel;
+extern char char2loglevel[32];
+
+#define msg(fmt,args...) \
+    (((fmt)[0]=='<' && char2loglevel[(fmt)[1]&31]<=maxloglevel)?msg_internal((fmt),## args):0)
+
+extern int msg_internal(const char* logFormat, ...);
 extern void msg_str(const char* log);
 extern void exitLog(void);
 

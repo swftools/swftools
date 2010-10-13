@@ -21,7 +21,7 @@
 #include <memory.h>
 #include <assert.h>
 #include "BitmapOutputDev.h"
-#include "GFXOutputDev.h"
+#include "CharOutputDev.h"
 
 #ifdef HAVE_POPPLER
   #include "splash/SplashBitmap.h"
@@ -53,7 +53,8 @@ ClipState::ClipState()
     this->written = 0;
 }
 
-BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
+BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
+:CommonOutputDev(info, doc, page2page, num_pages, x, y, x1, y1, x2, y2)
 {
     this->info = info;
     this->doc = doc;
@@ -75,7 +76,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     this->booltextdev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
 
     /* device for handling texts and links */
-    this->gfxdev = new GFXOutputDev(info, this->doc);
+    this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
 
     this->rgbdev->startDoc(this->xref);
     this->boolpolydev->startDoc(this->xref);
@@ -90,6 +91,8 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc)
     
     this->config_extrafontdata = 0;
     this->config_optimizeplaincolorfills = 0;
+    this->config_skewedtobitmap = 0;
+    this->config_alphatobitmap = 0;
     this->bboxpath = 0;
     //this->clipdev = 0;
     //this->clipstates = 0;
@@ -149,30 +152,17 @@ void BitmapOutputDev::setDevice(gfxdevice_t*dev)
 {
     this->dev = dev;
 }
-void BitmapOutputDev::setMove(int x,int y)
-{
-    this->gfxdev->setMove(x,y);
-    this->user_movex = x;
-    this->user_movey = y;
-}
-void BitmapOutputDev::setClip(int x1,int y1,int x2,int y2)
-{
-    this->gfxdev->setClip(x1,y1,x2,y2);
-    this->user_clipx1 = x1;
-    this->user_clipy1 = y1;
-    this->user_clipx2 = x2;
-    this->user_clipy2 = y2;
-}
 void BitmapOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key, "extrafontdata")) {
 	this->config_extrafontdata = atoi(value);
+    } else if(!strcmp(key, "skewedtobitmap")) {
+       this->config_skewedtobitmap = atoi(value);
+    } else if(!strcmp(key, "alphatobitmap")) {
+       this->config_alphatobitmap = atoi(value);
     }
+
     this->gfxdev->setParameter(key, value);
-}
-void BitmapOutputDev::setPageMap(int*page2page, int num_pages)
-{
-    this->gfxdev->setPageMap(page2page, num_pages);
 }
 
 void writeBitmap(SplashBitmap*bitmap, char*filename);
@@ -558,7 +548,7 @@ static void clearBooleanBitmap(SplashBitmap*btm, int x1, int y1, int x2, int y2)
 
 void BitmapOutputDev::dbg_newdata(char*newdata)
 {
-    if(0) {
+    if(0) { //!strcmp(newdata,"text")) {
         char filename1[80];
         char filename2[80];
         char filename3[80];
@@ -647,6 +637,50 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     clearBooleanBitmap(boolpolybitmap, x1, y1, x2, y2);
 
     return ret;
+}
+
+void scan_bitmap(SplashBitmap*bitmap)
+{
+    int width = bitmap->getWidth();
+    int width8 = (width+7)/8;
+    int height = bitmap->getHeight();
+
+    int x,y;
+    int x1=width,y1=height,x2=0,y2=0;
+    for(y=0;y<height;y++) {
+	Guchar*b = bitmap->getDataPtr() + y*width8;
+	for(x=0;x<width8;x++) {
+	    if(b[x]) {
+		if(y<y1) y1=y;
+		if(y>y2) y2=y;
+		int x8;
+		for(x8=0;x8<8;x8++) {
+		    if((b[x]<<x8)&0x80)
+			break;
+		}
+		x = x*8 + x8;
+		if(x<x1) x1 = x;
+		break;
+	    }
+	}
+	for(x=width8-1;x>=0;x--) {
+	    if(b[x]) {
+		int x8;
+		for(x8=7;x8>=0;x8--) {
+		    if((b[x]<<x8)&0x80)
+			break;
+		}
+		x = x*8 + x8;
+		if(x>x2) x2 = x;
+		break;
+	    }
+	}
+    }
+    if(x1>x2 || y1>y2) {
+	printf("bitmap is empty\n");
+    } else {
+	printf("bounding box of bitmap is %d,%d,%d,%d\n", x1, y1, x2, y2);
+    }
 }
 
 //void checkNewText() {
@@ -871,27 +905,8 @@ GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
     return gTrue;
 }
 
-void BitmapOutputDev::startPage(int pageNum, GfxState *state)
+void BitmapOutputDev::beginPage(GfxState *state, int pageNum)
 {
-    PDFRectangle *r = this->page->getCropBox();
-    double x1,y1,x2,y2;
-    state->transform(r->x1,r->y1,&x1,&y1);
-    state->transform(r->x2,r->y2,&x2,&y2);
-    if(x2<x1) {double x3=x1;x1=x2;x2=x3;}
-    if(y2<y1) {double y3=y1;y1=y2;y2=y3;}
-    
-    this->movex = -(int)x1 - user_movex;
-    this->movey = -(int)y1 - user_movey;
-    
-    if(user_clipx1|user_clipy1|user_clipx2|user_clipy2) {
-        x1 = user_clipx1;
-        x2 = user_clipx2;
-        y1 = user_clipy1;
-        y2 = user_clipy2;
-    }
-    this->width = (int)(x2-x1);
-    this->height = (int)(y2-y1);
-
     rgbdev->startPage(pageNum, state);
     boolpolydev->startPage(pageNum, state);
     booltextdev->startPage(pageNum, state);
@@ -932,8 +947,9 @@ void BitmapOutputDev::endPage()
 void BitmapOutputDev::finishPage()
 {
     msg("<verbose> finishPage (BitmapOutputDev)");
+    
+    flushEverything();
     gfxdev->endPage();
-   
     flushEverything();
 
     /* splash will now destroy alpha, and paint the 
@@ -1352,8 +1368,6 @@ void BitmapOutputDev::stroke(GfxState *state)
     dbg_newdata("stroke");
 }
 
-extern gfxcolor_t getFillColor(GfxState * state);
-
 char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*rgbbitmap, int x1, int y1, int x2, int y2)
 {
     int width = boolpoly->getWidth();
@@ -1361,7 +1375,7 @@ char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*r
     if(!fixBBox(&x1, &y1, &x2, &y2, width, height)) {
 	return 0;
     }
-    gfxcolor_t color = getFillColor(state);
+    gfxcolor_t color = gfxstate_getfillcolor(state);
     SplashColorPtr rgb = rgbbitmap->getDataPtr() 
 	               + (y1*width+x1)*sizeof(SplashColor);
     int width8 = (width+7)/8;
@@ -1513,16 +1527,28 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 {
     msg("<debug> drawChar render=%d", state->getRender());
 
+    char render_as_bitmap = 0;
+
+    if(config_skewedtobitmap) {
+	if(text_matrix_is_skewed(state)) {
+	    render_as_bitmap = 1;
+	}
+    }
+    if(config_alphatobitmap) {
+	double opaq = state->getFillOpacity();
+	if(opaq < 0.9)
+	    render_as_bitmap = 1;
+    }
+    if((state->getRender()&3)) {
+	render_as_bitmap = 1;
+    }
+
     if(state->getRender()&RENDER_CLIP) {
-	//char is just a clipping boundary
+	//char is, amongst others, a clipping boundary
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
         clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-    } else if(state->getRender()&RENDER_STROKE) {
-	// we're drawing as stroke
-	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else if(rgbbitmap != rgbdev->getBitmap()) {
 	// we're doing softmasking or transparency grouping
 	boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
@@ -1532,13 +1558,13 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clearClips();
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-   
+        
 	/* calculate the bbox of this character */
-	int x1 = (int)x, x2 = (int)x+1, y1 = (int)y, y2 = (int)y+1;
+	double x0,y0;
+	this->transformXY(state, x-originX, y-originY, &x0, &y0);
+	int x1 = (int)x0, x2 = (int)x0+1, y1 = (int)y0, y2 = (int)y0+1;
         SplashFont*font = clip0dev->getCurrentFont();
 	SplashPath*path = font?font->getGlyphPath(code):NULL;
-        x-=originX;
-        y-=originY;
 	if(path) {
 	    path->offset((SplashCoord)x, (SplashCoord)y);
 	    int t;
@@ -1547,6 +1573,10 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		Guchar f;
 		path->getPoint(t,&xx,&yy,&f);
 		state->transform(xx,yy,&xx,&yy);
+		if(!t) {
+		    x1=x2=(int)xx;
+		    y1=y2=(int)yy;
+		}
 		if(xx<x1) x1=(int)xx;
 		if(yy<y1) y1=(int)yy;
 		if(xx>=x2) x2=(int)xx+1;
@@ -1555,25 +1585,35 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    delete(path);path=0;
 	}
 
+	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
+
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
 	   text */
-	if(clip0and1differ(x1,y1,x2,y2)) {
+	if(char_is_outside || render_as_bitmap || clip0and1differ(x1,y1,x2,y2)) {
 	    msg("<verbose> Char %d is affected by clipping", code);
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    checkNewBitmap(x1,y1,x2,y2);
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	    if(config_extrafontdata) {
+	    if(config_extrafontdata && render_as_bitmap) {
+		/* we draw invisible glyphs on top of the bitmap text for text selection.
+		   We don't do this for clipped text, though- there's no way the pass 1 font
+		   logic would know that the text will end up being clipped */
 		int oldrender = state->getRender();
 		state->setRender(3); //invisible
 		gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 		state->setRender(oldrender);
 	    }
 	} else {
+	    x1 = 0 + movex;
+	    y1 = 0 + movey;
+	    x2 = this->width + movex;
+	    y2 = this->height + movey;
 
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+
 	    checkNewText(x1,y1,x2,y2);
 	    /* use polygonal output device to do the actual text handling */
 	    gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);

@@ -275,7 +275,7 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 		}
 	    }
 	}
-	gfxfont_fix_unicode(font);
+	gfxfont_fix_unicode(font, 1);
     }
     return out->finish(out);
 }

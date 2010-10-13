@@ -1152,7 +1152,6 @@ int swf_SetJPEGBits3(TAG * tag, U16 width, U16 height, RGBA * bitmap, int qualit
 #endif
 
 
-#define NO_LOSSLESS
 /* expects mem to be non-premultiplied */
 TAG* swf_AddImage(TAG*tag, int bitid, RGBA*mem, int width, int height, int quality)
 {

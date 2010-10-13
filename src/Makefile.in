@@ -3,8 +3,8 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) as3compile$(E) @PDF2SWF@ @PDF2PDF@
-opt_programs = swfbytes$(E)
+install_programs = wav2swf$(E) @PNG2SWF@ swfcombine$(E) swfstrings$(E) swfextract$(E) swfdump$(E) swfc$(E) @JPEG2SWF@ @GIF2SWF@ swfbbox$(E) font2swf$(E) swfrender$(E) as3compile$(E) @PDF2SWF@ @PDF2PDF@
+programs = $(install_programs) swfbytes$(E) ttftool$(E)
 
 all: $(programs)
 
@@ -40,6 +40,8 @@ swfbytes.$(O): swfbytes.c
 	$(C) swfbytes.c -o $@
 font2swf.$(O): font2swf.c
 	$(C) font2swf.c -o $@
+ttftool.$(O): ttftool.c
+	$(C) ttftool.c -o $@
 as3compile.$(O): as3compile.c
 	$(C) as3compile.c -o $@
 swfc.$(O): swfc.c parser.h ../lib/q.h
@@ -56,13 +58,13 @@ parser.$(O): parser.yy.c parser.h ../lib/q.h
 ../lib/librfxswf$(A): ../lib/modules/swfrender.c ../lib/modules/swfshape.c ../lib/modules/swftext.c ../lib/modules/swffont.c ../lib/modules/swfbits.c ../lib/rfxswf.c ../lib/devices/swf.c ../lib/modules/swfalignzones.c
 	cd ../lib;$(MAKE) librfxswf$(A);cd -
 
-../lib/libgfxpdf$(A): ../lib/pdf/GFXOutputDev.cc
+../lib/libgfxpdf$(A): ../lib/pdf/VectorGraphicOutputDev.cc
 	cd ../lib;$(MAKE) libgfxpdf$(A);cd -
 
 ../lib/libgfx$(A): ../lib/devices/*.c ../lib/gfxdevice.h ../lib/gfxtools.c ../lib/gfxfont.c
 	cd ../lib;$(MAKE) libgfx$(A);cd -
 
-../lib/libgfxswf$(A): ../lib/devices/swf.c
+../lib/libgfxswf$(A): ../lib/devices/swf.c ../lib/readers/swf.c
 	cd ../lib;$(MAKE) libgfxswf$(A);cd -
 
 # TODO: include the following rule only if lex is available
@@ -102,6 +104,9 @@ swfbbox$(E): swfbbox.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 font2swf$(E): font2swf.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) font2swf.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
+ttftool$(E): ttftool.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
+	$(L) ttftool.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
+	$(STRIP) $@
 as3compile$(E): as3compile.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A)
 	$(L) as3compile.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)
 	$(STRIP) $@
@@ -131,10 +136,10 @@ swfc$(E): parser.$(O) swfc.$(O) swfc-feedback.$(O) swfc-history.$(O) swfc-interp
 install:
 	$(mkinstalldirs) $(bindir)
 	$(mkinstalldirs) $(man1dir)
-	@for file in $(programs) $(opt_programs); do if test -f $$file;then $(INSTALL_BIN);$(INSTALL_MAN1);fi;done
+	@for file in $(install_programs); do if test -f $$file;then $(INSTALL_BIN);$(INSTALL_MAN1);fi;done
 	
 uninstall:
-	@for file in $(programs) $(opt_programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
+	@for file in $(install_programs); do $(UNINSTALL_BIN);$(UNINSTALL_MAN1);done
 
 clean: 
 	rm -f *.o *.obj *.lo *.la *~ gmon.out

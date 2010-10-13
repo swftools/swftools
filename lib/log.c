@@ -36,10 +36,10 @@
 
 #include "log.h"
 
+int maxloglevel = 1;
 static int screenloglevel = 1;
 static int fileloglevel = -1;
 static FILE *logFile = 0;
-static int maxloglevel = 1;
 
 int getScreenLogLevel()
 {
@@ -191,7 +191,14 @@ void msg_str(const char* buf)
     }
     log_str(buf);
 }
-void msg(const char* format, ...)
+
+char char2loglevel[32] =
+/*   a  b  c           d           e            f            g            h   i  j  k   l  m           n  o */
+{-1,-1,-1,-1, /*debug*/5, /*error*/1,  /*fatal*/0,          -1,          -1, -1,-1,-1,-1,-1,/*notice*/3,-1,
+/*   p  q  r           s           t            u            v            w   x  y  z                       */
+ -1,-1,-1,-1,         -1, /*trace*/6,          -1,/*verbose*/4,/*warning*/2, -1,-1,-1,-1,-1,         -1,-1};
+
+int msg_internal(const char* format, ...)
 {
     char buf[1024];
 	va_list arglist;
@@ -202,12 +209,13 @@ void msg(const char* format, ...)
 	char*z = "fewnvdt";
 	char*x = strchr(z,format[1]);
 	if(x && (x-z)>maxloglevel)
-		return;
+		return 0;
     }
 
     vsnprintf(buf, sizeof(buf)-1, format, arglist);
 	va_end(arglist);
     strcat(buf, "\n");
     log_str(buf);
+    return 0;
 }
 

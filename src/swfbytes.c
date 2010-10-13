@@ -29,6 +29,7 @@
 
 static char * filename = 0;
 static int verbose;
+static char* output_filename = "output.swf";
 
 static struct options_t options[] = {
 {"h", "help"},
@@ -45,6 +46,9 @@ int args_callback_option(char*name,char*val)
     } else if(!strcmp(name, "v")) {
 	verbose++;
 	return 0;
+    } else if(!strcmp(name, "o")) {
+	output_filename = val;
+	return 1;
     } else {
         printf("Unknown option: -%s\n", name);
 	return 0;
@@ -369,7 +373,7 @@ int main (int argc,char ** argv)
 	parseFile(fi, &newswf);
 	fclose(fi);
 	int f;
-	char*sname = "output.swf";
+	char*sname = output_filename;
 	f = open(sname,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY, 0644);
 	if FAILED(swf_WriteSWF(f,&newswf)) { 
 	    fprintf(stderr, "Unable to write output file: %s\n", sname);

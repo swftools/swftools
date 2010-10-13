@@ -314,6 +314,7 @@ kdarea_list_t* kdtree_filter(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, 
 			result = kdarea_list_concatenate(result, kdarea_all_children(l->area, 0));
 			l = l->next;
 		    } while(l!=branches4);
+		    kdarea_list_destroy(branches4);
 		} else {
 		    result = kdarea_list_concatenate(result, l);
 		}
