@@ -92,8 +92,6 @@ ${name}/lib/q.c \
 ${name}/lib/q.h \
 ${name}/lib/utf8.c \
 ${name}/lib/utf8.h \
-${name}/lib/MD5.h \
-${name}/lib/MD5.c \
 ${name}/lib/png.h \
 ${name}/lib/png.c \
 ${name}/lib/jpeg.h \

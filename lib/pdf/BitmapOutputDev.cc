@@ -1317,15 +1317,6 @@ void BitmapOutputDev::updateTextShift(GfxState *state, double shift)
     gfxdev->updateTextShift(state, shift);
 }
 
-double max(double x, double y) 
-{
-    return x>y?x:y;
-}
-double min(double x, double y) 
-{
-    return x<y?x:y;
-}
-
 gfxbbox_t BitmapOutputDev::getBBox(GfxState*state)
 {
     GfxPath * path = state->getPath();
@@ -1345,10 +1336,10 @@ gfxbbox_t BitmapOutputDev::getBBox(GfxState*state)
                bbox.xmax = x; bbox.ymax = y;
                valid = 1;
            } else {
-               bbox.xmin = min(bbox.xmin, x);
-               bbox.ymin = min(bbox.ymin, y);
-               bbox.xmax = max(bbox.xmax, x);
-               bbox.ymax = max(bbox.ymax, y);
+               bbox.xmin = fmin(bbox.xmin, x);
+               bbox.ymin = fmin(bbox.ymin, y);
+               bbox.xmax = fmax(bbox.xmax, x);
+               bbox.ymax = fmax(bbox.ymax, y);
            }
         }
     }
@@ -1727,20 +1718,20 @@ gfxbbox_t BitmapOutputDev::getImageBBox(GfxState*state)
     bbox.xmin=bbox.xmax = x;
     bbox.ymin=bbox.ymax = y;
     state->transform(0, 0, &x, &y);
-    bbox.xmin=min(bbox.xmin,x);
-    bbox.ymin=min(bbox.ymin,y);
-    bbox.xmax=max(bbox.xmax,x);
-    bbox.ymax=max(bbox.ymax,y);
+    bbox.xmin=fmin(bbox.xmin,x);
+    bbox.ymin=fmin(bbox.ymin,y);
+    bbox.xmax=fmax(bbox.xmax,x);
+    bbox.ymax=fmax(bbox.ymax,y);
     state->transform(1, 0, &x, &y);
-    bbox.xmin=min(bbox.xmin,x);
-    bbox.ymin=min(bbox.ymin,y);
-    bbox.xmax=max(bbox.xmax,x);
-    bbox.ymax=max(bbox.ymax,y);
+    bbox.xmin=fmin(bbox.xmin,x);
+    bbox.ymin=fmin(bbox.ymin,y);
+    bbox.xmax=fmax(bbox.xmax,x);
+    bbox.ymax=fmax(bbox.ymax,y);
     state->transform(1, 1, &x, &y);
-    bbox.xmin=min(bbox.xmin,x);
-    bbox.ymin=min(bbox.ymin,y);
-    bbox.xmax=max(bbox.xmax,x);
-    bbox.ymax=max(bbox.ymax,y);
+    bbox.xmin=fmin(bbox.xmin,x);
+    bbox.ymin=fmin(bbox.ymin,y);
+    bbox.xmax=fmax(bbox.xmax,x);
+    bbox.ymax=fmax(bbox.ymax,y);
     return bbox;
 }
 
