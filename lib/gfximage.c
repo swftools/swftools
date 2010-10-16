@@ -359,6 +359,18 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     return image2;
 }
 
+bool gfximage_has_alpha(gfximage_t*img)
+{
+    int size = img->width*img->height;
+    gfxcolor_t*data = img->data;
+    int t;
+    for(t=0;t<size;t++) {
+	if(data[t].a!=255) 
+	    return 1;
+    }
+    return 0;
+}
+
 void gfximage_free(gfximage_t*b)
 {
     free(b->data);
