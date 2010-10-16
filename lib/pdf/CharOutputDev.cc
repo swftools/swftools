@@ -912,6 +912,10 @@ void CharOutputDev::beginPage(GfxState *state, int pageNum)
 {
     this->currentpage = pageNum;
     this->last_char_was_space = 1;
+    this->last_char_y = 0;
+    this->last_char_y_fontsize = 0;
+    this->last_ascent = 0;
+    this->last_descent = 0;
 }
 
 void GFXLink::draw(CharOutputDev*out, gfxdevice_t*dev)
