@@ -300,8 +300,11 @@ void BitmapOutputDev::flushBitmap()
 	gfxline_t* line = gfxline_makerectangle(xmin, ymin, xmax, ymax);
 	dev->fillbitmap(dev, line, img, &m, 0);
 	gfxline_free(line);
-    
-	free(img->data);img->data=0;free(img);img=0;
+   
+	if(img->data) {
+	    free(img->data);img->data=0;
+	}
+	free(img);img=0;
     }
     ibbox_destroy(boxes);
 
