@@ -875,9 +875,6 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 	}
 	gfxfont_t*current_gfxfont = current_fontinfo->getGfxFont();
 
-	gfxmatrix_t m = gfxmatrix_from_state(state);
-	this->transformXY(state, 0, 0, &m.tx, &m.ty);
-
 	/*m.m00*=INTERNAL_FONT_SIZE;
 	m.m01*=INTERNAL_FONT_SIZE;
 	m.m10*=INTERNAL_FONT_SIZE;
@@ -889,6 +886,8 @@ GBool CharOutputDev::beginType3Char(GfxState *state, double x, double y, double 
 	}
 	gfxcolor_t col={0,0,0,0};
 	CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
+	gfxmatrix_t m = current_fontinfo->get_gfxmatrix(state);
+	this->transformXY(state, 0, 0, &m.tx, &m.ty);
 	device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     }
 
