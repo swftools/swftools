@@ -18,7 +18,7 @@ gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfx
 
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c modules/swfalignzones.c
 
-base_objects=q.$(O) base64.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) xml.$(O) ttf.$(O) kdtree.$(O)
+base_objects=q.$(O) base64.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) xml.$(O) ttf.$(O) kdtree.$(O) graphcut.$(O)
 devices=devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
 filters=filters/alpha.$(O) filters/remove_font_transforms.$(O) filters/one_big_font.$(O) filters/vectors_to_glyphs.$(O)
 gfx_objects=gfximage.$(O) gfxtools.$(O) gfxfont.$(O) gfxfilter.$(O) $(devices) $(filters)
@@ -57,6 +57,8 @@ wav.$(O): wav.c wav.h $(top_builddir)/config.h
 	$(C) wav.c -o $@
 xml.$(O): xml.c xml.h bitio.h
 	$(C) xml.c -o $@
+graphcut.$(O): graphcut.c graphcut.h
+	$(C) graphcut.c -o $@
 ttf.$(O): ttf.c ttf.h
 	$(C) ttf.c -o $@
 os.$(O): os.c os.h $(top_builddir)/config.h
@@ -75,7 +77,7 @@ modules/swfdump.$(O): modules/swfdump.c rfxswf.h
 	$(C) modules/swfdump.c -o $@
 modules/swffilter.$(O): modules/swffilter.c rfxswf.h
 	$(C) modules/swffilter.c -o $@
-modules/swfalignzones.$(O): modules/swfalignzones.c graphcut.c graphcut.h rfxswf.h
+modules/swfalignzones.$(O): modules/swfalignzones.c rfxswf.h
 	$(C) modules/swfalignzones.c -o $@
 modules/swffont.$(O): modules/swffont.c rfxswf.h
 	$(C) modules/swffont.c -o $@
