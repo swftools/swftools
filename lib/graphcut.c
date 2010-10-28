@@ -24,7 +24,7 @@
 #include <math.h>
 #include <memory.h>
 #include "graphcut.h"
-#include "../mem.h"
+#include "mem.h"
 
 //#define DEBUG
 
