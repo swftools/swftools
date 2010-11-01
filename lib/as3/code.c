@@ -357,8 +357,7 @@ code_t*code_parse(TAG*tag, int len, abc_file_t*file, pool_t*pool, codelookup_t**
                 printf("Can't parse opcode param type \"%c\" (for op %02x %s).\n", *p, code->opcode, op->name);
                 return 0;
             }
-            if(data)
-                code->data[pos++] = data;
+            code->data[pos++] = data;
             p++;
         }
     }

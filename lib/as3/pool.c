@@ -881,6 +881,7 @@ int pool_register_int(pool_t*p, int i)
 int pool_register_float(pool_t*p, double d)
 {
     int pos = array_append_or_increase(p->x_floats, &d);
+    fprintf(stderr, "putting %f at %d\n", d, pos);fflush(stderr);
     assert(pos!=0);
     return pos;
 }
@@ -1013,7 +1014,9 @@ int pool_find_multiname(pool_t*pool, multiname_t*name)
 int pool_lookup_int(pool_t*pool, int i)
 {
     if(!i) return 0;
-    return *(int*)array_getkey(pool->x_ints, i);
+    int*ptr = (int*)array_getkey(pool->x_ints, i);
+    if(!ptr) return 0;
+    return *ptr;
 }
 unsigned int pool_lookup_uint(pool_t*pool, int i)
 {
@@ -1023,7 +1026,10 @@ unsigned int pool_lookup_uint(pool_t*pool, int i)
 double pool_lookup_float(pool_t*pool, int i)
 {
     if(!i) return __builtin_nan("");
-    return *(double*)array_getkey(pool->x_floats, i);
+    double*ptr = (double*)array_getkey(pool->x_floats, i);
+    if(!ptr) 
+	return  __builtin_nan("");
+    return *ptr;
 }
 const char*pool_lookup_string(pool_t*pool, int i)
 {
