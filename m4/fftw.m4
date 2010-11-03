@@ -3,7 +3,7 @@ AC_DEFUN([RFX_CHECK_FFTW],
   OLDCPPFLAGS="${CPPFLAGS}"
   OLDLIBS="${LIBS}"
   	
-  AC_CHECK_LIB(fftw3, fftw_plan_dft_r2c_2d, [HAVE_LIBFFTW3=1],)
+  AC_CHECK_LIB(fftw3f, fftwf_plan_dft_r2c_2d, [HAVE_LIBFFTW3=1],)
   AC_CHECK_HEADERS(fftw3.h,[HAVE_FFTW3_H=1])
   
   if test "x${HAVE_LIBFFTW3}" != "x";then
@@ -13,7 +13,7 @@ AC_DEFUN([RFX_CHECK_FFTW],
   fi
   
   if test "x${HAVE_FFTW3}" = "x1"; then 
-    LIBS="$LIBS -lfftw3"
+    LIBS="$LIBS -lfftw3f"
     AC_MSG_CHECKING([whether we can compile the fftw3 test program])
   
     cat > conftest.c << EOF
@@ -22,11 +22,11 @@ AC_DEFUN([RFX_CHECK_FFTW],
     int main()
     {
 	char*data = 0;
-    	fftw_plan plan = fftw_plan_dft_2d(600, 800, (fftw_complex*)data, (fftw_complex*)data, FFTW_FORWARD, FFTW_ESTIMATE);
-	plan = fftw_plan_dft_r2c_2d(600, 800, (double*)data, (fftw_complex*)data, FFTW_ESTIMATE);
-	plan = fftw_plan_dft_c2r_2d(600, 800, (fftw_complex*)data, (double*)data, FFTW_ESTIMATE);
-    	fftw_execute(plan);
-    	fftw_destroy_plan(plan);
+    	fftwf_plan plan = fftwf_plan_dft_2d(600, 800, (fftwf_complex*)data, (fftwf_complex*)data, FFTW_FORWARD, FFTW_ESTIMATE);
+	plan = fftwf_plan_dft_r2c_2d(600, 800, (float*)data, (fftwf_complex*)data, FFTW_ESTIMATE);
+	plan = fftwf_plan_dft_c2r_2d(600, 800, (fftwf_complex*)data, (float*)data, FFTW_ESTIMATE);
+    	fftwf_execute(plan);
+    	fftwf_destroy_plan(plan);
     }
 EOF
     

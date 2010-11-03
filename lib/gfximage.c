@@ -1,11 +1,17 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include <memory.h>
+#include <assert.h>
+#include "../config.h"
 #include "jpeg.h"
 #include "png.h"
 #include "mem.h"
 #include "gfximage.h"
 #include "types.h"
+#ifdef HAVE_FFTW3
+#include <fftw3.h>
+#endif
 
 gfximage_t*gfximage_new(int width, int height)
 {
@@ -136,7 +142,7 @@ static void decodeMonochromeImage(gfxcolor_t*data, int width, int height, gfxcol
     int len = width*height;
 
     for(t=0;t<len;t++) {
-	U32 m = data[t].r;
+	U32 m = data[t].a;
 	data[t].r = (colors[0].r * (255-m) + colors[1].r * m) >> 8;
 	data[t].g = (colors[0].g * (255-m) + colors[1].g * m) >> 8;
 	data[t].b = (colors[0].b * (255-m) + colors[1].b * m) >> 8;
@@ -236,30 +242,36 @@ void blurImage(gfxcolor_t*src, int width, int height, int r)
     rfx_free(gauss);
 }
 
-int swf_ImageGetNumberOfPaletteEntries2(gfxcolor_t*_img, int width, int height)
+int gfximage_getNumberOfPaletteEntries(gfximage_t*img)
 {
-    int len = width*height;
+    int width = img->width;
+    int height = img->height;
+
+    int size = width*height;
     int t;
-    U32* img = (U32*)_img;
-    U32 color1 = img[0];
+    U32* data = (U32*)img->data;
+    U32 color1 = data[0];
     U32 color2 = 0;
-    for(t=1;t<len;t++) {
-	if(img[t] != color1) {
-	    color2 = img[t];
+    for(t=1;t<size;t++) {
+	if(data[t] != color1) {
+	    color2 = data[t];
 	    break;
 	}
     }
-    if(t==len)
+    if(t==size)
 	return 1;
 
-    for(;t<len;t++) {
-	if(img[t] != color1 && img[t] != color2) {
+    for(;t<size;t++) {
+	if(data[t] != color1 && data[t] != color2) {
 	    return width*height;
 	}
     }
     return 2;
 }
 
+#ifndef HAVE_FFTW3
+
+/* old (slow) code- only used if we don't have fftw3 */
 gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
 {
     int x,y;
@@ -278,7 +290,7 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     int height = image->height;
     gfxcolor_t*data = image->data;
 
-    if(swf_ImageGetNumberOfPaletteEntries2(data, width, height) == 2) {
+    if(gfximage_getNumberOfPaletteEntries(image) == 2) {
 	monochrome=1;
 	encodeMonochromeImage(data, width, height, monochrome_colors);
         int r1 = width / newwidth;
@@ -358,6 +370,107 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     image2->height = newheight;
     return image2;
 }
+
+#else
+
+#define MOD(x,d) (((x)+(d))%(d))
+gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
+{
+    int channel;
+
+    int oldwidth = image->width;
+    int oldheight = image->height;
+
+    unsigned char*rgba = (unsigned char*)image->data;
+
+    bool has_alpha = gfximage_has_alpha(image);
+    bool monochrome = 0;
+    gfxcolor_t monochrome_colors[2];
+    if(gfximage_getNumberOfPaletteEntries(image) == 2) {
+	monochrome=1;
+	encodeMonochromeImage(image->data, image->width, image->height, monochrome_colors);
+    }
+    
+    float*data = malloc(sizeof(float)*oldwidth*oldheight);
+    int osize = oldwidth*oldheight;
+    int nsize = newwidth*newheight;
+
+    assert(newwidth <= oldwidth && newheight <= oldheight);
+
+    gfxcolor_t*rgba_new = malloc(newwidth*newheight*sizeof(gfxcolor_t));
+    unsigned char*rgba_new_asbytes = (unsigned char*)rgba_new;
+
+    int oxwidth = oldwidth/2+1;
+    int oxsize = oxwidth*oldheight;
+    fftwf_complex* fft = (fftwf_complex*)calloc(sizeof(fftwf_complex),oxwidth*oldheight);
+    fftwf_complex* fft2 = (fftwf_complex*)calloc(sizeof(fftwf_complex),newwidth*newheight);
+    fftwf_complex* data2 = malloc(sizeof(fftwf_complex)*newwidth*newheight);
+    fftwf_plan plan1 = fftwf_plan_dft_r2c_2d(oldheight, oldwidth, data, fft, FFTW_ESTIMATE);
+    fftwf_plan plan2 = fftwf_plan_dft_2d(newheight, newwidth, fft2, data2, FFTW_BACKWARD, FFTW_ESTIMATE);
+
+    double ff = 1.0/osize;
+
+    for(channel=0;channel<4;channel++) {
+	if(channel==0 && !has_alpha)
+	    continue;
+	if(channel>=1 && monochrome)
+	    continue;
+	int t;
+	for(t=0;t<osize;t++) {
+	    data[t] = rgba[t*4+channel];
+	}
+	fftwf_execute(plan1);
+
+	int x,y;
+	int width2 = newwidth >> 2;
+	for(y=0;y<newheight;y++) {
+	    fftwf_complex*from,*to;
+	    
+	    int fromy = (oldheight-MOD(y-newheight/2,oldheight))%oldheight;
+	    from = &fft[fromy*oxwidth + 1];
+	    to = &fft2[MOD(y-newheight/2,newheight)*newwidth+newwidth-width2];
+	    int x;
+	    for(x=0;x<width2;x++) {
+		to[x][0] =  from[width2-x-1][0]*ff;
+		to[x][1] = -from[width2-x-1][1]*ff;
+	    }
+
+	    from = &fft[MOD(y-newheight/2,oldheight)*oxwidth];
+	    to = &fft2[MOD(y-newheight/2,newheight)*newwidth];
+	    for(x=0;x<width2;x++) {
+		to[x][0] = from[x][0]*ff;
+		to[x][1] = from[x][1]*ff;
+	    }
+	}
+	fftwf_execute(plan2);
+
+	for(t=0;t<nsize;t++) {
+	    int f = data2[t][0];
+	    rgba_new_asbytes[t*4+channel] = f<0?0:(f>255?255:f);
+	}
+    }
+    fftwf_destroy_plan(plan1);
+    fftwf_destroy_plan(plan2);
+    free(fft);
+    free(fft2);
+    if(!has_alpha) {
+	int t;
+	for(t=0;t<nsize;t++) {
+	    rgba_new[t].a = 255;
+	}
+    }
+    
+    if(monochrome)
+	decodeMonochromeImage(rgba_new, newwidth, newheight, monochrome_colors);
+
+    gfximage_t*image2 = (gfximage_t*)malloc(sizeof(gfximage_t));
+    image2->data = rgba_new;
+    image2->width = newwidth;
+    image2->height = newheight;
+    return image2;
+}
+
+#endif
 
 bool gfximage_has_alpha(gfximage_t*img)
 {
