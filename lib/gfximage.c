@@ -13,6 +13,8 @@
 #include <fftw3.h>
 #endif
 
+#define MOD(x,d) (((x)+(d))%(d))
+
 gfximage_t*gfximage_new(int width, int height)
 {
     gfximage_t*i = rfx_calloc(sizeof(gfximage_t));
@@ -269,10 +271,7 @@ int gfximage_getNumberOfPaletteEntries(gfximage_t*img)
     return 2;
 }
 
-#ifndef HAVE_FFTW3
-
-/* old (slow) code- only used if we don't have fftw3 */
-gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
+gfximage_t* gfximage_rescale_old(gfximage_t*image, int newwidth, int newheight)
 {
     int x,y;
     gfxcolor_t* newdata; 
@@ -371,10 +370,8 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     return image2;
 }
 
-#else
-
-#define MOD(x,d) (((x)+(d))%(d))
-gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
+#ifdef HAVE_FFTW3
+gfximage_t* gfximage_rescale_fft(gfximage_t*image, int newwidth, int newheight)
 {
     int channel;
 
@@ -391,7 +388,7 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
 	encodeMonochromeImage(image->data, image->width, image->height, monochrome_colors);
     }
     
-    float*data = malloc(sizeof(float)*oldwidth*oldheight);
+    float*data = fftwf_malloc(sizeof(float)*oldwidth*oldheight);
     int osize = oldwidth*oldheight;
     int nsize = newwidth*newheight;
 
@@ -402,9 +399,9 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
 
     int oxwidth = oldwidth/2+1;
     int oxsize = oxwidth*oldheight;
-    fftwf_complex* fft = (fftwf_complex*)calloc(sizeof(fftwf_complex),oxwidth*oldheight);
-    fftwf_complex* fft2 = (fftwf_complex*)calloc(sizeof(fftwf_complex),newwidth*newheight);
-    fftwf_complex* data2 = malloc(sizeof(fftwf_complex)*newwidth*newheight);
+    fftwf_complex* fft = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex)*oxwidth*oldheight);
+    fftwf_complex* fft2 = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex)*newwidth*newheight);
+    fftwf_complex* data2 = fftwf_malloc(sizeof(fftwf_complex)*newwidth*newheight);
     fftwf_plan plan1 = fftwf_plan_dft_r2c_2d(oldheight, oldwidth, data, fft, FFTW_ESTIMATE);
     fftwf_plan plan2 = fftwf_plan_dft_2d(newheight, newwidth, fft2, data2, FFTW_BACKWARD, FFTW_ESTIMATE);
 
@@ -469,7 +466,19 @@ gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
     image2->height = newheight;
     return image2;
 }
+#endif
 
+#ifdef HAVE_FFTW3
+gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
+{
+    //return gfximage_rescale_fft(image, newwidth, newheight);
+    return gfximage_rescale_old(image, newwidth, newheight);
+}
+#else
+gfximage_t* gfximage_rescale(gfximage_t*image, int newwidth, int newheight)
+{
+    return gfximage_rescale_old(image, newwidth, newheight);
+}
 #endif
 
 bool gfximage_has_alpha(gfximage_t*img)
