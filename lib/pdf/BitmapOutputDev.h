@@ -186,7 +186,7 @@ public:
     
 private:
     void flushEverything();
-    void clearClips();
+    void clearClips(int x1, int y1, int x2, int y2);
     void clearBoolPolyDev();
     void clearBoolTextDev();
     void flushText();

@@ -1501,10 +1501,10 @@ void BitmapOutputDev::beginString(GfxState *state, GString *s)
     gfxdev->beginString(state, s);
 }
 
-void BitmapOutputDev::clearClips()
+void BitmapOutputDev::clearClips(int x1, int y1, int x2, int y2)
 {
-    clearBooleanBitmap(clip0bitmap, 0, 0, 0, 0);
-    clearBooleanBitmap(clip1bitmap, 0, 0, 0, 0);
+    clearBooleanBitmap(clip0bitmap, x1,y1,x2,y2);
+    clearBooleanBitmap(clip1bitmap, x1,y1,x2,y2);
 }
 void BitmapOutputDev::clearBoolPolyDev()
 {
@@ -1549,10 +1549,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else {
 	// we're drawing a regular char
-	clearClips();
-	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-        
+
 	/* calculate the bbox of this character */
 	double x0,y0;
 	this->transformXY(state, x-originX, y-originY, &x0, &y0);
@@ -1578,6 +1575,11 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    }
 	    delete(path);path=0;
 	}
+
+	/* only clear the area we're going to check */
+	clearClips(x1,y1,x2,y2);
+	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
+	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 
 	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
 
