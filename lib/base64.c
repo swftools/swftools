@@ -31,7 +31,7 @@ void write_base64(FILE*fi, const char* s)
     const unsigned char*end = b + strlen(b);
     const unsigned char*end_minus_3 = end - 3;
 
-    while(b < end_minus_3) {
+    while(b <= end_minus_3) {
 	char data[4];
 	data[0] = base64[(b[0]>>2)&63        ];
 	data[1] = base64[(b[0]<<4|b[1]>>4)&63];
@@ -58,7 +58,7 @@ void write_base64(FILE*fi, const char* s)
 	    data[3] = '=';
 	break;
 	default:
-	    fprintf(stderr, "internal error in base64 implementation\n");
+	    fprintf(stderr, "internal error in base64 implementation (%d)\n", end-b);
 	break;
     }
     fwrite(data, 4, 1, fi);
