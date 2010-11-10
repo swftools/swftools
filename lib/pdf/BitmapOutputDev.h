@@ -204,6 +204,8 @@ private:
     char config_skewedtobitmap;
     char config_alphatobitmap;
 
+    int text_x1,text_y1,text_x2,text_y2;
+
     int layerstate;
     GBool emptypage;
 
@@ -224,6 +226,7 @@ private:
     SplashBitmap*staletextbitmap;
 
     gfxdevice_t* gfxoutput;
+    gfxdevice_t* gfxoutput_string;
     CharOutputDev*gfxdev;
     gfxdevice_t*dev;
 

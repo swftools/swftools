@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 #include <memory.h>
 #include <assert.h>
 #include "BitmapOutputDev.h"
@@ -53,6 +54,13 @@ ClipState::ClipState()
     this->written = 0;
 }
 
+static gfxdevice_t* device_new_record()
+{
+    gfxdevice_t*dev = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
+    gfxdevice_record_init(dev, 0);
+    return dev;
+}
+
 BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
 :CommonOutputDev(info, doc, page2page, num_pages, x, y, x1, y1, x2, y2)
 {
@@ -84,9 +92,8 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     this->clip0dev->startDoc(this->xref);
     this->clip1dev->startDoc(this->xref);
 
-    this->gfxoutput = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
-    gfxdevice_record_init(this->gfxoutput, 0);
-
+    this->gfxoutput_string = device_new_record();
+    this->gfxoutput = device_new_record();
     this->gfxdev->setDevice(this->gfxoutput);
     
     this->config_extrafontdata = 0;
@@ -103,6 +110,11 @@ BitmapOutputDev::~BitmapOutputDev()
 	gfxresult_t*r = this->gfxoutput->finish(this->gfxoutput);
 	r->destroy(r);
 	free(this->gfxoutput);this->gfxoutput = 0;
+    }
+    if(this->gfxoutput_string) {
+	gfxresult_t*r = this->gfxoutput_string->finish(this->gfxoutput_string);
+	r->destroy(r);
+	free(this->gfxoutput_string);this->gfxoutput_string = 0;
     }
     if(this->bboxpath) {
 	delete this->bboxpath;this->bboxpath = 0;
@@ -1491,6 +1503,7 @@ void BitmapOutputDev::beginStringOp(GfxState *state)
     clip1dev->beginStringOp(state);
     booltextdev->beginStringOp(state);
     gfxdev->beginStringOp(state);
+    this->gfxdev->setDevice(this->gfxoutput_string);
 }
 void BitmapOutputDev::beginString(GfxState *state, GString *s)
 {
@@ -1499,6 +1512,10 @@ void BitmapOutputDev::beginString(GfxState *state, GString *s)
     clip1dev->beginString(state, s);
     booltextdev->beginString(state, s);
     gfxdev->beginString(state, s);
+    text_x1 = INT_MAX;
+    text_y1 = INT_MAX;
+    text_x2 = INT_MIN;
+    text_y2 = INT_MIN;
 }
 
 void BitmapOutputDev::clearClips(int x1, int y1, int x2, int y2)
@@ -1575,6 +1592,10 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    }
 	    delete(path);path=0;
 	}
+	if(x1 < text_x1) text_x1 = x1;
+	if(y1 < text_y1) text_y1 = y1;
+	if(x2 > text_x2) text_x2 = x2;
+	if(y2 > text_y2) text_y2 = y2;
 
 	/* only clear the area we're going to check */
 	clearClips(x1,y1,x2,y2);
@@ -1605,13 +1626,9 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	    y1 = 0 + movey;
 	    x2 = this->width + movex;
 	    y2 = this->height + movey;
-
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
-
-	    checkNewText(x1,y1,x2,y2);
-	    /* use polygonal output device to do the actual text handling */
 	    gfxdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	}
     }
@@ -1640,14 +1657,11 @@ void BitmapOutputDev::endString(GfxState *state)
     clip0dev->endString(state);
     clip1dev->endString(state);
     booltextdev->endString(state);
-    int render = state->getRender();
-    if(render != RENDER_INVISIBLE && render != RENDER_FILL) {
-	/* xpdf draws things like stroke text or fill+stroke text in the
-	   endString() method */
-        checkNewText(UNKNOWN_BOUNDING_BOX);
-    }
     gfxdev->endString(state);
     dbg_newdata("endstring");
+    checkNewText(text_x1,text_y1,text_x2,text_y2);
+    gfxdevice_record_flush(this->gfxoutput_string, this->gfxoutput, 0);
+    this->gfxdev->setDevice(this->gfxoutput);
 }
 void BitmapOutputDev::endStringOp(GfxState *state)
 {
