@@ -1587,7 +1587,7 @@
    }
 -  if (FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP)) {
 +  int error = 0;
-+  if ((error=FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP|FT_LOAD_NO_HINTING))) {
++  if ((error=FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP))) {
 +      fprintf(stderr, "Truetype wasn't able to load glyph %d, error %d\n", gid, error);
      return NULL;
    }
