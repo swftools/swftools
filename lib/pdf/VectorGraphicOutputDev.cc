@@ -98,7 +98,6 @@ VectorGraphicOutputDev::VectorGraphicOutputDev(InfoOutputDev*info, PDFDoc*doc, i
     this->current_text_clip = 0;
     this->outer_clip_box = 0;
     this->config_convertgradients=1;
-    this->config_break_on_warning=0;
     this->config_transparent=0;
     this->config_disable_polygon_conversion = 0;
     this->config_multiply = 1;
@@ -116,9 +115,7 @@ VectorGraphicOutputDev::VectorGraphicOutputDev(InfoOutputDev*info, PDFDoc*doc, i
 
 void VectorGraphicOutputDev::setParameter(const char*key, const char*value)
 {
-    if(!strcmp(key,"breakonwarning")) {
-	this->config_break_on_warning = atoi(value);
-    } else if(!strcmp(key,"transparent")) {
+    if(!strcmp(key,"transparent")) {
         this->config_transparent = atoi(value);
     } else if(!strcmp(key,"convertgradients")) {
         this->config_convertgradients = atoi(value);

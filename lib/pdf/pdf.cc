@@ -385,6 +385,7 @@ extern int config_marker_glyph;
 extern int config_normalize_fonts;
 extern int config_remove_font_transforms;
 extern int config_remove_invisible_outlines;
+extern int config_break_on_warning;
 
 static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 {
@@ -412,6 +413,8 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 	config_skewedtobitmap_pass1 = atoi(value);
     } else if(!strcmp(name, "remove_font_transforms")) {
 	config_remove_font_transforms = atoi(value);
+    } else if(!strcmp(name, "breakonwarning")) {
+	config_break_on_warning = atoi(value);
     } else if(!strcmp(name, "remove_invisible_outlines")) {
 	config_remove_invisible_outlines = atoi(value);
     } else if(!strcmp(name, "fontquality")) {
