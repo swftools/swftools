@@ -40,7 +40,7 @@ void swf_AddButtonLinks(SWF*swf, char stop_each_frame, char events)
         tag = tag->next;
     }
     int t = time(0);
-    crc32_add_bytes(checksum, &t, sizeof(t));
+    checksum = crc32_add_bytes(checksum, &t, sizeof(t));
 
     unsigned char h[16];
     unsigned char file_signature[33];
