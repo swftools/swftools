@@ -100,6 +100,12 @@ static void swf_ShapeDrawerMoveTo(drawer_t*draw, FPOINT * to)
     int x = floor(to->x*20);
     int y = floor(to->y*20);
 
+    /* Flash will ignore a moveto (0,0) in glyphs. Hence, we map
+       all (0,0)s to (0.05,0)s in moveto,lineto and splineto. */
+
+    if(!x&&!y)
+	x++;
+
     /* we need to write moveto always- it
        might be that it signals the end of a polygon, otherwise
        we would end up connecting two polygons which should
@@ -121,6 +127,8 @@ static void swf_ShapeDrawerLineTo(drawer_t*draw, FPOINT * to)
     SWFSHAPEDRAWER*sdraw = (SWFSHAPEDRAWER*)draw->internal;
     int x = floor(to->x*20);
     int y = floor(to->y*20);
+    if(!x&&!y)
+	x++;
     if(sdraw->lastx < sdraw->bbox.xmin) sdraw->bbox.xmin = sdraw->lastx;
     if(sdraw->lasty < sdraw->bbox.ymin) sdraw->bbox.ymin = sdraw->lasty;
     if(sdraw->lastx > sdraw->bbox.xmax) sdraw->bbox.xmax = sdraw->lastx;
@@ -141,6 +149,8 @@ static void swf_ShapeDrawerSplineTo(drawer_t*draw, FPOINT * c1, FPOINT*  to)
     int ty = floor(c1->y*20);
     int x = floor(to->x*20);
     int y = floor(to->y*20);
+    if(!x&&!y)
+	x++;
     if(sdraw->lastx < sdraw->bbox.xmin) sdraw->bbox.xmin = sdraw->lastx;
     if(sdraw->lasty < sdraw->bbox.ymin) sdraw->bbox.ymin = sdraw->lasty;
     if(sdraw->lastx > sdraw->bbox.xmax) sdraw->bbox.xmax = sdraw->lastx;
