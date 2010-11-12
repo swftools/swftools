@@ -899,7 +899,6 @@ GBool InfoOutputDev::beginType3Char(GfxState *state, double x, double y, double 
     FontInfo* fontinfo = (FontInfo*)dict_lookup(this->fontcache, &fontclass);
     if(!fontinfo) {
 	fontinfo = new FontInfo(&fontclass);
-	fontclass_print(&fontclass);
 	dict_put(this->fontcache, &fontclass, fontinfo);
 	fontinfo->font = font;
 	fontinfo->max_size = 0;
