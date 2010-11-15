@@ -259,8 +259,11 @@ void gfxfont_transform(gfxfont_t*font, gfxmatrix_t*m)
 {
     int t;
     for(t=0;t<font->num_glyphs;t++) {
-	gfxline_t*line = font->glyphs[t].line;
+	gfxglyph_t*g = &font->glyphs[t];
+	gfxline_t*line = g->line;
 	gfxline_transform(line, m);
+	if(m->m00>0)
+	    g->advance *= m->m00;
     }
 }
 
