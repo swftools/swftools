@@ -294,7 +294,6 @@ gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
     }
     if(!di->doc) {
 	di->doc = new PDFDoc(di->fileName, di->userPW);
-	printf("new doc\n");
     }
 
     if(page < 1 || page > doc->num_pages)
