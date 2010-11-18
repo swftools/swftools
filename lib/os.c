@@ -244,6 +244,7 @@ memfile_t* memfile_open(const char*path)
     }
     file->len = sb.st_size;
     file->data = mmap(0, sb.st_size, PROT_READ, MAP_PRIVATE, fi, 0);
+    close(fi);
 #else
     FILE*fi = fopen(path, "rb");
     if(!fi) {

@@ -25,6 +25,7 @@ static double zoom = 72; /* xpdf: 86 */
 static int zoomtowidth = 0;
 static double multiply = 1.0;
 static char* global_page_range = 0;
+static int threadsafe = 0;
 
 static int globalparams_count=0;
 
@@ -49,8 +50,11 @@ typedef struct _pdf_doc_internal
     int protect;
     int nocopy;
     int noprint;
-    
+   
+    GString*fileName;
+    GString*userPW;
     PDFDoc*doc;
+
     Object docinfo;
     InfoOutputDev*info;
 
@@ -190,9 +194,19 @@ void pdf_doc_destroy(gfxdocument_t*gfx)
 {
     pdf_doc_internal_t*i= (pdf_doc_internal_t*)gfx->internal;
 
-    delete i->doc; i->doc=0;
-    free(i->pages); i->pages = 0;
+    if (i->userPW) {
+	delete i->userPW;i->userPW = 0;
+    }
+    if (i->fileName) {
+	/* will be freed by PDFDoc::~PDFDoc */
+	i->fileName = 0;
+    }
    
+    if(i->doc) {
+	delete i->doc; i->doc=0;
+    }
+    free(i->pages); i->pages = 0;
+    
     if(i->pagemap) {
 	free(i->pagemap);
     }
@@ -273,6 +287,15 @@ void pdf_doc_setparameter(gfxdocument_t*gfx, const char*name, const char*value)
 gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
 {
     pdf_doc_internal_t*di= (pdf_doc_internal_t*)doc->internal;
+    if(threadsafe) {
+	/* for multi-thread operation, we need to create a new PDFDoc instance
+	   for each thread */
+	di->doc = 0;
+    }
+    if(!di->doc) {
+	di->doc = new PDFDoc(di->fileName, di->userPW);
+	printf("new doc\n");
+    }
 
     if(page < 1 || page > doc->num_pages)
         return 0;
@@ -427,6 +450,8 @@ static void pdf_setparameter(gfxsource_t*src, const char*name, const char*value)
 	addGlobalFont(value);
     } else if(!strncmp(name, "languagedir", strlen("languagedir"))) {
         addGlobalLanguageDir(value);
+    } else if(!strcmp(name, "threadsafe")) {
+	threadsafe = atoi(value);
     } else if(!strcmp(name, "zoomtowidth")) {
 	zoomtowidth = atoi(value);
     } else if(!strcmp(name, "zoom")) {
@@ -475,19 +500,15 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	userPassword = x+1;
     }
     
-    GString *fileName = new GString(filename);
-    GString *userPW;
+    i->fileName = new GString(filename);
 
     // open PDF file
     if (userPassword && userPassword[0]) {
-      userPW = new GString(userPassword);
+      i->userPW = new GString(userPassword);
     } else {
-      userPW = NULL;
+      i->userPW = NULL;
     }
-    i->doc = new PDFDoc(fileName, userPW);
-    if (userPW) {
-      delete userPW;
-    }
+    i->doc = new PDFDoc(i->fileName, i->userPW);
     if (!i->doc->isOk()) {
         return 0;
     }
@@ -550,7 +571,6 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	pdf_doc->setparameter(pdf_doc, p->key, p->value);
 	p = p->next;
     }
-    
     return pdf_doc;
 }
     
