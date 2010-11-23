@@ -83,6 +83,15 @@ static char* strf(char*format, ...)
     va_end(arglist);
     return strdup(buf);
 }
+PyObject*forward_getattr(PyObject*self, char *a)
+{
+    PyObject*o = PyString_FromString(a);
+    PyObject*ret = PyObject_GenericGetAttr(self, o);
+    printf("%s -> %p\n", a, ret);
+    Py_DECREF(o);
+    return ret;
+}
+
 #define PY_ERROR(s,args...) (PyErr_SetString(PyExc_Exception, strf(s, ## args)),(void*)NULL)
 #define PY_NONE Py_BuildValue("s", 0)
 
@@ -738,7 +747,7 @@ static PyObject* output_getattr(PyObject * _self, char* a)
         return PyInt_FromLong(self->output_device->y2);
     }*/
     
-    return Py_FindMethod(output_methods, _self, a);
+    return forward_getattr(_self, a);
 }
 static int output_setattr(PyObject * _self, char* a, PyObject * o) 
 {
@@ -757,6 +766,8 @@ static int output_print(PyObject * _self, FILE *fi, int flags)
 }
 
 //---------------------------------------------------------------------
+staticforward PyMethodDef font_methods[];
+
 static void font_dealloc(PyObject* _self) {
     FontObject* self = (FontObject*)_self; 
     PyObject_Del(self);
@@ -961,7 +972,7 @@ static PyObject* page_getattr(PyObject * _self, char* a)
     } else if(!strcmp(a, "height")) {
         return PyInt_FromLong(self->page->height);
     }
-    return Py_FindMethod(page_methods, _self, a);
+    return forward_getattr(_self, a);
 }
 
 static int page_setattr(PyObject * self, char* a, PyObject * o) {
@@ -989,10 +1000,8 @@ PyDoc_STRVAR(doc_getPage_doc,
 static PyObject*page_new(DocObject*doc, int pagenr)
 {
     PageObject*page = PyObject_New(PageObject, &PageClass);
-    page->page = self->doc->getpage(self->doc, pagenr);
     page->page = doc->doc->getpage(doc->doc, pagenr);
     page->nr = pagenr;
-    page->parent = _self;
     page->parent = (PyObject*)doc;
     Py_INCREF(page->parent);
     if(!page->page) {
@@ -1172,7 +1181,7 @@ static PyObject* doc_getattr(PyObject * _self, char* a)
     if(!strcmp(a, "filename")) {
         return PyString_FromString(self->filename);
     }
-    return Py_FindMethod(doc_methods, _self, a);
+    return forward_getattr(_self, a);
 }
 static int doc_setattr(PyObject * self, char* a, PyObject * o) {
     return -1;
@@ -1243,6 +1252,7 @@ static PyTypeObject DocClass =
     tp_basicsize: sizeof(DocObject),
     tp_itemsize: 0,
     tp_dealloc: doc_dealloc,
+
     tp_print: doc_print,
     tp_getattr: doc_getattr,
     tp_setattr: doc_setattr,
@@ -1251,6 +1261,8 @@ static PyTypeObject DocClass =
 	
     tp_iter: doc_getiter,
     tp_iternext: doc_iternext,
+
+    tp_flags: Py_TPFLAGS_HAVE_ITER,
 };
 PyDoc_STRVAR(font_doc,
 "A font is a list of polygons, with a Unicode index attached to each one\n"
@@ -1348,7 +1360,7 @@ static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
     return PY_NONE;
 }
 
-static PyMethodDef pdf2swf_methods[] =
+static PyMethodDef gfx_methods[] =
 {
     /* sources */
     {"open", (PyCFunction)f_open, M_FLAGS, f_open_doc},
@@ -1387,12 +1399,13 @@ void initgfx(void)
     OutputClass.ob_type = &PyType_Type;
     PageClass.ob_type = &PyType_Type;
     DocClass.ob_type = &PyType_Type;
+    FontClass.ob_type = &PyType_Type;
 
     pdfdriver = gfxsource_pdf_create();
     swfdriver = gfxsource_swf_create();
     imagedriver = gfxsource_image_create();
     
-    PyObject*module = Py_InitModule3("gfx", pdf2swf_methods, gfx_doc);
+    PyObject*module = Py_InitModule3("gfx", gfx_methods, gfx_doc);
     PyObject*module_dict = PyModule_GetDict(module);
 
     PyDict_SetItemString(module_dict, "Doc", (PyObject*)&DocClass);
