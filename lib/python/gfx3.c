@@ -457,7 +457,7 @@ static PyObject* f_createOpenGL(PyObject* module, PyObject* args, PyObject* kwar
 }
 #endif
 
-jmp_buf backjump;
+static jmp_buf backjump;
 static int has_backjump = 0;
 
 static PyObject* convert_gfxline(gfxline_t*line)
@@ -661,25 +661,6 @@ static gfxresult_t* my_finish(gfxdevice_t*dev)
 }
 
 
-PyDoc_STRVAR(f_createPassThrough_doc, \
-"PassThrough(device)\n\n"
-"Creates a PassThrough device, which can be used as parameter in calls\n"
-"to page.render().\n"
-"device needs to be a class implementing at least the following functions:\n\n"
-"setparameter(key,value)\n"
-"startclip(outline)\n"
-"endclip()\n"
-"stroke(outline, width, color, capstyle, jointstyle, miterLimit)\n"
-"fill(outline, color)\n"
-"fillbitmap(outline, image, matrix, colortransform)\n"
-"fillgradient(outline, gradient, gradienttype, matrix)\n"
-"addfont(font)\n"
-"drawchar(font, glyph, color, matrix)\n"
-"drawlink(outline, url)\n"
-"If any of these functions are not defined, a error message will be printed,\n"
-"however the rendering process will *not* be aborted.\n"
-);
-
 PyObject* passthrough_create(PyObject*obj)
 {
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
@@ -705,6 +686,24 @@ PyObject* passthrough_create(PyObject*obj)
     return (PyObject*)self;
 }
 
+PyDoc_STRVAR(f_createPassThrough_doc, \
+"PassThrough(device)\n\n"
+"Creates a PassThrough device, which can be used as parameter in calls\n"
+"to page.render().\n"
+"device needs to be a class implementing at least the following functions:\n\n"
+"setparameter(key,value)\n"
+"startclip(outline)\n"
+"endclip()\n"
+"stroke(outline, width, color, capstyle, jointstyle, miterLimit)\n"
+"fill(outline, color)\n"
+"fillbitmap(outline, image, matrix, colortransform)\n"
+"fillgradient(outline, gradient, gradienttype, matrix)\n"
+"addfont(font)\n"
+"drawchar(font, glyph, color, matrix)\n"
+"drawlink(outline, url)\n"
+"If any of these functions are not defined, a error message will be printed,\n"
+"however the rendering process will *not* be aborted.\n"
+);
 static PyObject* f_createPassThrough(PyObject* module, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"device", NULL};
@@ -743,10 +742,6 @@ static void output_dealloc(PyObject* _self) {
     
     PyObject_Del(self);
 }
-
-//static PyObject*Py_FindMethod(PyMethodDef*, PyObject*object, char*a)
-//{
-//}
 
 static PyObject* output_getattr(PyObject * _self, char* a)
 {

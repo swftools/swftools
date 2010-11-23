@@ -9,7 +9,14 @@ else
         echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
     fi
     # iterate through version 2.2 to 3.2
-    for v in 2.2 2.3 2.4 2.5 2.6 3.0 3.1 3.2; do
+    VERSIONS="2.2 2.3 2.4 2.5 2.6 3.0 3.1 3.2"
+    case "$PYTHON" in
+	2*) VERSIONS="2.2 2.3 2.4 2.5 2.6 2.7 $PYTHON"
+	    ;;
+	3*) VERSIONS="3.1 3.2 3.3 $PYTHON"
+	    ;;
+    esac
+    for v in $VERSIONS; do
         # Linux
         if test -f "/usr/include/python$v/Python.h";then
             PY_VERSION=$v
