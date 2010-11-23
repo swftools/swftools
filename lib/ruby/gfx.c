@@ -388,23 +388,6 @@ static VALUE font_save_eot(VALUE cls, VALUE _filename)
     return Qnil;
 }
 
-static VALUE font_kerning(VALUE cls)
-{
-    Get_Font(font,cls);
-    gfxkerning_t*kerning = font->font->kerning;
-    int kerning_size = font->font->kerning_size;
-    volatile VALUE a = rb_ary_new2(kerning_size);
-    int t;
-    for(t=0;t<kerning_size;t++) {
-	volatile VALUE tuple = rb_ary_new2(3);
-	rb_ary_store(tuple, 0, INT2FIX(kerning[t].c1));
-	rb_ary_store(tuple, 1, INT2FIX(kerning[t].c2));
-	rb_ary_store(tuple, 2, INT2FIX(kerning[t].advance));
-	rb_ary_store(a, t, tuple);
-    }
-    return a;
-}
-
 // ------------------------ gfx device --------------------------------------
 
 typedef struct device_internal {
@@ -816,8 +799,6 @@ void Init_gfx()
     rb_define_method(Font, "ascent", font_ascent, 0);
     rb_define_method(Font, "descent", font_descent, 0);
     rb_define_method(Font, "glyphs", font_glyphs, 0);
-    rb_define_method(Font, "kerning", font_kerning, 0);
-    rb_define_method(Font, "get_kerning_table", font_kerning, 0);
     rb_define_method(Font, "save_ttf", font_save_ttf, 1);
     rb_define_method(Font, "save_eot", font_save_eot, 1);
     

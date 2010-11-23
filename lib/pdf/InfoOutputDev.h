@@ -99,7 +99,6 @@ public:
     double max_size;
     int num_glyphs;
     GlyphInfo**glyphs;
-    dict_t**kerning;
 
     char seen;
     int space_char;

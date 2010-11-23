@@ -125,9 +125,7 @@ void FontInfo::grow(int size)
 {
     if(size >= this->num_glyphs) {
 	this->glyphs = (GlyphInfo**)realloc(this->glyphs, sizeof(GlyphInfo*)*(size));
-	this->kerning = (dict_t**)realloc(this->kerning, sizeof(dict_t*)*(size));
 	memset(&this->glyphs[this->num_glyphs], 0, sizeof(SplashPath*)*((size)-this->num_glyphs));
-	memset(&this->kerning[this->num_glyphs], 0, sizeof(dict_t*)*((size)-this->num_glyphs));
 	this->num_glyphs = size;
     }
 }
@@ -146,7 +144,6 @@ FontInfo::FontInfo(fontclass_t*fontclass)
     this->seen = 0;
     this->num_glyphs = 0;
     this->glyphs = 0;
-    this->kerning = 0;
     this->gfxfont = 0;
     this->space_char = -1;
     this->ascender = 0;
@@ -173,19 +170,6 @@ FontInfo::~FontInfo()
     if(this->fontclass) {
 	fontclass_type.free(this->fontclass);
 	this->fontclass=0;
-    }
-   
-    if(kerning) {
-	for(t=0;t<num_glyphs;t++) {
-	    dict_t* d = kerning[t];
-	    if(!d) continue;
-	    DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
-		mtf_destroy(m);
-	    }
-	    dict_destroy(d);
-	}
-	free(kerning);
-	kerning=0;
     }
 }
 
@@ -397,41 +381,6 @@ gfxfont_t* FontInfo::createGfxFont()
 	    }
 	}
     }
-
-    int kerning_size = 0;
-    for(t=0;t<this->num_glyphs;t++) {
-	dict_t* d = this->kerning[t];
-	if(!d) continue;
-	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
-	    if(m) {
-		double adv_char = this->glyphs[t]->advance;
-		int adv_kerning = (int)(ptroff_t)m->first->key;
-		if(fabs(adv_char - adv_kerning)>0.5) {
-		    kerning_size++;
-		}
-	    }
-	}
-    }
-    font->kerning_size = kerning_size;
-    font->kerning = (gfxkerning_t*)malloc(sizeof(gfxkerning_t)*kerning_size);
-    int pos = 0;
-    for(t=0;t<this->num_glyphs;t++) {
-	dict_t* d = this->kerning[t];
-	if(!d) continue;
-	DICT_ITERATE_ITEMS(d,void*,key,mtf_t*,m) {
-	    if(m) {
-		double adv_char = this->glyphs[t]->advance;
-		int adv_kerning = (int)(ptroff_t)m->first->key;
-		if(fabs(adv_char - adv_kerning)>0.5) {
-		    font->kerning[pos].c1 = this->glyphs[t]->glyphid;
-		    font->kerning[pos].c2 = this->glyphs[(int)(ptroff_t)key]->glyphid;
-		    font->kerning[pos].advance = (int)(ptroff_t)m->first->key;
-		    pos++;
-		}
-	    }
-	}
-    }
-    //int advance = (int)(ptroff_t)m->first->key;
 
     return font;
 }
@@ -827,21 +776,6 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
 	double xshift = (x - fontinfo->lastx);
 	if(xshift>=0 && xshift > g->advance_max) {
 	    g->advance_max = xshift;
-	}
-	if(xshift>=0 && xshift <= fontinfo->lastadvance * 1.5) {
-	    int advance = (int)round(xshift);
-	    int c1 = fontinfo->lastchar;
-	    int c2 = code;
-	    dict_t*d = fontinfo->kerning[c1];
-	    if(!d) {
-		d = fontinfo->kerning[c1] = dict_new2(&int_type);
-	    }
-	    mtf_t*k = (mtf_t*)dict_lookup(d, (void*)(ptroff_t)c2);
-	    if(!k) {
-		k = mtf_new(&int_type);
-		dict_put(d, (void*)(ptroff_t)c2, k);
-	    }
-	    mtf_increase(k, (void*)(ptroff_t)advance);
 	}
     } else {
 	num_text_breaks++;

@@ -251,30 +251,6 @@ static gfxresult_t* pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
 	    }
 	}
 
-	if(fd->matrix.m00>0) {
-	    /* subset kerning table */
-	    count = 0;
-	    for(t=0;t<fd->orig->kerning_size;t++) {
-		int char1 = fd->used[fd->orig->kerning[t].c1]-1;
-		int char2 = fd->used[fd->orig->kerning[t].c2]-1;
-		if(char1>=0 && char2>=0) {
-		    count++;
-		}
-	    }
-	    font->kerning = malloc(sizeof(font->kerning[0])*count);
-	    font->kerning_size = count;
-	    count = 0;
-	    for(t=0;t<fd->orig->kerning_size;t++) {
-		int char1 = fd->used[fd->orig->kerning[t].c1]-1;
-		int char2 = fd->used[fd->orig->kerning[t].c2]-1;
-		if(char1>=0 && char2>=0) {
-		    font->kerning[count].c1 = char1;
-		    font->kerning[count].c2 = char2;
-		    font->kerning[count].advance = fd->orig->kerning[t].advance * fd->matrix.m00;
-		    count++;
-		}
-	    }
-	}
 	gfxfont_fix_unicode(font, 1);
     }
     return out->finish(out);
