@@ -42,6 +42,9 @@
 
 #if PY_MAJOR_VERSION >= 3
 #define PYTHON3
+#define M_FLAGS (METH_VARARGS|METH_KEYWORDS)
+#else
+#define M_FLAGS (METH_KEYWORDS)
 #endif
 
 typedef struct _state {
@@ -50,7 +53,13 @@ typedef struct _state {
     gfxsource_t*imagedriver;
 } state_t;
 
+#ifdef PYTHON3
 #define STATE(m) ((state_t*)PyModule_GetState(m))
+#else
+static state_t global_state = {0,0,0};
+#define STATE(m) &global_state;
+#endif
+ 
 
 static PyTypeObject OutputClass;
 static PyTypeObject PageClass;
@@ -92,10 +101,41 @@ static char* strf(char*format, ...)
     va_end(arglist);
     return strdup(buf);
 }
-
+static inline PyObject*pystring_fromstring(const char*s)
+{
+#ifdef PYTHON3
+    return PyUnicode_FromString(s);
+#else
+    return PyString_FromString(s);
+#endif
+}
+static inline int pystring_check(PyObject*o)
+{
+#ifdef PYTHON3
+    return PyUnicode_Check(o);
+#else
+    return PyString_Check(o);
+#endif
+}
+static inline PyObject*pyint_fromlong(long l)
+{
+#ifdef PYTHON3
+    return PyLong_FromLong(l);
+#else
+    return PyInt_FromLong(l);
+#endif
+}
+static inline const char*pystring_asstring(PyObject*s)
+{
+#ifdef PYTHON3
+    return PyUnicode_AS_DATA(s);
+#else
+    return PyString_AsString(s);
+#endif
+}
 PyObject*forward_getattr(PyObject*self, char *a)
 {
-    PyObject*o = PyUnicode_FromString(a);
+    PyObject*o = pystring_fromstring(a);
     PyObject*ret = PyObject_GenericGetAttr(self, o);
     Py_DECREF(o);
     return ret;
@@ -187,9 +227,9 @@ static gfxline_t*toLine(PyObject*_line)
             return PY_ERROR("each point must be a tuple");
 	}
         PyObject*_type = PyTuple_GetItem(p, 0);
-        if(!PyUnicode_Check(_type))
+        if(!pystring_check(_type))
             return PY_ERROR("point tuples must start with a string");
-        const char*type = PyUnicode_AS_DATA(_type);
+        const char*type = pystring_asstring(_type);
         int s;
         int size = PyTuple_Size(p);
         for(s=1;s<size;s++) {
@@ -472,17 +512,17 @@ static PyObject* convert_gfxline(gfxline_t*line)
 	PyObject*point=0;
 	if(l->type == gfx_moveTo) {
 	    point = PyTuple_New(3);
-	    PyTuple_SetItem(point, 0, PyUnicode_FromString("m"));
+	    PyTuple_SetItem(point, 0, pystring_fromstring("m"));
 	    PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
 	    PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
 	} else if(l->type == gfx_lineTo) {
 	    point = PyTuple_New(3);
-	    PyTuple_SetItem(point, 0, PyUnicode_FromString("l"));
+	    PyTuple_SetItem(point, 0, pystring_fromstring("l"));
 	    PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
 	    PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
 	} else if(l->type == gfx_splineTo) {
 	    point = PyTuple_New(5);
-	    PyTuple_SetItem(point, 0, PyUnicode_FromString("s"));
+	    PyTuple_SetItem(point, 0, pystring_fromstring("s"));
 	    PyTuple_SetItem(point, 1, PyFloat_FromDouble(l->x));
 	    PyTuple_SetItem(point, 2, PyFloat_FromDouble(l->y));
 	    PyTuple_SetItem(point, 3, PyFloat_FromDouble(l->sx));
@@ -496,7 +536,7 @@ static PyObject* convert_gfxline(gfxline_t*line)
     }
     return list;
 }
-    
+
 static char callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
 {
     OutputObject*self = (OutputObject*)dev->internal;
@@ -515,12 +555,12 @@ static char callback_python(char*function, gfxdevice_t*dev, const char*format, .
 	switch(p) {
 	    case 's': {
 		char*s = va_arg(ap, char*);
-		obj = PyUnicode_FromString(s);
+		obj = pystring_fromstring(s);
 		break;
-	    } 
+	    }
 	    case 'i': {
 		int i = va_arg(ap, int);
-		obj = PyLong_FromLong(i);
+		obj = pyint_fromlong(i);
 		break;
 	    }
 	    case 'd': {
@@ -532,10 +572,10 @@ static char callback_python(char*function, gfxdevice_t*dev, const char*format, .
 		void* ptr = va_arg(ap, void*);
 		gfxcolor_t*col = (gfxcolor_t*)ptr;
 		obj = PyTuple_New(4);
-		PyTuple_SetItem(obj, 0, PyLong_FromLong(col->a));
-		PyTuple_SetItem(obj, 1, PyLong_FromLong(col->r));
-		PyTuple_SetItem(obj, 2, PyLong_FromLong(col->g));
-		PyTuple_SetItem(obj, 3, PyLong_FromLong(col->b));
+		PyTuple_SetItem(obj, 0, pyint_fromlong(col->a));
+		PyTuple_SetItem(obj, 1, pyint_fromlong(col->r));
+		PyTuple_SetItem(obj, 2, pyint_fromlong(col->g));
+		PyTuple_SetItem(obj, 3, pyint_fromlong(col->b));
 		break;
 	    }
 	    case 'f': {
@@ -566,7 +606,7 @@ static char callback_python(char*function, gfxdevice_t*dev, const char*format, .
     PyErr_Clear();
     PyObject* result = PyObject_CallObject(f, tuple);
     Py_DECREF(tuple);
-    
+
     if(!result) { 
 	if(!has_backjump) {
 	    PyErr_Print();
@@ -580,7 +620,7 @@ static char callback_python(char*function, gfxdevice_t*dev, const char*format, .
         return 1;
     }
 }
-
+    
 static int my_setparameter(gfxdevice_t*dev, const char*key, const char*value)
 {
     callback_python("setparameter", dev, "ss", key, value);
@@ -660,7 +700,6 @@ static gfxresult_t* my_finish(gfxdevice_t*dev)
     return 0;
 }
 
-
 PyObject* passthrough_create(PyObject*obj)
 {
     OutputObject*self = PyObject_New(OutputObject, &OutputClass);
@@ -669,6 +708,7 @@ PyObject* passthrough_create(PyObject*obj)
     self->output_device = (gfxdevice_t*)malloc(sizeof(gfxdevice_t));
     memset(self->output_device, 0, sizeof(gfxdevice_t));
     self->output_device->name = strdup("passthrough");
+
     self->output_device->setparameter = my_setparameter;
     self->output_device->startpage = my_startpage;
     self->output_device->startclip = my_startclip;
@@ -683,6 +723,7 @@ PyObject* passthrough_create(PyObject*obj)
     self->output_device->endpage = my_endpage;
     self->output_device->finish = my_finish;
     self->output_device->internal = self;
+
     return (PyObject*)self;
 }
 
@@ -713,9 +754,6 @@ static PyObject* f_createPassThrough(PyObject* module, PyObject* args, PyObject*
     return passthrough_create(obj);
 }
 
-
-#define M_FLAGS (METH_VARARGS|METH_KEYWORDS)
-
 static PyMethodDef output_methods[] =
 {
     /* Output functions */
@@ -742,29 +780,28 @@ static void output_dealloc(PyObject* _self) {
     
     PyObject_Del(self);
 }
-
 static PyObject* output_getattr(PyObject * _self, char* a)
 {
     OutputObject*self = (OutputObject*)_self;
    
 /*    if(!strcmp(a, "x1")) {
-        return PyLong_FromLong(self->output_device->x1);
+        return pyint_fromlong(self->output_device->x1);
     } else if(!strcmp(a, "y1")) {
-        return PyLong_FromLong(self->output_device->y1);
+        return pyint_fromlong(self->output_device->y1);
     } else if(!strcmp(a, "x2")) {
-        return PyLong_FromLong(self->output_device->x2);
+        return pyint_fromlong(self->output_device->x2);
     } else if(!strcmp(a, "y2")) {
-        return PyLong_FromLong(self->output_device->y2);
+        return pyint_fromlong(self->output_device->y2);
     }*/
-   
+    
     return forward_getattr(_self, a);
 }
 static int output_setattr(PyObject * _self, char* a, PyObject * o) 
 {
     OutputObject*self = (OutputObject*)_self;
-    if(!PyUnicode_Check(o))
+    if(!pystring_check(o))
         return -1;
-    const char*value = PyUnicode_AS_DATA(o);
+    const char*value = pystring_asstring(o);
     self->output_device->setparameter(self->output_device, a, value);
     return -1;
 }
@@ -776,6 +813,8 @@ static int output_print(PyObject * _self, FILE *fi, int flags)
 }
 
 //---------------------------------------------------------------------
+static PyMethodDef font_methods[];
+
 static void font_dealloc(PyObject* _self) {
     FontObject* self = (FontObject*)_self; 
     PyObject_Del(self);
@@ -784,9 +823,9 @@ static PyObject* font_getattr(PyObject * _self, char* a)
 {
     FontObject*self = (FontObject*)_self;
     if(!strcmp(a, "num_glyphs")) {
-        return PyLong_FromLong(self->gfxfont->num_glyphs);
+        return pyint_fromlong(self->gfxfont->num_glyphs);
     } else if(!strcmp(a, "name")) {
-        return PyUnicode_FromString(self->gfxfont->id);
+        return pystring_fromstring(self->gfxfont->id);
     }
     return forward_getattr(_self, a);
 }
@@ -939,7 +978,11 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
 	data[s+2] = img->data[t].b;
     }
     result->destroy(result);
-    return PyUnicode_FromStringAndSize((char*)data,img->width*img->height*3);
+#ifdef PYTHON3
+    return PyByteArray_FromStringAndSize((char*)data,img->width*img->height*3);
+#else
+    return PyString_FromStringAndSize((char*)data,img->width*img->height*3);
+#endif
 }
 
 static PyMethodDef page_methods[] =
@@ -974,11 +1017,11 @@ static PyObject* page_getattr(PyObject * _self, char* a)
 	Py_INCREF(self->parent);
         return self->parent;
     } if(!strcmp(a, "nr")) {
-        return PyLong_FromLong(self->nr);
+        return pyint_fromlong(self->nr);
     } else if(!strcmp(a, "width")) {
-        return PyLong_FromLong(self->page->width);
+        return pyint_fromlong(self->page->width);
     } else if(!strcmp(a, "height")) {
-        return PyLong_FromLong(self->page->height);
+        return pyint_fromlong(self->page->height);
     }
     return forward_getattr(_self, a);
 }
@@ -1005,7 +1048,6 @@ PyDoc_STRVAR(doc_getPage_doc,
 "You can find out how many pages a document contains by querying\n"
 "its pages field (doc.pages)\n"
 );
-
 static PyObject*page_new(DocObject*doc, int pagenr)
 {
     PageObject*page = PyObject_New(PageObject, &PageClass);
@@ -1046,6 +1088,7 @@ static PyObject* doc_iternext(PyObject* _self)
     return page_new(self, self->page_pos++);
 }
 
+
 PyDoc_STRVAR(doc_getInfo_doc,
 "getInfo(key)\n\n"
 "Retrieve some information about a document. For PDF files, key\n"
@@ -1067,7 +1110,7 @@ static PyObject* doc_getInfo(PyObject* _self, PyObject* args, PyObject* kwargs)
 	return NULL;
 
     char*s = self->doc->getinfo(self->doc, key);
-    return PyUnicode_FromString(s);
+    return pystring_fromstring(s);
 }
 
 PyDoc_STRVAR(doc_setparameter_doc,
@@ -1109,7 +1152,7 @@ PyDoc_STRVAR(f_open_doc,
 "Notice that for image files, the only supported file formats right now\n"
 "are jpeg and png.\n"
 );
-static PyObject* f_open(PyObject*module, PyObject* args, PyObject* kwargs)
+static PyObject* f_open(PyObject* module, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"type", "filename", NULL};
     char*filename=0;
@@ -1142,8 +1185,8 @@ static PyObject* f_open(PyObject*module, PyObject* args, PyObject* kwargs)
 	    }
 	}
     }
-  
-    state_t*state = (state_t*)PyModule_GetState(module);
+   
+    state_t*state = STATE(module);
     if(!strcmp(type,"pdf"))
 	self->doc = state->pdfdriver->open(state->pdfdriver,filename);
     else if(!strcmp(type, "image") || !strcmp(type, "img"))  
@@ -1164,9 +1207,9 @@ static PyObject* f_open(PyObject*module, PyObject* args, PyObject* kwargs)
 static PyMethodDef doc_methods[] =
 {
     /* PDF functions */
-    {"getPage", (PyCFunction)doc_getPage, M_FLAGS, doc_getPage_doc},
-    {"getInfo", (PyCFunction)doc_getInfo, M_FLAGS, doc_getInfo_doc},
-    {"setparameter", (PyCFunction)doc_setparameter, M_FLAGS, doc_setparameter_doc},
+    {"getPage", (PyCFunction)doc_getPage, METH_KEYWORDS, doc_getPage_doc},
+    {"getInfo", (PyCFunction)doc_getInfo, METH_KEYWORDS, doc_getInfo_doc},
+    {"setparameter", (PyCFunction)doc_setparameter, METH_KEYWORDS, doc_setparameter_doc},
     {0,0,0,0}
 };
 
@@ -1185,10 +1228,10 @@ static PyObject* doc_getattr(PyObject * _self, char* a)
 {
     DocObject*self = (DocObject*)_self;
     if(!strcmp(a, "pages")) {
-        return PyLong_FromLong(self->doc->num_pages);
+        return pyint_fromlong(self->doc->num_pages);
     }
     if(!strcmp(a, "filename")) {
-        return PyUnicode_FromString(self->filename);
+        return pystring_fromstring(self->filename);
     }
     return forward_getattr(_self, a);
 }
@@ -1204,6 +1247,15 @@ static int doc_print(PyObject * _self, FILE *fi, int flags)
 
 //---------------------------------------------------------------------
 
+#ifdef PYTHON3
+#define PYTHON23_HEAD_INIT \
+    PyObject_HEAD_INIT(NULL)
+    0,
+#else
+#define PYTHON23_HEAD_INIT \
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+#endif
+
 PyDoc_STRVAR(output_doc,
 "An Output object can be used as parameter to the render()\n"
 "call of a page. It's not possible to create this type of\n"
@@ -1214,7 +1266,7 @@ PyDoc_STRVAR(output_doc,
 );
 static PyTypeObject OutputClass =
 {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PYTHON23_HEAD_INIT
     tp_name: "gfx.Output",
     tp_basicsize: sizeof(OutputObject),
     tp_itemsize: 0,
@@ -1233,7 +1285,7 @@ PyDoc_STRVAR(page_doc,
 );
 static PyTypeObject PageClass =
 {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PYTHON23_HEAD_INIT
     tp_name: "gfx.Page",
     tp_basicsize: sizeof(PageObject),
     tp_itemsize: 0,
@@ -1253,11 +1305,12 @@ PyDoc_STRVAR(doc_doc,
 );
 static PyTypeObject DocClass =
 {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PYTHON23_HEAD_INIT
     tp_name: "gfx.Doc",
     tp_basicsize: sizeof(DocObject),
     tp_itemsize: 0,
     tp_dealloc: doc_dealloc,
+
     tp_print: doc_print,
     tp_getattr: doc_getattr,
     tp_setattr: doc_setattr,
@@ -1266,13 +1319,15 @@ static PyTypeObject DocClass =
 	
     tp_iter: doc_getiter,
     tp_iternext: doc_iternext,
+
+    tp_flags: Py_TPFLAGS_HAVE_ITER,
 };
 PyDoc_STRVAR(font_doc,
 "A font is a list of polygons, with a Unicode index attached to each one\n"
 );
 static PyTypeObject FontClass =
 {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    PYTHON23_HEAD_INIT
     tp_name: "gfx.Font",
     tp_basicsize: sizeof(FontObject),
     tp_itemsize: 0,
@@ -1297,7 +1352,7 @@ PyDoc_STRVAR(f_setparameter_doc, \
 "    pdf2swf somefile.pdf -s help\n"
 ".\n"
 );
-static PyObject* f_setparameter(PyObject* module, PyObject* args, PyObject* kwargs)
+static PyObject* f_setparameter(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"key", "value", NULL};
     char*key=0,*value=0;
@@ -1321,7 +1376,7 @@ PyDoc_STRVAR(f_verbose_doc, \
 "level=6 (trace)   Log extended debug statements\n"
 "All logging messages are written to stdout.\n"
 );
-static PyObject* f_verbose(PyObject* module, PyObject* args, PyObject* kwargs)
+static PyObject* f_verbose(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"val", NULL};
     int val;
@@ -1338,7 +1393,7 @@ PyDoc_STRVAR(f_addfont_doc, \
 "then the files added by addfont() will be searched.\n"
 );
 
-static PyObject* f_addfont(PyObject*module, PyObject* args, PyObject* kwargs)
+static PyObject* f_addfont(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"filename", NULL};
     char*filename=0;
@@ -1355,7 +1410,7 @@ PyDoc_STRVAR(f_addfontdir_doc, \
 "font file within this directory might be used to resolve external fonts\n"
 "in PDF files\n"
 );
-static PyObject* f_addfontdir(PyObject*module, PyObject* args, PyObject* kwargs)
+static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"filename", NULL};
     char*filename=0;
@@ -1415,6 +1470,7 @@ void gfx_free(void*module)
     memset(state, 0, sizeof(state_t));
 }
 
+#ifdef PYTHON3
 static struct PyModuleDef gfx_moduledef = {
         PyModuleDef_HEAD_INIT,
         "gfx",
@@ -1426,13 +1482,22 @@ static struct PyModuleDef gfx_moduledef = {
         /*clear*/NULL,
         gfx_free,
 };
+#endif
 
 PyObject * PyInit_gfx(void)
 {
     initLog(0,0,0,0,0,2);
+#ifdef PYTHON3
+    PyObject*module = PyModule_Create(&gfx_moduledef);
+#else
+    PyObject*module = Py_InitModule3("gfx", gfx_methods, gfx_doc);
+#endif
+    OutputClass.ob_type = &PyType_Type;
+    PageClass.ob_type = &PyType_Type;
+    DocClass.ob_type = &PyType_Type;
+    FontClass.ob_type = &PyType_Type;
     
-    PyObject *module = PyModule_Create(&gfx_moduledef);
-    state_t* state = (state_t*)PyModule_GetState(module);
+    state_t* state = STATE(module);
     memset(state, 0, sizeof(state_t));
     state->pdfdriver = gfxsource_pdf_create();
     state->swfdriver = gfxsource_swf_create();
@@ -1445,3 +1510,8 @@ PyObject * PyInit_gfx(void)
 
     return module;
 }
+#ifndef PYTHON3
+void initgfx(void) {
+    PyInit_gfx();
+}
+#endif
