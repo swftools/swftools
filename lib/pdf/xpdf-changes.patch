@@ -1645,6 +1645,27 @@
  }
  
  void SplashFont::initCache() {
+@@ -74,11 +78,15 @@
+   } else {
+     cacheSets = 1;
+   }
+-  cache = (Guchar *)gmallocn(cacheSets * cacheAssoc, glyphSize);
+-  cacheTags = (SplashFontCacheTag *)gmallocn(cacheSets * cacheAssoc,
+-					     sizeof(SplashFontCacheTag));
+-  for (i = 0; i < cacheSets * cacheAssoc; ++i) {
+-    cacheTags[i].mru = i & (cacheAssoc - 1);
++  cache = (Guchar *)gmallocn_noexit(cacheSets * cacheAssoc, glyphSize);
++  if(cache) {
++      cacheTags = (SplashFontCacheTag *)gmallocn(cacheSets * cacheAssoc,
++						 sizeof(SplashFontCacheTag));
++      for (i = 0; i < cacheSets * cacheAssoc; ++i) {
++	cacheTags[i].mru = i & (cacheAssoc - 1);
++      }
++  } else {
++    cacheAssoc = 0;
+   }
+ }
+ 
 --- xpdf/SplashFont.h.orig	2010-08-16 14:02:38.000000000 -0700
 +++ xpdf/SplashFont.h	2010-08-16 14:02:38.000000000 -0700
 @@ -73,6 +73,9 @@
@@ -1966,3 +1987,208 @@
  // Append a file name to a path string.  <path> may be an empty
  // string, denoting the current directory).  Returns <path>.
  extern GString *appendToPath(GString *path, char *fileName);
+--- xpdf/gmem.cc.orig	2010-11-12 10:59:45.000000000 -0800
++++ xpdf/gmem.cc	2010-11-23 10:09:47.000000000 -0800
+@@ -10,6 +10,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <stddef.h>
++#include <stdbool.h>
+ #include <string.h>
+ #include <limits.h>
+ #include "gmem.h"
+@@ -47,7 +48,7 @@
+ 
+ #endif /* DEBUG_MEM */
+ 
+-void *gmalloc(int size) GMEM_EXCEP {
++void *gmalloc(int size, bool exit_on_error) GMEM_EXCEP {
+ #ifdef DEBUG_MEM
+   int size1;
+   char *mem;
+@@ -60,7 +61,10 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Invalid memory allocation size\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   if (size == 0) {
+@@ -72,7 +76,10 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Out of memory\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   hdr = (GMemHdr *)mem;
+@@ -104,7 +111,10 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Invalid memory allocation size\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   if (size == 0) {
+@@ -115,14 +125,23 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Out of memory\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   return p;
+ #endif
+ }
++void *gmalloc(int size) GMEM_EXCEP {
++    return gmalloc(size, true);
++}
++void *gmalloc_noexit(int size) GMEM_EXCEP {
++    return gmalloc(size, false);
++}
+ 
+-void *grealloc(void *p, int size) GMEM_EXCEP {
++void *grealloc(void *p, int size, bool exit_on_error) GMEM_EXCEP {
+ #ifdef DEBUG_MEM
+   GMemHdr *hdr;
+   void *q;
+@@ -133,7 +152,10 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Invalid memory allocation size\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   if (size == 0) {
+@@ -160,7 +182,10 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Invalid memory allocation size\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   if (size == 0) {
+@@ -179,14 +204,23 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Out of memory\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   return q;
+ #endif
+ }
++void *grealloc(void *p, int size) GMEM_EXCEP {
++    return grealloc(p, size, true);
++}
++void *grealloc_noexit(void *p, int size) GMEM_EXCEP {
++    return grealloc(p, size, false);
++}
+ 
+-void *gmallocn(int nObjs, int objSize) GMEM_EXCEP {
++void *gmallocn(int nObjs, int objSize, bool exit_on_error) GMEM_EXCEP {
+   int n;
+ 
+   if (nObjs == 0) {
+@@ -198,13 +232,22 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Bogus memory allocation size\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   return gmalloc(n);
+ }
++void *gmallocn(int nObjs, int objSize) GMEM_EXCEP {
++    return gmallocn(nObjs, objSize, true);
++}
++void *gmallocn_noexit(int nObjs, int objSize) GMEM_EXCEP {
++    return gmallocn(nObjs, objSize, false);
++}
+ 
+-void *greallocn(void *p, int nObjs, int objSize) GMEM_EXCEP {
++void *greallocn(void *p, int nObjs, int objSize, bool exit_on_error) GMEM_EXCEP {
+   int n;
+ 
+   if (nObjs == 0) {
+@@ -219,11 +262,20 @@
+     throw GMemException();
+ #else
+     fprintf(stderr, "Bogus memory allocation size\n");
+-    exit(1);
++    if(exit_on_error)
++	exit(1);
++    else
++	return NULL;
+ #endif
+   }
+   return grealloc(p, n);
+ }
++void *greallocn(void *p, int nObjs, int objSize) GMEM_EXCEP {
++    return greallocn(p, nObjs, objSize, true);
++}
++void *greallocn_noexit(void *p, int nObjs, int objSize) GMEM_EXCEP {
++    return greallocn(p, nObjs, objSize, false);
++}
+ 
+ void gfree(void *p) {
+ #ifdef DEBUG_MEM
+--- xpdf/gmem.h.orig	2010-11-12 10:59:45.000000000 -0800
++++ xpdf/gmem.h	2010-11-23 10:09:43.000000000 -0800
+@@ -37,12 +37,14 @@
+  * returns NULL.
+  */
+ extern void *gmalloc(int size) GMEM_EXCEP;
++extern void *gmalloc_noexit(int size) GMEM_EXCEP;
+ 
+ /*
+  * Same as realloc, but prints error message and exits if realloc()
+  * returns NULL.  If <p> is NULL, calls malloc instead of realloc().
+  */
+ extern void *grealloc(void *p, int size) GMEM_EXCEP;
++extern void *grealloc_noexit(void *p, int size) GMEM_EXCEP;
+ 
+ /*
+  * These are similar to gmalloc and grealloc, but take an object count
+@@ -52,6 +54,8 @@
+  */
+ extern void *gmallocn(int nObjs, int objSize) GMEM_EXCEP;
+ extern void *greallocn(void *p, int nObjs, int objSize) GMEM_EXCEP;
++extern void *gmallocn_noexit(int nObjs, int objSize) GMEM_EXCEP;
++extern void *greallocn_noexit(void *p, int nObjs, int objSize) GMEM_EXCEP;
+ 
+ /*
+  * Same as free, but checks for and ignores NULL pointers.
+ 
