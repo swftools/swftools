@@ -65,6 +65,8 @@ static PyTypeObject OutputClass;
 static PyTypeObject PageClass;
 static PyTypeObject DocClass;
 static PyTypeObject FontClass;
+static PyTypeObject GlyphClass;
+static PyTypeObject CharClass;
 
 typedef struct {
     PyObject_HEAD
@@ -90,6 +92,21 @@ typedef struct {
     PyObject_HEAD
     gfxfont_t*gfxfont;
 } FontObject;
+
+typedef struct {
+    PyObject_HEAD
+    FontObject*font;
+    int nr;
+} GlyphObject;
+
+typedef struct {
+    PyObject_HEAD
+    FontObject*font;
+    int nr;
+    gfxmatrix_t matrix;
+    int size;
+    gfxcolor_t color;
+} CharObject;
 
 static char* strf(char*format, ...)
 {
@@ -536,7 +553,37 @@ static PyObject* convert_gfxline(gfxline_t*line)
     }
     return list;
 }
+static PyObject* convert_matrix(gfxmatrix_t*m)
+{
+    PyObject*columns = PyTuple_New(3);
+    PyObject*column0 = PyTuple_New(2);
+    PyTuple_SetItem(column0, 0, PyFloat_FromDouble(m->m00));
+    PyTuple_SetItem(column0, 1, PyFloat_FromDouble(m->m10));
+    PyTuple_SetItem(columns, 0, column0);
+    PyObject*column1 = PyTuple_New(2);
+    PyTuple_SetItem(column1, 0, PyFloat_FromDouble(m->m01));
+    PyTuple_SetItem(column1, 1, PyFloat_FromDouble(m->m11));
+    PyTuple_SetItem(columns, 1, column0);
+    PyObject*column2 = PyTuple_New(2);
+    PyTuple_SetItem(column2, 0, PyFloat_FromDouble(m->tx));
+    PyTuple_SetItem(column2, 1, PyFloat_FromDouble(m->ty));
+    PyTuple_SetItem(columns, 2, column0);
+    return columns;
+}
+static PyObject* convert_color(gfxcolor_t*col)
+{
+    PyObject*obj = PyTuple_New(4);
+    PyTuple_SetItem(obj, 0, pyint_fromlong(col->a));
+    PyTuple_SetItem(obj, 1, pyint_fromlong(col->r));
+    PyTuple_SetItem(obj, 2, pyint_fromlong(col->g));
+    PyTuple_SetItem(obj, 3, pyint_fromlong(col->b));
+    return obj;
+}
 
+static PyObject* lookup_font(gfxfont_t*font);
+static PyObject* char_new(gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix);
+
+static gfxfontlist_t* global_fonts;
 static char callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
 {
     OutputObject*self = (OutputObject*)dev->internal;
@@ -571,24 +618,28 @@ static char callback_python(char*function, gfxdevice_t*dev, const char*format, .
 	    case 'c': {
 		void* ptr = va_arg(ap, void*);
 		gfxcolor_t*col = (gfxcolor_t*)ptr;
-		obj = PyTuple_New(4);
-		PyTuple_SetItem(obj, 0, pyint_fromlong(col->a));
-		PyTuple_SetItem(obj, 1, pyint_fromlong(col->r));
-		PyTuple_SetItem(obj, 2, pyint_fromlong(col->g));
-		PyTuple_SetItem(obj, 3, pyint_fromlong(col->b));
+		obj = convert_color(col);
 		break;
 	    }
 	    case 'f': {
 		void* ptr = va_arg(ap, void*);
-		FontObject*font = PyObject_New(FontObject, &FontClass);
-		font->gfxfont = (gfxfont_t*)ptr;
-		obj = (PyObject*)font;
+		obj = lookup_font((gfxfont_t*)ptr);
 		break;
 	    }
 	    case 'l': {
 		void* ptr = va_arg(ap, void*);
 		gfxline_t*line = (gfxline_t*)ptr;
 		obj = convert_gfxline(line);
+		break;
+	    }
+	    case 'O': {
+		void* ptr = va_arg(ap, void*);
+		obj = (PyObject*)ptr;
+		break;
+	    }
+	    case 'm': {
+		void* ptr = va_arg(ap, void*);
+		obj = convert_matrix((gfxmatrix_t*)ptr);
 		break;
 	    }
 	    default: {
@@ -674,16 +725,26 @@ static void my_addfont(gfxdevice_t*dev, gfxfont_t*font)
 }
 static void my_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
 {
-    if(!callback_python("drawchar", dev, "ficm", font, glyphnr, color, matrix))
-    {
-        if(!font)
-            return;
-        gfxglyph_t*glyph = &font->glyphs[glyphnr];
-        gfxline_t*line2 = gfxline_clone(glyph->line);
-        gfxline_transform(line2, matrix);
-        my_fill(dev, line2, color);
-        gfxline_free(line2);
-        return;
+    PyMethodObject*obj = (PyMethodObject*)PyObject_GetAttrString(((OutputObject*)(dev->internal))->pyobj, "drawchar");
+    if(!obj) {
+	/* if the device doesn't support chars, try drawing a polygon instead */
+	if(!font)
+	    return;
+	gfxglyph_t*glyph = &font->glyphs[glyphnr];
+	gfxline_t*line2 = gfxline_clone(glyph->line);
+	gfxline_transform(line2, matrix);
+	my_fill(dev, line2, color);
+	gfxline_free(line2);
+	return;
+    }
+    PyFunctionObject*f = (PyFunctionObject*)obj->im_func;
+    PyCodeObject*c = (PyCodeObject*)f->func_code;
+    if(c->co_argcount == 2) {
+	/* new style drawchar method */
+	CharObject*chr = (CharObject*)char_new(font, glyphnr, color, matrix);
+	callback_python("drawchar", dev, "O", chr);
+    } else {
+	callback_python("drawchar", dev, "ficm", font, glyphnr, color, matrix);
     }
 }
 static void my_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
@@ -808,9 +869,52 @@ static int output_setattr(PyObject * _self, char* a, PyObject * o)
 static int output_print(PyObject * _self, FILE *fi, int flags)
 {
     OutputObject*self = (OutputObject*)_self;
-    fprintf(fi, "%08x(%d)", (int)_self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
+
+//---------------------------------------------------------------------
+static PyMethodDef glyph_methods[];
+
+static void glyph_dealloc(PyObject* _self) {
+    GlyphObject* self = (GlyphObject*)_self;
+    Py_DECREF(self->font);
+    PyObject_Del(self);
+}
+static PyObject* glyph_getattr(PyObject * _self, char* a)
+{
+    GlyphObject*self = (GlyphObject*)_self;
+    FontObject*font = self->font;
+    if(!strcmp(a, "unicode")) {
+        return pyint_fromlong(font->gfxfont->glyphs[self->nr].unicode);
+    } else if(!strcmp(a, "advance")) {
+        return PyFloat_FromDouble(font->gfxfont->glyphs[self->nr].advance);
+    } else if(!strcmp(a, "polygon")) {
+        return convert_gfxline(font->gfxfont->glyphs[self->nr].line);
+    }
+    return forward_getattr(_self, a);
+}
+static int glyph_setattr(PyObject * self, char* a, PyObject * o) {
+    return -1;
+}
+static PyObject* glyph_new(FontObject*font, int nr) {
+    GlyphObject*glyph = PyObject_New(GlyphObject, &GlyphClass);
+    glyph->font = font;
+    Py_INCREF(glyph->font);
+    glyph->nr = nr;
+    return (PyObject*)glyph;
+}
+static int glyph_print(PyObject * _self, FILE *fi, int flags)
+{
+    GlyphObject*self = (GlyphObject*)_self;
+    fprintf(fi, "Glyph %p(%d)", _self, _self?_self->ob_refcnt:0);
+    return 0;
+}
+static PyMethodDef glyph_methods[] =
+{
+    /* Glyph functions */
+    {0,0,0,0}
+};
 
 //---------------------------------------------------------------------
 static PyMethodDef font_methods[];
@@ -818,6 +922,24 @@ static PyMethodDef font_methods[];
 static void font_dealloc(PyObject* _self) {
     FontObject* self = (FontObject*)_self; 
     PyObject_Del(self);
+}
+static PyObject* font_new(gfxfont_t*gfxfont)
+{
+    FontObject*font = PyObject_New(FontObject, &FontClass);
+    font->gfxfont = gfxfont;
+    return (PyObject*)font;
+}
+static gfxfontlist_t* global_fonts = 0;
+
+static PyObject* lookup_font(gfxfont_t*font)
+{
+    PyObject*fontobj = gfxfontlist_getuserdata(global_fonts, font->id);
+    if(!fontobj) {
+	fontobj = font_new(font);
+	global_fonts = gfxfontlist_addfont2(global_fonts, font, fontobj);
+    }
+    Py_INCREF(fontobj);
+    return fontobj;
 }
 static PyObject* font_getattr(PyObject * _self, char* a)
 {
@@ -832,23 +954,97 @@ static PyObject* font_getattr(PyObject * _self, char* a)
 static int font_setattr(PyObject * self, char* a, PyObject * o) {
     return -1;
 }
-static PyObject* font_glyph(PyObject * self, PyObject* args, PyObject* kwargs) {
+static PyObject* font_glyph(PyObject * _self, PyObject* args, PyObject* kwargs) {
+    FontObject*self = (FontObject*)_self;
     static char *kwlist[] = {"nr", NULL};
     static long nr = 0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i", kwlist, &nr))
 	return NULL;
-    return PY_NONE;
+    return glyph_new(self, nr);
 }
 static int font_print(PyObject * _self, FILE *fi, int flags)
 {
     FontObject*self = (FontObject*)_self;
-    fprintf(fi, "Font %08x(%d)", (int)_self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "Font %p(%d)", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 static PyMethodDef font_methods[] =
 {
     /* Font functions */
-    {"glyph", (PyCFunction)font_glyph, M_FLAGS, "get a glyph from this font"},
+    {"get_glyph", (PyCFunction)font_glyph, M_FLAGS, "get a glyph from this font"},
+    {0,0,0,0}
+};
+
+//---------------------------------------------------------------------
+static PyMethodDef char_methods[];
+
+static void char_dealloc(PyObject* _self) {
+    CharObject* self = (CharObject*)_self;
+    Py_DECREF(self->font);
+    PyObject_Del(self);
+}
+static PyObject* char_getattr(PyObject * _self, char* a)
+{
+    CharObject*self = (CharObject*)_self;
+    FontObject*font = self->font;
+    gfxglyph_t*glyph = &font->gfxfont->glyphs[self->nr];
+    if(!strcmp(a, "unicode")) {
+        return pyint_fromlong(glyph->unicode);
+    } else if(!strcmp(a, "advance")) {
+        return pyint_fromlong(self->size * glyph->advance);
+    } else if(!strcmp(a, "matrix")) {
+        return convert_matrix(&self->matrix);
+    } else if(!strcmp(a, "color")) {
+        return convert_color(&self->color);
+    } else if(!strcmp(a, "glyph")) {
+        return glyph_new(font, self->nr);
+    } else if(!strcmp(a, "x1")) {
+	int lsb = 0; //left side bearing
+    	int x1 = self->matrix.tx - (self->matrix.m00) * lsb;
+        return pyint_fromlong(x1);
+    } else if(!strcmp(a, "y1")) {
+    	int y1 = self->matrix.ty - (-self->matrix.m11) * font->gfxfont->ascent;
+        return pyint_fromlong(y1);
+    } else if(!strcmp(a, "x2")) {
+    	int x2 = self->matrix.tx + (self->matrix.m00) * font->gfxfont->glyphs[self->nr].advance;
+        return pyint_fromlong(x2);
+    } else if(!strcmp(a, "y2")) {
+    	int y2 = self->matrix.ty + (-self->matrix.m11) * font->gfxfont->descent;
+        return pyint_fromlong(y2);
+    } else if(!strcmp(a, "x")) {
+    	int x = self->matrix.tx;
+        return pyint_fromlong(x);
+    } else if(!strcmp(a, "y")) {
+    	int y = self->matrix.ty;
+        return pyint_fromlong(y);
+    }
+    return forward_getattr(_self, a);
+}
+static int char_setattr(PyObject * self, char* a, PyObject * o) {
+    return -1;
+}
+static PyObject* char_new(gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix) 
+{
+    FontObject*fontobj = (FontObject*)lookup_font(font);
+    CharObject*chr = PyObject_New(CharObject, &CharClass);
+    chr->font = fontobj;
+    Py_INCREF(fontobj);
+    chr->nr = glyphnr;
+    chr->matrix = *matrix;
+    chr->size = ceil(1024*fabs(matrix->m00 + matrix->m10)); //horizontal size
+    chr->color = *color;
+    return (PyObject*)chr;
+    return 0;
+}
+static int char_print(PyObject * _self, FILE *fi, int flags)
+{
+    CharObject*self = (CharObject*)_self;
+    fprintf(fi, "char %p(%d)", _self, _self?_self->ob_refcnt:0);
+    return 0;
+}
+static PyMethodDef char_methods[] =
+{
+    /* char functions */
     {0,0,0,0}
 };
 
@@ -1032,7 +1228,7 @@ static int page_setattr(PyObject * self, char* a, PyObject * o) {
 static int page_print(PyObject * _self, FILE *fi, int flags)
 {
     PageObject*self = (PageObject*)_self;
-    fprintf(fi, "%08x(%d)", (int)_self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 
@@ -1241,7 +1437,7 @@ static int doc_setattr(PyObject * self, char* a, PyObject * o) {
 static int doc_print(PyObject * _self, FILE *fi, int flags)
 {
     DocObject*self = (DocObject*)_self;
-    fprintf(fi, "%08x(%d)", (int)_self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 
@@ -1323,7 +1519,7 @@ static PyTypeObject DocClass =
     tp_flags: Py_TPFLAGS_HAVE_ITER,
 };
 PyDoc_STRVAR(font_doc,
-"A font is a list of polygons, with a Unicode index attached to each one\n"
+"A font is a list of glyphs\n"
 );
 static PyTypeObject FontClass =
 {
@@ -1338,6 +1534,39 @@ static PyTypeObject FontClass =
     tp_doc: font_doc,
     tp_methods: font_methods,
 };
+PyDoc_STRVAR(glyph_doc,
+"A glyph is a polygon and a unicode index\n"
+);
+static PyTypeObject GlyphClass =
+{
+    PYTHON23_HEAD_INIT
+    tp_name: "gfx.Glyph",
+    tp_basicsize: sizeof(GlyphObject),
+    tp_itemsize: 0,
+    tp_dealloc: glyph_dealloc,
+    tp_print: glyph_print,
+    tp_getattr: glyph_getattr,
+    tp_setattr: glyph_setattr,
+    tp_doc: glyph_doc,
+    tp_methods: glyph_methods,
+};
+PyDoc_STRVAR(char_doc,
+"A char is a glyph at a given position (in a given color)\n"
+);
+static PyTypeObject CharClass =
+{
+    PYTHON23_HEAD_INIT
+    tp_name: "gfx.Char",
+    tp_basicsize: sizeof(CharObject),
+    tp_itemsize: 0,
+    tp_dealloc: char_dealloc,
+    tp_print: char_print,
+    tp_getattr: char_getattr,
+    tp_setattr: char_setattr,
+    tp_doc: char_doc,
+    tp_methods: char_methods,
+};
+
 
 //=====================================================================
 
@@ -1457,10 +1686,6 @@ PyDoc_STRVAR(gfx_doc, \
 void gfx_free(void*module)
 {
     state_t*state = STATE(module);
-    if(state->pdfdriver && !state->pdfdriver->destroy) printf("1\n");
-    if(state->swfdriver && !state->swfdriver->destroy) printf("2\n");
-    if(state->imagedriver && !state->imagedriver->destroy) printf("3\n");
-
     if(state->pdfdriver && state->pdfdriver->destroy)
 	state->pdfdriver->destroy(state->pdfdriver);
     if(state->swfdriver && state->swfdriver->destroy)
