@@ -29,15 +29,15 @@ extern "C" {
 #include <stdint.h>
 
 /*
-         192
+          3
 	  A
           |
           |
- 128 <---- ----> 0
+   2 <---- ----> 0
           |
           |
 	  V
-  	  64
+  	  1
 */
 
 typedef enum {KD_RIGHT=0, KD_DOWN=1, KD_LEFT=2, KD_UP=3} kdtype_t;
