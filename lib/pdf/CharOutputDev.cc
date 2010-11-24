@@ -750,6 +750,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
     if(!current_fontinfo->seen) {
 	dumpFontInfo("<verbose>", state->getFont());
 	device->addfont(device, current_gfxfont);
+        current_fontinfo->seen = 1;
     }
     
     CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
