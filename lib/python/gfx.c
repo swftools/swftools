@@ -965,7 +965,7 @@ static PyObject* font_glyph(PyObject * _self, PyObject* args, PyObject* kwargs) 
 static int font_print(PyObject * _self, FILE *fi, int flags)
 {
     FontObject*self = (FontObject*)_self;
-    fprintf(fi, "Font %p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "Font %s at %p(%d)", self->gfxfont->id, _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 static PyMethodDef font_methods[] =
@@ -991,13 +991,17 @@ static PyObject* char_getattr(PyObject * _self, char* a)
     if(!strcmp(a, "unicode")) {
         return pyint_fromlong(glyph->unicode);
     } else if(!strcmp(a, "advance")) {
-        return pyint_fromlong(self->size * glyph->advance);
+        return PyFloat_FromDouble((self->matrix.m00 * glyph->advance));
     } else if(!strcmp(a, "matrix")) {
         return convert_matrix(&self->matrix);
     } else if(!strcmp(a, "color")) {
         return convert_color(&self->color);
+    } else if(!strcmp(a, "size")) {
+        return pyint_fromlong(self->size);
     } else if(!strcmp(a, "glyph")) {
         return glyph_new(font, self->nr);
+    } else if(!strcmp(a, "font")) {
+        return (PyObject*)font;
     } else if(!strcmp(a, "x1")) {
 	int lsb = 0; //left side bearing
     	int x1 = self->matrix.tx - (self->matrix.m00) * lsb;
