@@ -1587,7 +1587,7 @@ PyDoc_STRVAR(f_setparameter_doc, \
 "    pdf2swf somefile.pdf -s help\n"
 ".\n"
 );
-static PyObject* f_setparameter(PyObject* self, PyObject* args, PyObject* kwargs)
+static PyObject* f_setparameter(PyObject* module, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"key", "value", NULL};
     char*key=0,*value=0;
@@ -1628,7 +1628,7 @@ PyDoc_STRVAR(f_addfont_doc, \
 "then the files added by addfont() will be searched.\n"
 );
 
-static PyObject* f_addfont(PyObject* self, PyObject* args, PyObject* kwargs)
+static PyObject* f_addfont(PyObject* module, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"filename", NULL};
     char*filename=0;
@@ -1645,7 +1645,7 @@ PyDoc_STRVAR(f_addfontdir_doc, \
 "font file within this directory might be used to resolve external fonts\n"
 "in PDF files\n"
 );
-static PyObject* f_addfontdir(PyObject* self, PyObject* args, PyObject* kwargs)
+static PyObject* f_addfontdir(PyObject* module, PyObject* args, PyObject* kwargs)
 {
     static char *kwlist[] = {"filename", NULL};
     char*filename=0;
@@ -1722,11 +1722,11 @@ PyObject * PyInit_gfx(void)
     PyObject*module = PyModule_Create(&gfx_moduledef);
 #else
     PyObject*module = Py_InitModule3("gfx", gfx_methods, gfx_doc);
-#endif
     OutputClass.ob_type = &PyType_Type;
     PageClass.ob_type = &PyType_Type;
     DocClass.ob_type = &PyType_Type;
     FontClass.ob_type = &PyType_Type;
+#endif
     
     state_t* state = STATE(module);
     memset(state, 0, sizeof(state_t));
