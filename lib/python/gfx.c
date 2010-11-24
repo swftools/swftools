@@ -1447,9 +1447,9 @@ static int doc_print(PyObject * _self, FILE *fi, int flags)
 
 //---------------------------------------------------------------------
 
-#ifdef PYTHON3
+#ifndef PYTHON3
 #define PYTHON23_HEAD_INIT \
-    PyObject_HEAD_INIT(NULL)
+    PyObject_HEAD_INIT(NULL) \
     0,
 #else
 #define PYTHON23_HEAD_INIT \
@@ -1520,7 +1520,9 @@ static PyTypeObject DocClass =
     tp_iter: doc_getiter,
     tp_iternext: doc_iternext,
 
+#ifndef PYTHON3
     tp_flags: Py_TPFLAGS_HAVE_ITER,
+#endif
 };
 PyDoc_STRVAR(font_doc,
 "A font is a list of glyphs\n"
