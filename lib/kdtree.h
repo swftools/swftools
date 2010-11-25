@@ -84,6 +84,13 @@ kdarea_t* kdtree_find(kdtree_t*tree, int x, int y);
 void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data);
 void kdtree_print(kdtree_t*tree);
 
+kdarea_t*kdarea_neighbor(kdarea_t*area, int dir, int xy);
+
+#define kdarea_left_neighbor(area, y) (kdarea_neighbor((area), KD_LEFT, (y)))
+#define kdarea_right_neighbor(area, y) (kdarea_neighbor((area), KD_RIGHT, (y)))
+#define kdarea_top_neighbor(area, x) (kdarea_neighbor((area), KD_TOP, (x)))
+#define kdarea_bottom_neighbor(area, x) (kdarea_neighbor((area), KD_BOTTOM, (x)))
+
 #ifdef __cplusplus
 }
 #endif
