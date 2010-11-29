@@ -3,17 +3,38 @@ AC_DEFUN([RFX_CHECK_PYTHON],
 AC_MSG_CHECKING([for Python version])
 
 if test "x$PYTHON_LIB" '!=' "x" -a "x$PYTHON_INCLUDES" '!=' "x";then
-    PY_VERSION=unknown
+    # you can override the python detection by putting PYTHON_LIB
+    # and PYTHON_INCLUDES into the environment
+    case "$PYTHON_INCLUDES" in
+        *python2.4*) PY_VERSION=2.4
+	             ;;
+        *python2.5*) PY_VERSION=2.5
+	             ;;
+        *python2.6*) PY_VERSION=2.6
+	             ;;
+        *python2.7*) PY_VERSION=2.7
+	             ;;
+        *python3.0*) PY_VERSION=3.0
+	             ;;
+        *python3.1*) PY_VERSION=3.1
+	             ;;
+        *python3.2*) PY_VERSION=3.2
+	             ;;
+        *python3.3*) PY_VERSION=3.3
+	             ;;
+        *)           PY_VERSION=unknown
+	             ;;
+    esac
 else
     if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
         echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
     fi
-    # iterate through version 2.2 to 3.2
-    VERSIONS="2.2 2.3 2.4 2.5 2.6 3.0 3.1 3.2"
+    # iterate through version 2.4 to 3.3
+    VERSIONS="2.4 2.5 2.6 2.7 3.0 3.1 3.2 3.3"
     case "$PYTHON" in
-	2*) VERSIONS="2.2 2.3 2.4 2.5 2.6 2.7 $PYTHON"
+	2*) VERSIONS="2.4 2.5 2.6 2.7 $PYTHON"
 	    ;;
-	3*) VERSIONS="3.1 3.2 3.3 $PYTHON"
+	3*) VERSIONS="3.0 3.1 3.2 3.3 $PYTHON"
 	    ;;
     esac
     for v in $VERSIONS; do
