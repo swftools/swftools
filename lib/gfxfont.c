@@ -35,6 +35,15 @@
 static int loadfont_scale = 64;
 static int full_unicode = 1;
 
+static void glyph_clear(gfxglyph_t*g)
+{
+    gfxline_t*line;
+    if(g->name) {
+	free((void*)g->name); g->name = 0;
+    }
+    gfxline_free(g->line);g->line = 0;
+}
+
 #ifdef HAVE_FREETYPE
 
 #ifdef HAVE_FT2BUILD_H
@@ -130,15 +139,6 @@ static gfxglyph_t cloneGlyph(gfxglyph_t*src)
     dest.unicode = src->unicode;
     dest.line = gfxline_clone(src->line);
     return dest;
-}
-
-static void glyph_clear(gfxglyph_t*g)
-{
-    gfxline_t*line;
-    if(g->name) {
-	free((void*)g->name); g->name = 0;
-    }
-    gfxline_free(g->line);g->line = 0;
 }
 
 static int errorno = 0;
