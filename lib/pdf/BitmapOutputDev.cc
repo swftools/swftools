@@ -1602,13 +1602,17 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 
-	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
+	char char_is_outside = (x1<-this->movex || y1<-this->movey || x2>this->width-this->movex || y2>this->height-this->movey);
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
 	   text */
 	if(char_is_outside || render_as_bitmap || clip0and1differ(x1,y1,x2,y2)) {
-	    msg("<verbose> Char %d is affected by clipping", code);
+
+            if(char_is_outside) msg("<verbose> Char %d is outside the page (%d,%d,%d,%d)", code, x1, y1, x2, y2);
+            else if(render_as_bitmap)  msg("<verbose> Char %d needs to be rendered as bitmap", code);
+            else msg("<verbose> Char %d is affected by clipping", code);
+
 	    boolpolydev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	    checkNewBitmap(x1,y1,x2,y2);
 	    rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
@@ -1622,10 +1626,6 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		state->setRender(oldrender);
 	    }
 	} else {
-	    x1 = 0 + movex;
-	    y1 = 0 + movey;
-	    x2 = this->width + movex;
-	    y2 = this->height + movey;
 	    /* this char is not at all affected by clipping. 
 	       Now just dump out the bitmap we're currently working on, if necessary. */
 	    booltextdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
