@@ -185,6 +185,8 @@ typedef struct _swfoutput_internal
 
     SRECT pagebbox;
 
+    gfxline_t*stored_clipshapes; //for config_showclipshapes
+
     charbuffer_t* chardata;
     charbuffer_t* topchardata; //chars supposed to be above everything else
 
@@ -952,6 +954,7 @@ static void insert_watermark(gfxdevice_t*dev, char drawall)
     i->watermarks++;
 }
 
+static void drawoutline(gfxdevice_t*dev, gfxline_t*line);
 
 static void endpage(gfxdevice_t*dev)
 {
@@ -970,6 +973,11 @@ static void endpage(gfxdevice_t*dev)
     
     while(i->clippos)
         dev->endclip(dev);
+
+    if(i->stored_clipshapes) {
+        // in case of config_showclipshapes
+	drawoutline(dev, i->stored_clipshapes);
+    }
 
     if(i->config_watermark) {
 	insert_watermark(dev, 1);
@@ -1401,10 +1409,6 @@ static void endshape(gfxdevice_t*dev)
     m.tx += i->shapeposx;
     m.ty += i->shapeposy;
     swf_ObjectPlace(i->tag,i->shapeid,getNewDepth(dev),&m,NULL,NULL);
-
-    if(i->config_animate) {
-	i->tag = swf_InsertTag(i->tag,ST_SHOWFRAME);
-    }
 
     swf_ShapeFree(i->shape);
     i->shape = 0;
@@ -2127,6 +2131,7 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_override_line_widths = atof(value);
     } else if(!strcmp(name, "animate")) {
 	i->config_animate = atoi(value);
+	i->config_framerate = 25;
     } else if(!strcmp(name, "linknameurl")) {
 	i->config_linknameurl = atoi(value);
     } else if(!strcmp(name, "showimages")) {
@@ -2317,6 +2322,16 @@ static int add_image(swfoutput_internal*i, gfximage_t*img, int targetwidth, int 
     return bitid;
 }
 
+int line_is_empty(gfxline_t*line)
+{
+    while(line) {
+	if(line->type != gfx_moveTo)
+	    return 0;
+	line = line->next;
+    }
+    return 1;
+}
+
 static SRECT gfxline_getSWFbbox(gfxline_t*line)
 {
     gfxbbox_t bbox = gfxline_getbbox(line);
@@ -2326,16 +2341,6 @@ static SRECT gfxline_getSWFbbox(gfxline_t*line)
     r.xmax = (int)(bbox.xmax*20);
     r.ymax = (int)(bbox.ymax*20);
     return r;
-}
-
-int line_is_empty(gfxline_t*line)
-{
-    while(line) {
-	if(line->type != gfx_moveTo)
-	    return 0;
-	line = line->next;
-    }
-    return 1;
 }
 
 static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
@@ -2394,8 +2399,7 @@ static void swf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxm
     swf_ObjectPlace(i->tag,myshapeid,getNewDepth(dev),&i->page_matrix,&cxform2,NULL);
 }
 
-static RGBA col_black = {255,0,0,0};
-
+static RGBA col_purple = {255,255,0,255};
 static void drawoutline(gfxdevice_t*dev, gfxline_t*line)
 {
     swfoutput_internal*i = (swfoutput_internal*)dev->internal;
@@ -2405,7 +2409,7 @@ static void drawoutline(gfxdevice_t*dev, gfxline_t*line)
 
     SHAPE*shape;
     swf_ShapeNew(&shape);
-    int lsid = swf_ShapeAddLineStyle(shape,1,&col_black);
+    int lsid = swf_ShapeAddLineStyle(shape,60,&col_purple);
 
     swf_SetU16(i->tag,myshapeid);
     SRECT r = gfxline_getSWFbbox(line);
@@ -2438,8 +2442,9 @@ static void swf_startclip(gfxdevice_t*dev, gfxline_t*line)
         i->clippos --;
     } 
 
-    if(i->config_showclipshapes)
-	drawoutline(dev, line);
+    if(i->config_showclipshapes) {
+        i->stored_clipshapes = gfxline_append(i->stored_clipshapes, gfxline_clone(line));
+    }
 
     int myshapeid = getNewID(dev);
     i->tag = swf_InsertTag(i->tag,ST_DEFINESHAPE3);
@@ -3146,9 +3151,15 @@ static void swf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyph, gfxcolor_t*
     
     if(i->shapeid>=0)
 	endshape(dev);
+    
+    if(i->config_animate) {
+        endtext(dev);
+	i->tag = swf_InsertTag(i->tag,ST_SHOWFRAME);
+    }
+
     if(!i->textmode)
 	starttext(dev);
-
+    
     msg("<trace> Drawing char %d in font %d at %d,%d in color %02x%02x%02x%02x", 
 	    glyph, i->swffont->id, x, y, color->r, color->g, color->b, color->a);
 
