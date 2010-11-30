@@ -227,6 +227,7 @@ typedef struct _parameters {
     FILTERLIST* filters;
     U16 set; // bits indicating wether a parameter was set in the c_placement function
     U16 flags; // bits to toggle anything you may care to implement as a toggle
+    int noinstancename;
 } parameters_t;
 
 typedef struct _character {
@@ -426,6 +427,7 @@ static void parameters_clear(parameters_t*p)
     p->shear = 0;
     p->blendmode = 0;
     p->filters = 0;
+    p->noinstancename = 0;
     swf_GetCXForm(0, &p->cxform, 1);
 }
 
@@ -2242,7 +2244,7 @@ void s_put(const char*instance, const char*character, parameters_t p)
 	}
     else
         tag = swf_InsertTag(tag, ST_PLACEOBJECT2);
-    setPlacement(tag, c->id, currentdepth, m, instance, &p, 0);
+    setPlacement(tag, c->id, currentdepth, m, p.noinstancename ? NULL : instance, &p, 0);
     setStartparameters(i, &p, tag);
     currentdepth++;
 }
@@ -3395,6 +3397,7 @@ static int c_placement(map_t*args, int type)
     const char* as = map_lookup(args, "as");
     const char* blendmode = lu(args, "blend");
     const char* filterstr = lu(args, "filter");
+    const char* noinstancenamestr = lu(args, "noinstancename");
     U8 blend;
     MULADD r,g,b,a;
     float oldwidth;
@@ -3441,6 +3444,9 @@ static int c_placement(map_t*args, int type)
     } else {
 	s_getParameters(instance, &p);
     }
+
+    /* noinstancename */
+    p.noinstancename = !strcmp(noinstancenamestr, "noinstancename");
 
     /* x,y position */
     if(xstr[0])
@@ -4213,8 +4219,8 @@ static struct {
  {"previousframe", c_previousframe, "name"},
 
     // object placement tags
- {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
- {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below="},
+ {"put", c_put,             "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below= @noinstancename=0"},
+ {"startclip", c_startclip, "<i> x=0 y=0 red=+0 green=+0 blue=+0 alpha=+0 luminance= scale= scalex= scaley= blend= filter= pivot= pin= shear= rotate= ratio= above= below= @noinstancename=0"},
  {"move", c_move,	"name x= y= interpolation=linear"},
  {"smove", c_smove, 	"name x= y= interpolation=linear"},
  {"sweep", c_sweep,	"name x= y= r= dir=counterclockwise arc=short interpolation=linear"},
