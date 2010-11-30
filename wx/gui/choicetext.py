@@ -69,5 +69,5 @@ class ChoiceInt(wx.Panel):
         self.text.Enable(enable)
 
     def __OnChoice(self, event):
-        self.EnableText(self.IsEditableSelection(event.Selection))
+        self.EnableText(self.IsEditableSelection(event.GetSelection()))
 
