@@ -1008,6 +1008,7 @@ static PyObject* char_getattr(PyObject * _self, char* a)
     } else if(!strcmp(a, "glyph")) {
         return glyph_new(font, self->nr);
     } else if(!strcmp(a, "font")) {
+        Py_INCREF(font);
         return (PyObject*)font;
     } else if(!strcmp(a, "x")) {
     	int x = self->matrix.tx;
