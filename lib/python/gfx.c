@@ -38,6 +38,7 @@
 #include "../readers/swf.h"
 #include "../readers/image.h"
 #include "../log.h"
+#include "../kdtree.h"
 #include "../utf8.h"
 
 #if PY_MAJOR_VERSION >= 3
@@ -67,6 +68,7 @@ static PyTypeObject DocClass;
 static PyTypeObject FontClass;
 static PyTypeObject GlyphClass;
 static PyTypeObject CharClass;
+static PyTypeObject KDTreeClass;
 
 typedef struct {
     PyObject_HEAD
@@ -107,6 +109,11 @@ typedef struct {
     int size;
     gfxcolor_t color;
 } CharObject;
+
+typedef struct {
+    PyObject_HEAD
+    kdtree_t*kdtree;
+} KDTreeObject;
 
 static char* strf(char*format, ...)
 {
@@ -1002,25 +1009,34 @@ static PyObject* char_getattr(PyObject * _self, char* a)
         return glyph_new(font, self->nr);
     } else if(!strcmp(a, "font")) {
         return (PyObject*)font;
-    } else if(!strcmp(a, "x1")) {
-	int lsb = 0; //left side bearing
-    	int x1 = self->matrix.tx - (self->matrix.m00) * lsb;
-        return pyint_fromlong(x1);
-    } else if(!strcmp(a, "y1")) {
-    	int y1 = self->matrix.ty - (-self->matrix.m11) * font->gfxfont->ascent;
-        return pyint_fromlong(y1);
-    } else if(!strcmp(a, "x2")) {
-    	int x2 = self->matrix.tx + (self->matrix.m00) * font->gfxfont->glyphs[self->nr].advance;
-        return pyint_fromlong(x2);
-    } else if(!strcmp(a, "y2")) {
-    	int y2 = self->matrix.ty + (-self->matrix.m11) * font->gfxfont->descent;
-        return pyint_fromlong(y2);
     } else if(!strcmp(a, "x")) {
     	int x = self->matrix.tx;
         return pyint_fromlong(x);
     } else if(!strcmp(a, "y")) {
     	int y = self->matrix.ty;
         return pyint_fromlong(y);
+    }
+    
+    int lsb = 0; //left side bearing
+    int x1 = self->matrix.tx - (self->matrix.m00) * lsb;
+    int y1 = self->matrix.ty - (-self->matrix.m11) * font->gfxfont->ascent;
+    int x2 = self->matrix.tx + (self->matrix.m00) * font->gfxfont->glyphs[self->nr].advance;
+    int y2 = self->matrix.ty + (-self->matrix.m11) * font->gfxfont->descent;
+    if(!strcmp(a, "bbox")) {
+        PyObject*bbox = PyTuple_New(4);
+        PyTuple_SetItem(bbox, 0, pyint_fromlong(x1));
+        PyTuple_SetItem(bbox, 1, pyint_fromlong(y1));
+        PyTuple_SetItem(bbox, 2, pyint_fromlong(x2));
+        PyTuple_SetItem(bbox, 3, pyint_fromlong(y2));
+        return bbox;
+    } else if(!strcmp(a, "x1")) {
+        return pyint_fromlong(x1);
+    } else if(!strcmp(a, "y1")) {
+        return pyint_fromlong(y1);
+    } else if(!strcmp(a, "x2")) {
+        return pyint_fromlong(x2);
+    } else if(!strcmp(a, "y2")) {
+        return pyint_fromlong(y2);
     }
     return forward_getattr(_self, a);
 }
@@ -1446,6 +1462,83 @@ static int doc_print(PyObject * _self, FILE *fi, int flags)
 }
 
 //---------------------------------------------------------------------
+PyDoc_STRVAR(f_createKDTree_doc, \
+"KDTree()\n\n"
+"Creates a KDTree, which can be used to store bounding boxes\n"
+);
+static PyObject* f_createKDTree(PyObject* module, PyObject* args, PyObject* kwargs)
+{
+    static char *kwlist[] = {NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "", kwlist))
+	return NULL;
+    KDTreeObject*self = PyObject_New(KDTreeObject, &KDTreeClass);
+    self->kdtree = kdtree_new();
+    return (PyObject*)self;
+}
+static void gfx_kdtree_dealloc(PyObject* _self) {
+    KDTreeObject* self = (KDTreeObject*)_self;
+    kdtree_destroy(self->kdtree);
+    PyObject_Del(self);
+}
+static PyObject* gfx_kdtree_getattr(PyObject * _self, char* a)
+{
+    KDTreeObject*self = (KDTreeObject*)_self;
+    return forward_getattr(_self, a);
+}
+static int gfx_kdtree_setattr(PyObject * self, char* a, PyObject * o) {
+    return -1;
+}
+static int gfx_kdtree_print(PyObject * _self, FILE *fi, int flags)
+{
+    KDTreeObject*self = (KDTreeObject*)_self;
+    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
+    return 0;
+}
+PyDoc_STRVAR(gfx_kdtree_add_box_doc,
+"put(bbox, data)\n\n"
+"Add a rectangular area to the tree. All queries within that area\n"
+"will subsequently return 'data'\n"
+);
+static PyObject* gfx_kdtree_add_box(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    KDTreeObject* self = (KDTreeObject*)_self;
+
+    static char *kwlist[] = {"bbox", "data", NULL};
+    int x1=0,y1=0,x2=0,y2=0;
+    PyObject*value=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "(iiii)O", kwlist, &x1, &y1, &x2, &y2, &value))
+	return NULL;
+    
+    kdtree_add_box(self->kdtree, x1,y1,x2,y2, value);
+    Py_INCREF(value);
+
+    return PY_NONE;
+}
+
+PyDoc_STRVAR(gfx_kdtree_find_doc,
+"find(x,y)\n\n"
+"Look for a coordinate in the kdtree. It will return last inserted object covering that position, or None.\n"
+);
+static PyObject* gfx_kdtree_find(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    KDTreeObject* self = (KDTreeObject*)_self;
+
+    static char *kwlist[] = {"x", "y", NULL};
+    int x=0,y=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii", kwlist, &x, &y))
+	return NULL;
+    kdtree_find(self->kdtree, x,y);
+    return PY_NONE;
+}
+
+static PyMethodDef gfx_kdtree_methods[] =
+{
+    {"add_box", (PyCFunction)gfx_kdtree_add_box, METH_KEYWORDS, gfx_kdtree_add_box_doc},
+    {"find", (PyCFunction)gfx_kdtree_find, METH_KEYWORDS, gfx_kdtree_find_doc},
+    {0,0,0,0}
+};
+
+//---------------------------------------------------------------------
 
 #ifndef PYTHON3
 #define PYTHON23_HEAD_INIT \
@@ -1573,6 +1666,23 @@ static PyTypeObject CharClass =
     tp_methods: char_methods,
 };
 
+PyDoc_STRVAR(gfx_kdtree_doc,
+"A kdtree is a two dimensional tree for storing bounding box data\n"
+);
+static PyTypeObject KDTreeClass =
+{
+    PYTHON23_HEAD_INIT
+    tp_name: "gfx.KDTree",
+    tp_basicsize: sizeof(KDTreeObject),
+    tp_itemsize: 0,
+    tp_dealloc: gfx_kdtree_dealloc,
+    tp_print: gfx_kdtree_print,
+    tp_getattr: gfx_kdtree_getattr,
+    tp_setattr: gfx_kdtree_setattr,
+    tp_doc: gfx_kdtree_doc,
+    tp_methods: gfx_kdtree_methods,
+};
+
 
 //=====================================================================
 
@@ -1674,6 +1784,7 @@ static PyMethodDef gfx_methods[] =
 #ifdef USE_OPENGL
     {"OpenGL", (PyCFunction)f_createOpenGL, M_FLAGS, f_createOpenGL_doc},
 #endif
+    {"KDTree", (PyCFunction)f_createKDTree, M_FLAGS, f_createKDTree_doc},
 
     /* sentinel */
     {0, 0, 0, 0}
@@ -1726,6 +1837,8 @@ PyObject * PyInit_gfx(void)
     PageClass.ob_type = &PyType_Type;
     DocClass.ob_type = &PyType_Type;
     FontClass.ob_type = &PyType_Type;
+    CharClass.ob_type = &PyType_Type;
+    KDTreeClass.ob_type = &PyType_Type;
 #endif
     
     state_t* state = STATE(module);
