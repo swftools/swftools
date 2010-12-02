@@ -80,6 +80,7 @@ public:
   char last_char_was_space;
     
   GFXLink*last_link;
+  GFXLink*previous_link;
   kdtree_t*links;
   
   /* config */
@@ -94,11 +95,11 @@ public:
 
 class GFXLink {
     double x1,y1,x2,y2;
-    const char*action;
     int size;
     int buf_size;
     char*text;
   public:
+    const char*action;
     GFXLink*last;
     void draw(CharOutputDev*out, gfxdevice_t*dev);
     void addchar(int unicode);

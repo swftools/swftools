@@ -752,7 +752,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	device->addfont(device, current_gfxfont);
         current_fontinfo->seen = 1;
     }
-    
+
     CharCode glyphid = current_fontinfo->glyphs[charid]->glyphid;
 
     int render = state->getRender();
@@ -764,6 +764,10 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	if(a) {
 	    link = (GFXLink*)a->data;
 	}
+        if(link != previous_link) {
+            previous_link = link;
+            device->setparameter(device, "link", link->action);
+        }
     }
 
     // check for invisible text -- this is used by Acrobat Capture
@@ -787,7 +791,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
     this->transformXY(state, x-originX, y-originY, &m.tx, &m.ty);
 
     gfxbbox_t bbox;
-    
+
     msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d> '%c') CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, u, font->isCIDFont(), render, glyphid, current_gfxfont);
 
     int space = current_fontinfo->space_char;
@@ -796,14 +800,14 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	//bool different_y = last_char_y - m.ty;
 	bool different_y = m.ty < last_char_y - last_ascent*last_char_y_fontsize
 	                || m.ty > last_char_y + last_descent*last_char_y_fontsize;
-	if(!different_y && 
+	if(!different_y &&
 	   !last_char_was_space) {
 	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
 	    int space = current_fontinfo->space_char;
 	    float width = fmax(m.m00*current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
 	    if(m.tx - expected_x >= width*4/10) {
 		msg("<debug> There's a %f pixel gap between char %d and char %d (expected no more than %f), I'm inserting a space here", 
-			m.tx-expected_x, 
+			m.tx-expected_x,
 			last_char, glyphid,
 			width*4/10
 			);
@@ -916,6 +920,7 @@ void CharOutputDev::beginPage(GfxState *state, int pageNum)
     this->last_char_y_fontsize = 0;
     this->last_ascent = 0;
     this->last_descent = 0;
+    this->previous_link = 0;
 }
 
 void GFXLink::draw(CharOutputDev*out, gfxdevice_t*dev)
