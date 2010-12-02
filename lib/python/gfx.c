@@ -1492,6 +1492,7 @@ static PyObject* f_createKDTree(PyObject* module, PyObject* args, PyObject* kwar
 }
 static void gfx_kdtree_dealloc(PyObject* _self) {
     KDTreeObject* self = (KDTreeObject*)_self;
+    /* FIXME: we still need to Py_DECREF all PyObjects in the tree */
     kdtree_destroy(self->kdtree);
     PyObject_Del(self);
 }
@@ -1542,8 +1543,13 @@ static PyObject* gfx_kdtree_find(PyObject* _self, PyObject* args, PyObject* kwar
     int x=0,y=0;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii", kwlist, &x, &y))
 	return NULL;
-    kdtree_find(self->kdtree, x,y);
-    return PY_NONE;
+    PyObject*value = (PyObject*)kdtree_find(self->kdtree, x,y);
+    if(!value) {
+        return PY_NONE;
+    } else {
+        Py_INCREF(value);
+        return value;
+    }
 }
 
 static PyMethodDef gfx_kdtree_methods[] =
@@ -1577,6 +1583,11 @@ static void gfx_bitmap_dealloc(PyObject* _self) {
 static PyObject* gfx_bitmap_getattr(PyObject * _self, char* a)
 {
     BitmapObject*self = (BitmapObject*)_self;
+    if(!strcmp(a, "width")) {
+        return pyint_fromlong(self->image->width);
+    } else if(!strcmp(a, "height")) {
+        return pyint_fromlong(self->image->height);
+    }
     return forward_getattr(_self, a);
 }
 static int gfx_bitmap_setattr(PyObject * self, char* a, PyObject * o) {
