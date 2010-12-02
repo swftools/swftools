@@ -23,6 +23,7 @@
 #define __q_h__
 
 #include <stdio.h>
+#include <stdint.h>
 #include "mem.h"
 
 #ifdef __cplusplus
@@ -180,6 +181,7 @@ void string_free(string_t*s);
 unsigned int string_hash(const string_t*str);
 unsigned int string_hash2(const char*str);
 unsigned int string_hash3(const char*str, int len);
+uint64_t string_hash64(const char*str);
 void string_set(string_t*str, const char*text);
 void string_set2(string_t*str, const char*text, int len);
 string_t*string_dup3(string_t*s);

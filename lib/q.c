@@ -559,7 +559,7 @@ static char crc32_initialized=0;
 static void crc32_init(void)
 {
     int t;
-    if(crc32_initialized) 
+    if(crc32_initialized)
         return;
     crc32_initialized = 1;
     for(t=0; t<256; t++) {
@@ -569,6 +569,23 @@ static void crc32_init(void)
           c = (0xedb88320L*(c&1)) ^ (c >> 1);
         }
         crc32[t] = c;
+    }
+}
+static uint64_t crc64[256];
+static char crc64_initialized=0;
+static void crc64_init(void)
+{
+    int t;
+    if(crc64_initialized)
+        return;
+    crc64_initialized = 1;
+    for(t=0; t<256; t++) {
+        unsigned int c = t;
+        int s;
+        for (s = 0; s < 8; s++) {
+          c = ((c&1)?0xC96C5795D7870F42ll:0) ^ (c >> 1);
+        }
+        crc64[t] = c;
     }
 }
 // ------------------------------- string_t -----------------------------------
@@ -718,6 +735,17 @@ unsigned int string_hash2(const char*str)
     crc32_init();
     while(*p) {
         checksum = checksum>>8 ^ crc32[(*p^checksum)&0xff];
+        p++;
+    }
+    return checksum;
+}
+uint64_t string_hash64(const char*str)
+{
+    uint64_t checksum = 0;
+    const char*p = str;
+    crc64_init();
+    while(*p) {
+        checksum = checksum>>8 ^ crc64[(*p^checksum)&0xff];
         p++;
     }
     return checksum;
