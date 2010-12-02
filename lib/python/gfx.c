@@ -40,6 +40,8 @@
 #include "../log.h"
 #include "../kdtree.h"
 #include "../utf8.h"
+#include "../gfxdevice.h"
+#include "../gfximage.h"
 
 #if PY_MAJOR_VERSION >= 3
 #define PYTHON3
@@ -69,6 +71,7 @@ static PyTypeObject FontClass;
 static PyTypeObject GlyphClass;
 static PyTypeObject CharClass;
 static PyTypeObject KDTreeClass;
+static PyTypeObject BitmapClass;
 
 typedef struct {
     PyObject_HEAD
@@ -114,6 +117,11 @@ typedef struct {
     PyObject_HEAD
     kdtree_t*kdtree;
 } KDTreeObject;
+
+typedef struct {
+    PyObject_HEAD
+    gfximage_t*image;
+} BitmapObject;
 
 static char* strf(char*format, ...)
 {
@@ -589,6 +597,7 @@ static PyObject* convert_color(gfxcolor_t*col)
 
 static PyObject* lookup_font(gfxfont_t*font);
 static PyObject* char_new(gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix);
+static PyObject* create_bitmap(gfximage_t*img);
 
 static gfxfontlist_t* global_fonts;
 static char callback_python(char*function, gfxdevice_t*dev, const char*format, ...)
@@ -637,6 +646,11 @@ static char callback_python(char*function, gfxdevice_t*dev, const char*format, .
 		void* ptr = va_arg(ap, void*);
 		gfxline_t*line = (gfxline_t*)ptr;
 		obj = convert_gfxline(line);
+		break;
+	    }
+	    case 'I': {
+		void* ptr = va_arg(ap, void*);
+		obj = create_bitmap((gfximage_t*)ptr);
 		break;
 	    }
 	    case 'O': {
@@ -876,7 +890,7 @@ static int output_setattr(PyObject * _self, char* a, PyObject * o)
 static int output_print(PyObject * _self, FILE *fi, int flags)
 {
     OutputObject*self = (OutputObject*)_self;
-    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<output object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 
@@ -914,7 +928,7 @@ static PyObject* glyph_new(FontObject*font, int nr) {
 static int glyph_print(PyObject * _self, FILE *fi, int flags)
 {
     GlyphObject*self = (GlyphObject*)_self;
-    fprintf(fi, "Glyph %p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<glyph object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 static PyMethodDef glyph_methods[] =
@@ -972,7 +986,7 @@ static PyObject* font_glyph(PyObject * _self, PyObject* args, PyObject* kwargs) 
 static int font_print(PyObject * _self, FILE *fi, int flags)
 {
     FontObject*self = (FontObject*)_self;
-    fprintf(fi, "Font %s at %p(%d)", self->gfxfont->id, _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<font object %s at %p(%d)>", self->gfxfont->id, _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 static PyMethodDef font_methods[] =
@@ -1060,7 +1074,7 @@ static PyObject* char_new(gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatr
 static int char_print(PyObject * _self, FILE *fi, int flags)
 {
     CharObject*self = (CharObject*)_self;
-    fprintf(fi, "char %p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<char object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 static PyMethodDef char_methods[] =
@@ -1249,7 +1263,7 @@ static int page_setattr(PyObject * self, char* a, PyObject * o) {
 static int page_print(PyObject * _self, FILE *fi, int flags)
 {
     PageObject*self = (PageObject*)_self;
-    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<page object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 
@@ -1458,7 +1472,7 @@ static int doc_setattr(PyObject * self, char* a, PyObject * o) {
 static int doc_print(PyObject * _self, FILE *fi, int flags)
 {
     DocObject*self = (DocObject*)_self;
-    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<doc object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 
@@ -1492,7 +1506,7 @@ static int gfx_kdtree_setattr(PyObject * self, char* a, PyObject * o) {
 static int gfx_kdtree_print(PyObject * _self, FILE *fi, int flags)
 {
     KDTreeObject*self = (KDTreeObject*)_self;
-    fprintf(fi, "%p(%d)", _self, _self?_self->ob_refcnt:0);
+    fprintf(fi, "<kdtree object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
     return 0;
 }
 PyDoc_STRVAR(gfx_kdtree_add_box_doc,
@@ -1536,6 +1550,77 @@ static PyMethodDef gfx_kdtree_methods[] =
 {
     {"add_box", (PyCFunction)gfx_kdtree_add_box, METH_KEYWORDS, gfx_kdtree_add_box_doc},
     {"find", (PyCFunction)gfx_kdtree_find, METH_KEYWORDS, gfx_kdtree_find_doc},
+    {0,0,0,0}
+};
+
+//---------------------------------------------------------------------
+PyDoc_STRVAR(f_createBitmap_doc, \
+"Bitmap()\n\n"
+"Creates a Bitmap, which can be used to store bounding boxes\n"
+);
+static PyObject* create_bitmap(gfximage_t*img)
+{
+    BitmapObject*self = PyObject_New(BitmapObject, &BitmapClass);
+    self->image = malloc(sizeof(gfximage_t));
+    self->image->data = malloc(sizeof(gfxcolor_t)*img->width*img->height);
+    memcpy(self->image->data, img->data, sizeof(gfxcolor_t)*img->width*img->height);
+    self->image->width = img->width;
+    self->image->height = img->height;
+    return (PyObject*)self;
+}
+static void gfx_bitmap_dealloc(PyObject* _self) {
+    BitmapObject* self = (BitmapObject*)_self;
+    free(self->image->data);
+    free(self->image);
+    PyObject_Del(self);
+}
+static PyObject* gfx_bitmap_getattr(PyObject * _self, char* a)
+{
+    BitmapObject*self = (BitmapObject*)_self;
+    return forward_getattr(_self, a);
+}
+static int gfx_bitmap_setattr(PyObject * self, char* a, PyObject * o) {
+    return -1;
+}
+PyDoc_STRVAR(gfx_bitmap_save_png_doc,
+"save_jpeg(filename, quality)\n\n"
+"Save bitmap to a png file.\n"
+);
+static PyObject* gfx_bitmap_save_png(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    ImageObject* self = (ImageObject*)_self;
+    static char *kwlist[] = {"filename", NULL};
+    char*filename=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
+	return NULL;
+    gfximage_save_png_quick(self->image, filename);
+    return PY_NONE;
+}
+PyDoc_STRVAR(gfx_bitmap_save_jpeg_doc,
+"save_jpeg(filename, quality)\n\n"
+"Save bitmap to a jpeg file. The quality parameter is optional.\n"
+);
+static PyObject* gfx_bitmap_save_jpeg(PyObject* _self, PyObject* args, PyObject* kwargs)
+{
+    ImageObject* self = (ImageObject*)_self;
+    static char *kwlist[] = {"filename", "quality", NULL};
+    char*filename=0;
+    int quality=95;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s|i", kwlist, &filename, &quality))
+	return NULL;
+    gfximage_save_jpeg(self->image, filename, quality);
+    return PY_NONE;
+}
+static int gfx_bitmap_print(PyObject * _self, FILE *fi, int flags)
+{
+    BitmapObject*self = (BitmapObject*)_self;
+    fprintf(fi, "<bitmap object at %p(%d)>", _self, _self?_self->ob_refcnt:0);
+    return 0;
+}
+static PyMethodDef gfx_bitmap_methods[] =
+{
+    {"save_png", (PyCFunction)gfx_bitmap_save_png, METH_KEYWORDS, gfx_bitmap_save_png_doc},
+    {"save_jpeg", (PyCFunction)gfx_bitmap_save_jpeg, METH_KEYWORDS, gfx_bitmap_save_jpeg_doc},
     {0,0,0,0}
 };
 
@@ -1666,6 +1751,24 @@ static PyTypeObject CharClass =
     tp_doc: char_doc,
     tp_methods: char_methods,
 };
+
+PyDoc_STRVAR(gfx_bitmap_doc,
+"A bitmap.\n"
+);
+static PyTypeObject BitmapClass =
+{
+    PYTHON23_HEAD_INIT
+    tp_name: "gfx.Bitmap",
+    tp_basicsize: sizeof(BitmapObject),
+    tp_itemsize: 0,
+    tp_dealloc: gfx_bitmap_dealloc,
+    tp_print: gfx_bitmap_print,
+    tp_getattr: gfx_bitmap_getattr,
+    tp_setattr: gfx_bitmap_setattr,
+    tp_doc: gfx_bitmap_doc,
+    tp_methods: gfx_bitmap_methods,
+};
+
 
 PyDoc_STRVAR(gfx_kdtree_doc,
 "A kdtree is a two dimensional tree for storing bounding box data\n"
@@ -1840,6 +1943,7 @@ PyObject * PyInit_gfx(void)
     FontClass.ob_type = &PyType_Type;
     CharClass.ob_type = &PyType_Type;
     KDTreeClass.ob_type = &PyType_Type;
+    BitmapClass.ob_type = &PyType_Type;
 #endif
     
     state_t* state = STATE(module);
