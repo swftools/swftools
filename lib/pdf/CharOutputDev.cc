@@ -766,7 +766,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	}
         if(link != previous_link) {
             previous_link = link;
-            device->setparameter(device, "link", link->action);
+            device->setparameter(device, "link", link?link->action:"");
         }
     }
 
