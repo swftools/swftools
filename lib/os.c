@@ -309,3 +309,17 @@ void move_file(const char*from, const char*to)
     fclose(fi);
 }
 
+char file_exists(const char*filename)
+{
+#ifdef HAVE_STAT
+    struct stat sb;
+    return stat(filename, &sb) >= 0;
+#else
+    int fi = open(filename, O_RDONLY);
+    if(fi>=0) {
+        close(fi);
+        return 1;
+    }
+    return 0;
+#endif
+}
