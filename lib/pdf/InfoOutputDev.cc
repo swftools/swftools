@@ -716,7 +716,7 @@ gfxmatrix_t FontInfo::get_gfxmatrix(GfxState*state)
 {
     gfxmatrix_t m = gfxmatrix_from_state(state);
     if(!config_remove_font_transforms) {
-	return gfxmatrix_from_state(state);
+	return m;
     } else {
 	double scale = matrix_scale_factor(&m) * this->scale;
 	gfxmatrix_t m = {scale,  0, 0, 

@@ -1580,15 +1580,17 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		double xx,yy;
 		Guchar f;
 		path->getPoint(t,&xx,&yy,&f);
-		state->transform(xx,yy,&xx,&yy);
+		this->transformXY(state, xx, yy, &xx, &yy);
+                int px = (int)xx;
+                int py = (int)yy;
 		if(!t) {
-		    x1=x2=(int)xx;
-		    y1=y2=(int)yy;
+		    x1=x2=px;
+		    y1=y2=py;
 		}
-		if(xx<x1) x1=(int)xx;
-		if(yy<y1) y1=(int)yy;
-		if(xx>=x2) x2=(int)xx+1;
-		if(yy>=y2) y2=(int)yy+1;
+		if(xx<x1) x1=px;
+		if(yy<y1) y1=py;
+		if(xx>=x2) x2=px+1;
+		if(yy>=y2) y2=py+1;
 	    }
 	    delete(path);path=0;
 	}
@@ -1602,7 +1604,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 
-	char char_is_outside = (x1<-this->movex || y1<-this->movey || x2>this->width-this->movex || y2>this->height-this->movey);
+	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as
