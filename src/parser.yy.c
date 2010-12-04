@@ -679,16 +679,17 @@ static void store(enum type_t type, int line, int column, char*text, int length)
     token.column = column;
     //printf("->%d(%s) %s\n", type, type_names[type], text);fflush(stdout);
 
+    token.text_pos = 0;
     token.text = 0;
     switch(type) {
 	case END:
 	    string_set2(&tmp, "", 0);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case STRING:
 	    string_set2(&tmp, text+1, length-2);
 	    unescapeString(&tmp);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case TWIP: 
 	case NUMBER: 
@@ -696,20 +697,20 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 	    string_set2(&tmp, text, length);
 	    if(prefix) {
 		//strcat
-		token.text = (char*)mem_put(&strings, prefix, strlen(prefix));
+		token.text_pos = mem_put(&strings, prefix, strlen(prefix));
 		mem_putstring(&strings, tmp);
 	    } else {
-		token.text = (char*)mem_putstring(&strings, tmp);
+		token.text_pos = mem_putstring(&strings, tmp);
 	    }
 	    prefix = 0;
 	break;
 	case RAWDATA:
 	    string_set2(&tmp, text+1/*:*/, length-5/*.end*/);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case COMMAND:
 	    string_set2(&tmp, text+1, length-1);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case ASSIGNMENT: {
 	    char*x = &text[length-1];
@@ -718,7 +719,7 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 	    do{x--;} while(*x==32 || *x==10 || *x==13 || *x=='\t');
 	    x++; //first space
 	    string_set2(&tmp, text, x-text);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	    /*char*y,*x = strchr(text, '=');
 	    if(!x) exit(1);
 	    y=x;
@@ -782,7 +783,7 @@ static void handleInclude(char*text, int len)
 #define s(type) {store(type, line, column, yytext, yyleng);}
 
 
-#line 786 "parser.yy.c"
+#line 787 "parser.yy.c"
 
 #define INITIAL 0
 #define R 1
@@ -969,10 +970,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 219 "parser.lex"
+#line 220 "parser.lex"
 
 
-#line 976 "parser.yy.c"
+#line 977 "parser.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -1054,18 +1055,18 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 221 "parser.lex"
+#line 222 "parser.lex"
 {c();BEGIN(0);}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 222 "parser.lex"
+#line 223 "parser.lex"
 {c();}
 	YY_BREAK
 case 3:
 /* rule 3 can match eol */
 YY_RULE_SETUP
-#line 223 "parser.lex"
+#line 224 "parser.lex"
 {c();}
 	YY_BREAK
 case 4:
@@ -1074,7 +1075,7 @@ case 4:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 224 "parser.lex"
+#line 225 "parser.lex"
 {s(TWIP);c();BEGIN(0);}
 	YY_BREAK
 case 5:
@@ -1083,24 +1084,24 @@ case 5:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 225 "parser.lex"
+#line 226 "parser.lex"
 {s(NUMBER);c();BEGIN(0);}
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 226 "parser.lex"
+#line 227 "parser.lex"
 {c();}
 	YY_BREAK
 case 7:
 /* rule 7 can match eol */
 YY_RULE_SETUP
-#line 227 "parser.lex"
+#line 228 "parser.lex"
 {c();}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 228 "parser.lex"
+#line 229 "parser.lex"
 {s(STRING);c();BEGIN(0);}
 	YY_BREAK
 case 9:
@@ -1108,70 +1109,70 @@ case 9:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up yytext again */
 YY_RULE_SETUP
-#line 229 "parser.lex"
+#line 230 "parser.lex"
 {c();printf("unterminated string in line %d: %s\n", line, yytext);exit(1);yyterminate();}
 	YY_BREAK
 case 10:
 /* rule 10 can match eol */
 YY_RULE_SETUP
-#line 230 "parser.lex"
+#line 231 "parser.lex"
 {s(ASSIGNMENT);prefix="<plus>";c();BEGIN(R);}
 	YY_BREAK
 case 11:
 /* rule 11 can match eol */
 YY_RULE_SETUP
-#line 231 "parser.lex"
+#line 232 "parser.lex"
 {s(ASSIGNMENT);prefix="<minus>";c();BEGIN(R);}
 	YY_BREAK
 case 12:
 /* rule 12 can match eol */
 YY_RULE_SETUP
-#line 232 "parser.lex"
+#line 233 "parser.lex"
 {s(ASSIGNMENT);c();BEGIN(R);}
 	YY_BREAK
 /* values which appear only on the right-hand side of assignments, like: x=50% */
 case 13:
 YY_RULE_SETUP
-#line 234 "parser.lex"
+#line 235 "parser.lex"
 {s(IDENTIFIER);c();BEGIN(0);}
 	YY_BREAK
 
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 236 "parser.lex"
+#line 237 "parser.lex"
 {handleInclude(yytext, yyleng);}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 237 "parser.lex"
+#line 238 "parser.lex"
 {s(COMMAND);c();}
 	YY_BREAK
 case 16:
 /* rule 16 can match eol */
 YY_RULE_SETUP
-#line 238 "parser.lex"
+#line 239 "parser.lex"
 {s(RAWDATA);c();}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 239 "parser.lex"
+#line 240 "parser.lex"
 {s(IDENTIFIER);c();}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 240 "parser.lex"
+#line 241 "parser.lex"
 {c();BEGIN(BINARY);}
 	YY_BREAK
 case 19:
 /* rule 19 can match eol */
 YY_RULE_SETUP
-#line 241 "parser.lex"
+#line 242 "parser.lex"
 {c();}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 242 "parser.lex"
+#line 243 "parser.lex"
 {char c,c1=yytext[0];
 		             printf("Syntax error in line %d, %d: %s", line, column, yytext);
 		             while(1) {
@@ -1190,7 +1191,7 @@ YY_RULE_SETUP
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(R):
 case YY_STATE_EOF(BINARY):
-#line 256 "parser.lex"
+#line 257 "parser.lex"
 {c();
 			     if ( --include_stack_ptr < 0 ) {
 				s(END);
@@ -1205,10 +1206,10 @@ case YY_STATE_EOF(BINARY):
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 269 "parser.lex"
+#line 270 "parser.lex"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 1212 "parser.yy.c"
+#line 1213 "parser.yy.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -2218,7 +2219,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 269 "parser.lex"
+#line 270 "parser.lex"
 
 
 
@@ -2273,8 +2274,9 @@ struct token_t* generateTokens(char*filename)
     num = tokens.pos/sizeof(struct token_t);
 
     for(t=0;t<tokens.pos/sizeof(struct token_t);t++) {
-	if(result[t].text)
-	    result[t].text += (int)strings.buffer;
+	if(result[t].text_pos) {
+	    result[t].text = &strings.buffer[result[t].text_pos];
+	}
     }
 
     if(fi!=stdin)

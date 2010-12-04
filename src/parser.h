@@ -34,6 +34,7 @@ extern char*type_names[];
 
 struct token_t {
     enum type_t type;
+    int text_pos;
     char* text;
     int line;
     int column;

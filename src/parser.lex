@@ -102,16 +102,17 @@ static void store(enum type_t type, int line, int column, char*text, int length)
     token.column = column;
     //printf("->%d(%s) %s\n", type, type_names[type], text);fflush(stdout);
 
+    token.text_pos = 0;
     token.text = 0;
     switch(type) {
 	case END:
 	    string_set2(&tmp, "", 0);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case STRING:
 	    string_set2(&tmp, text+1, length-2);
 	    unescapeString(&tmp);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case TWIP: 
 	case NUMBER: 
@@ -119,20 +120,20 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 	    string_set2(&tmp, text, length);
 	    if(prefix) {
 		//strcat
-		token.text = (char*)mem_put(&strings, prefix, strlen(prefix));
+		token.text_pos = mem_put(&strings, prefix, strlen(prefix));
 		mem_putstring(&strings, tmp);
 	    } else {
-		token.text = (char*)mem_putstring(&strings, tmp);
+		token.text_pos = mem_putstring(&strings, tmp);
 	    }
 	    prefix = 0;
 	break;
 	case RAWDATA:
 	    string_set2(&tmp, text+1/*:*/, length-5/*.end*/);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case COMMAND:
 	    string_set2(&tmp, text+1, length-1);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	break;
 	case ASSIGNMENT: {
 	    char*x = &text[length-1];
@@ -141,7 +142,7 @@ static void store(enum type_t type, int line, int column, char*text, int length)
 	    do{x--;} while(*x==32 || *x==10 || *x==13 || *x=='\t');
 	    x++; //first space
 	    string_set2(&tmp, text, x-text);
-	    token.text = (char*)mem_putstring(&strings, tmp);
+	    token.text_pos = mem_putstring(&strings, tmp);
 	    /*char*y,*x = strchr(text, '=');
 	    if(!x) exit(1);
 	    y=x;
@@ -319,8 +320,9 @@ struct token_t* generateTokens(char*filename)
     num = tokens.pos/sizeof(struct token_t);
 
     for(t=0;t<tokens.pos/sizeof(struct token_t);t++) {
-	if(result[t].text)
-	    result[t].text += (int)strings.buffer;
+	if(result[t].text_pos) {
+	    result[t].text = &strings.buffer[result[t].text_pos];
+	}
     }
 
     if(fi!=stdin)
