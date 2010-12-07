@@ -215,9 +215,9 @@ static kdarea_list_t* kdarea_filter(kdarea_t*area, int xy, int dir)
 		kdarea_list_t*l2 = kdarea_filter(branch->side[1], xy, dir);
 		return kdarea_list_concatenate(l1,l2);
 	    }
-	} else if((branch->type^dir) == 1) {
+	} else if((branch->type^dir) == 2) {
 	    /* filter and branch point into opposite directions */
-	    if(xy*vsign[dir] <= branch->xy*vsign[dir]) {
+	    if(branch->xy*vsign[dir] <= xy*vsign[dir]) {
 		// filter splits the secondary node. We can skip the primary node.
 		return kdarea_filter(branch->side[1], xy, dir);
 	    } else {
@@ -229,9 +229,7 @@ static kdarea_list_t* kdarea_filter(kdarea_t*area, int xy, int dir)
 	    }
 	} else {
             /* filter segment is perpendicular to the node */
-            kdarea_list_t*l1 = kdarea_filter(branch->side[0], xy, dir);
-            kdarea_list_t*l2 = kdarea_filter(branch->side[1], xy, dir);
-            return kdarea_list_concatenate(l1,l2);
+            return kdarea_list_new(area);
         }
     }
 }
@@ -283,15 +281,33 @@ kdarea_list_t* kdtree_filter(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, 
     kdarea_list_t*result = 0;
     kdarea_list_t*branches1 = kdarea_filter(tree->root, x2, KD_LEFT);
     kdarea_list_t*i = branches1;
+
+#ifdef DEBUG
+    kdarea_list_t*u = branches1;
+    if(u) do {printf("%p [%d %d %d %d] is to the left of %d\n", u->area, u->area->bbox.xmin, u->area->bbox.ymin, u->area->bbox.xmax, u->area->bbox.ymax, x2);u = u->next;} while(u!=branches1);
+#endif
     if(i) do {
 	kdarea_list_t*branches2 = kdarea_filter(i->area, y2, KD_UP);
 	kdarea_list_t*j = branches2;
+
+#ifdef DEBUG
+        kdarea_list_t*u = branches2;
+        if(u) do {printf("%p [%d %d %d %d] is above %d\n", u->area, u->area->bbox.xmin, u->area->bbox.ymin, u->area->bbox.xmax, u->area->bbox.ymax, y2);u = u->next;} while(u!=branches2);
+#endif
 	if(j) do {
-	    kdarea_list_t*branches3 = kdarea_filter(i->area, x1, KD_RIGHT);
+	    kdarea_list_t*branches3 = kdarea_filter(j->area, x1, KD_RIGHT);
 	    kdarea_list_t*k = branches3;
+#ifdef DEBUG
+            kdarea_list_t*u = branches3;
+            if(u) do {printf("%p [%d %d %d %d] is to the right of %d\n", u->area, u->area->bbox.xmin, u->area->bbox.ymin, u->area->bbox.xmax, u->area->bbox.ymax, x1);u = u->next;} while(u!=branches3);
+#endif
 	    if(k) do {
-		kdarea_list_t*branches4 = kdarea_filter(i->area, y1, KD_DOWN);
+		kdarea_list_t*branches4 = kdarea_filter(k->area, y1, KD_DOWN);
 		kdarea_list_t*l = branches4;
+#ifdef DEBUG
+                kdarea_list_t*u = branches4;
+                if(u) do {printf("%p [%d %d %d %d] is to below %d\n", u->area, u->area->bbox.xmin, u->area->bbox.ymin, u->area->bbox.xmax, u->area->bbox.ymax, y1);u = u->next;} while(u!=branches4);
+#endif
 		if(leafs) {
 		    if(l) do {
 			result = kdarea_list_concatenate(result, kdarea_all_children(l->area, 0));
@@ -322,7 +338,10 @@ static void kdtree_modify_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2,
     kdarea_list_t*l = kdtree_filter(tree, x1, y1, x2, y2, 1);
     kdarea_list_t*i = l;
     if(l) do {
-	l->area->data = f(user, l->area->data);
+#ifdef DEBUG
+        printf("%p is contained in [%d %d %d %d]\n", i->area, x1, y1, x2, y2);
+#endif
+	i->area->data = f(user, i->area->data);
 	i = i->next;
     } while(i!=l);
     kdarea_list_destroy(l);
@@ -385,7 +404,7 @@ void kdarea_print(kdarea_t*area, int indent)
 {
     int i;
     assert(area);
-    do_indent(indent);printf("[%p] leaf (%d,%d,%d,%d) %p (l:%p r:%p u:%p d:%p)\n", area,
+    do_indent(indent);printf("[%p] area (%d,%d,%d,%d) %p (l:%p r:%p u:%p d:%p)\n", area,
 	    area->bbox.xmin,
 	    area->bbox.ymin,
 	    area->bbox.xmax,
@@ -447,6 +466,16 @@ int main()
     kdarea_t*right = kdarea_neighbor(a, KD_RIGHT, /*y*/35);
     kdarea_t*up = kdarea_neighbor(a, KD_UP, /*x*/15);
     kdarea_t*down = kdarea_neighbor(a, KD_DOWN, /*x*/15);
+    
+    a = kdtree_find(tree, 15,25);
+    assert(!a->data);
+    a = kdtree_find(tree, 15,45);
+    assert(!a->data);
+    a = kdtree_find(tree, 5,35);
+    assert(!a->data);
+    a = kdtree_find(tree, 45,35);
+    assert(!a->data);
+    
     kdtree_destroy(tree);
 }
 #endif
