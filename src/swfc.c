@@ -2060,7 +2060,7 @@ int s_playsound(const char*name, int loops, int nomultiple, int stop)
     return 1;
 }
 
-void s_includeswf(const char*name, const char*filename)
+void s_includeswf(const char*name, const char*filename, const char*as3name)
 {
     int f;
     SWF swf;
@@ -2130,6 +2130,13 @@ void s_includeswf(const char*name, const char*filename)
     swf_FreeTags(&swf);
 
     s_addcharacter(name, id, tag, r);
+    
+    if(as3name) {
+        tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
+        swf_SetU16(tag, 1);
+        swf_SetU16(tag, id);
+        swf_SetString(tag, as3name);
+    }
     incrementid();
 }
 SRECT s_getCharBBox(const char*name)
@@ -3853,9 +3860,11 @@ static int c_swf(map_t*args)
     const char*name = lu(args, "name");
     const char*filename = lu(args, "filename");
     const char*command = lu(args, "commandname");
+    const char*as3name = lu(args, "as3name");
+
     if(!strcmp(command, "shape"))
 	warning("Please use .swf instead of .shape");
-    s_includeswf(name, filename);
+    s_includeswf(name, filename, as3name);
     return 0;
 }
 
@@ -4169,7 +4178,7 @@ static struct {
 {{"flash", c_flash, "bbox=autocrop background=black version=6 fps=50 name= filename= @compress=default @change-sets-all=no @export=1 @mainclass="},
  {"frame", c_frame, "n=<plus>1 name= @cut=no @anchor=no"},
  // "import" type stuff
- {"swf", c_swf, "name filename"},
+ {"swf", c_swf, "name filename as3name="},
  {"shape", c_swf, "name filename"},
  {"jpeg", c_image, "name filename quality=80%"},
  {"png", c_image, "name filename"},
