@@ -760,9 +760,18 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 
     GFXLink*link = 0;
     if(links) {
-	kdarea_t*a = kdtree_find(this->links, x+dx/2,y+dx/2);
+	kdarea_t*a = kdtree_find(this->links, x+dx/2,y+dy/2);
 	if(a) {
 	    link = (GFXLink*)a->data;
+#if 0
+            if(link) {
+                printf("area [%d %d %d %d] (link [%f %f %f %f]) contains (%f,%f)\n", 
+                        a->bbox.xmin, a->bbox.ymin, a->bbox.xmax, a->bbox.ymax,
+                        link->x1, link->y1, link->x2, link->y2,
+                        x+dx/2, y+dy/2
+                        );
+            }
+#endif
 	}
         if(link != previous_link) {
             previous_link = link;
@@ -1154,6 +1163,9 @@ void CharOutputDev::processLink(Link *link, Catalog *catalog)
 	this->links = kdtree_new();
     }
     kdtree_add_box(this->links, x1,y1,x2,y2, this->last_link);
+#if 0
+    printf("adding link %p at %f %f %f %f to tree\n", this->last_link, x1, y1, x2, y2);
+#endif
 
     msg("<verbose> storing \"%s\" link to \"%s\"", type, FIXNULL(action));
     free(s);s=0;
