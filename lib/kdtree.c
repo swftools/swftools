@@ -217,7 +217,7 @@ static kdarea_list_t* kdarea_filter(kdarea_t*area, int xy, int dir)
 	    }
 	} else if((branch->type^dir) == 2) {
 	    /* filter and branch point into opposite directions */
-	    if(branch->xy*vsign[dir] <= xy*vsign[dir]) {
+	    if(xy*vsign[dir] >= branch->xy*vsign[dir]) {
 		// filter splits the secondary node. We can skip the primary node.
 		return kdarea_filter(branch->side[1], xy, dir);
 	    } else {
