@@ -89,3 +89,6 @@ lib/action/Makefile
 lib/python/Makefile
 lib/readers/Makefile
 tmp/
+src/ttftool
+_pypath.py
+_pypath.txt
