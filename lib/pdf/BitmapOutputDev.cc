@@ -363,7 +363,7 @@ void writeMonoBitmap(SplashBitmap*btm, char*filename)
             }
         }
     }
-    png_write(filename, (unsigned char*)b, width, height);
+    png_write_quick(filename, (unsigned char*)b, width, height);
     free(b);
 }
 
@@ -392,7 +392,7 @@ void writeBitmap(SplashBitmap*bitmap, char*filename)
 	    line[x].a =  bitmap->getAlpha(x,y);
 	}
     }
-    png_write(filename, (unsigned char*)data, width, height);
+    png_write_quick(filename, (unsigned char*)data, width, height);
     free(data);
 }
 
@@ -420,7 +420,7 @@ void writeAlpha(SplashBitmap*bitmap, char*filename)
 	    line[x].a = a;
 	}
     }
-    png_write(filename, (unsigned char*)data, width, height);
+    png_write_quick(filename, (unsigned char*)data, width, height);
     free(data);
 }
 
@@ -563,17 +563,23 @@ static void clearBooleanBitmap(SplashBitmap*btm, int x1, int y1, int x2, int y2)
 
 void BitmapOutputDev::dbg_newdata(char*newdata)
 {
-    if(0) { //!strcmp(newdata,"text")) {
+    if(0) {
         char filename1[80];
         char filename2[80];
         char filename3[80];
+        char filename4[80];
+        char filename5[80];
         sprintf(filename1, "state%03dboolbitmap_after%s.png", dbg_btm_counter, newdata);
         sprintf(filename2, "state%03dbooltext_after%s.png", dbg_btm_counter, newdata);
-        sprintf(filename3, "state%03dbitmap_after%s.png", dbg_btm_counter, newdata);
-        msg("<verbose> %s %s %s", filename1, filename2, filename3);
-	writeAlpha(stalepolybitmap, filename1);
+        sprintf(filename3, "state%03dstalebitmap_after%s.png", dbg_btm_counter, newdata);
+        sprintf(filename4, "state%03dstaletext_after%s.png", dbg_btm_counter, newdata);
+        sprintf(filename5, "state%03dbitmap_after%s.png", dbg_btm_counter, newdata);
+        msg("<verbose> %s %s %s", filename1, filename2, filename5);
+	writeAlpha(boolpolybitmap, filename1);
 	writeAlpha(booltextbitmap, filename2);
-	writeBitmap(rgbdev->getBitmap(), filename3);
+	writeAlpha(stalepolybitmap, filename3);
+	writeAlpha(staletextbitmap, filename4);
+	writeBitmap(rgbdev->getBitmap(), filename5);
     }
     dbg_btm_counter++;
 }
@@ -620,6 +626,13 @@ GBool BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
     /* clear the thing we just drew from our temporary drawing bitmap */
     clearBooleanBitmap(booltextbitmap, x1, y1, x2, y2);
 
+#ifdef DEBUG
+    if(intersection(booltextbitmap, booltextbitmap, UNKNOWN_BOUNDING_BOX)) {
+        msg("<fatal> Text bitmap is not empty after clear. Bad bounding box?");
+        exit(1);
+    }
+    clearBooleanBitmap(booltextbitmap, UNKNOWN_BOUNDING_BOX);
+#endif
     return ret;
 }
 GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
@@ -651,6 +664,14 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     /* clear the thing we just drew from our temporary drawing bitmap */
     clearBooleanBitmap(boolpolybitmap, x1, y1, x2, y2);
 
+#ifdef DEBUG
+    if(intersection(boolpolybitmap, boolpolybitmap, UNKNOWN_BOUNDING_BOX)) {
+	writeAlpha(boolpolybitmap, "notempty.png");
+        msg("<fatal> Polygon bitmap is not empty after clear. Bad bounding box?");
+        exit(1);
+    }
+    clearBooleanBitmap(boolpolybitmap, UNKNOWN_BOUNDING_BOX);
+#endif
     return ret;
 }
 
@@ -853,10 +874,11 @@ GBool BitmapOutputDev::intersection(SplashBitmap*boolpoly, SplashBitmap*booltext
         int x,y;
         unsigned char*data1 = (unsigned char*)polypixels;
         unsigned char*data2 = (unsigned char*)textpixels;
-        msg("<verbose> Testing area (%d,%d,%d,%d), runx=%d,runy=%d", x1,y1,x2,y2, runx, runy);
+        msg("<verbose> Testing area (%d,%d,%d,%d), runx=%d,runy=%d,state=%d", x1,y1,x2,y2, runx, runy, dbg_btm_counter);
         for(y=0;y<runy;y++) {
-            if(compare8(data1,data2,runx))
+            if(compare8(data1,data2,runx)) {
                 return gTrue;
+            }
             data1+=width8;
             data2+=width8;
         }
