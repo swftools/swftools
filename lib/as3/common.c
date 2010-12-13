@@ -71,3 +71,15 @@ void as3_softwarning(const char*format, ...)
     fprintf(stderr, "%s:%d:%d: warning: %s\n", current_filename, current_line, current_column, buf);
     fflush(stderr);
 }
+
+void internal_error(const char*file, int line, const char*f)
+{
+    syntaxerror("internal error in %s, %s:%d", f, file, line);
+}
+
+int a3_error(char*s)
+{
+   syntaxerror("%s", s); 
+   return 0; //make gcc happy
+}
+

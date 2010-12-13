@@ -331,7 +331,7 @@ xpdf_include=
 
 if test "x$USE_POPPLER" = "xtrue"; then
     AC_DEFINE([HAVE_POPPLER],[1],[use poppler])
-    PKG_CHECK_MODULES([POPPLER],[poppler poppler-splash],,[poppler_pkgconfig=no])
+    #PKG_CHECK_MODULES([POPPLER],[poppler poppler-splash],,[poppler_pkgconfig=no])
     if test "x$poppler_pkgconfig" = "xno"; then
         AC_LANG_PUSH([C++])
         AC_CHECK_HEADERS([OutputDev.h],[
@@ -380,18 +380,6 @@ if test "x${UNCOMPRESS}" = "xgzip"; then
     AC_DEFINE([USE_GZIP], [1], [Define if gzip is present])
 fi
 AC_SUBST(USE_GZIP)
-
-# ------------------------------------------------------------------
-
-RFX_CHECK_PYTHON
-
-if test "x$PYTHON_OK" '!=' "xyes";then
-    echo all install uninstall clean: > lib/python/Makefile
-    # fail silently- the most users won't have any need for the
-    # python interface anyway
-else
-    pythongfx="lib/python/Makefile"
-fi
 
 # ------------------------------------------------------------------
 
@@ -468,6 +456,18 @@ fi
 #fi
 
 AC_MSG_RESULT(${MISSINGLIBS})
+
+# ------------------------------------------------------------------
+
+RFX_CHECK_PYTHON
+
+if test "x$PYTHON_OK" '!=' "xyes" -o "$DISABLEPDF2SWF";then
+    echo all install uninstall clean: > lib/python/Makefile
+    # fail silently- the most users won't have any need for the
+    # python interface anyway
+else
+    pythongfx="lib/python/Makefile"
+fi
 
 # ------------------------------------------------------------------
 

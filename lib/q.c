@@ -781,6 +781,30 @@ int string_equals2(string_t*str, string_t*str2)
     return 0;
 }
 
+char* concat2(const char* t1, const char* t2)
+{
+    int l1 = strlen(t1);
+    int l2 = strlen(t2);
+    char*text = malloc(l1+l2+1);
+    memcpy(text   , t1, l1);
+    memcpy(text+l1, t2, l2);
+    text[l1+l2] = 0;
+    return text;
+}
+
+char* concat3(const char* t1, const char* t2, const char* t3)
+{
+    int l1 = strlen(t1);
+    int l2 = strlen(t2);
+    int l3 = strlen(t3);
+    char*text = malloc(l1+l2+l3+1);
+    memcpy(text   , t1, l1);
+    memcpy(text+l1, t2, l2);
+    memcpy(text+l1+l2, t3, l3);
+    text[l1+l2+l3] = 0;
+    return text;
+}
+
 // ------------------------------- stringarray_t ------------------------------
 
 typedef struct _stringlist {

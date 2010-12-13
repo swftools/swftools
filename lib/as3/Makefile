@@ -7,8 +7,8 @@ D=-g -pg
 
 #BISONDEBUG=yes
 
-MODULES = abc.o opcodes.o code.o pool.o scripts.o expr.o common.o initcode.o
-SOURCES = abc.c abc.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h common.c common.h initcode.c initcode.h assets.c assets.h
+MODULES = abc.o opcodes.o code.o parser_help.o state.o pool.o scripts.o expr.o common.o initcode.o
+SOURCES = abc.c abc.h state.c state.h parser_help.c parser_help.h pool.c pool.h files.c files.h code.c code.h registry.c registry.h opcodes.c opcodes.h builtin.c builtin.h compiler.c compiler.h parser.tab.h parser.tab.c tokenizer.yy.c scripts.c import.c import.h expr.c expr.h common.c common.h initcode.c initcode.h assets.c assets.h
 
 tokenizer.yy.c: tokenizer.lex tokenizer.h
 	flex -Pas3_ -8 -B -otokenizer.yy.c tokenizer.lex

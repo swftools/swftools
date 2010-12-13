@@ -28,7 +28,12 @@ extern int as3_lex();
 extern int as3_verbosity;
 extern int as3_pass;
 #define syntaxerror as3_error
+int a3_error(char*s);
 void as3_error(const char*format, ...) __attribute__ ((__noreturn__));
 void as3_warning(const char*format, ...);
 void as3_softwarning(const char*format, ...);
+
+void internal_error(const char*file, int line, const char*f);
+#define as3_assert(b) {if(!(b)) internal_error(__FILE__, __LINE__,__func__);}
+
 #endif
