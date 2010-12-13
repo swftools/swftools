@@ -60,24 +60,21 @@ DECLARE_LIST(slotinfo);
 #define SUBTYPE_SET 2
 #define SUBTYPE_GETSET 3
 
-struct _slotinfo {
-    U8 kind,subtype,flags,access;
-    const char*package;
-    const char*name;
+#define SLOTINFO_HEAD \
+    U8 kind,subtype,flags,access; \
+    const char*package; \
+    const char*name; \
     int slot;
+
+struct _slotinfo {
+    SLOTINFO_HEAD;
 };
 struct _unresolvedinfo {
-    U8 kind,subtype,flags,access;
-    const char*package;
-    const char*name;
-    int slot;
+    SLOTINFO_HEAD;
     namespace_list_t*nsset;
 };
 struct _classinfo {
-    U8 kind,subtype,flags,access;
-    const char*package;
-    const char*name;
-    int slot;
+    SLOTINFO_HEAD;
     classinfo_t*superclass;
     dict_t members;
     dict_t static_members;
@@ -86,10 +83,7 @@ struct _classinfo {
     classinfo_t*interfaces[];
 };
 struct _memberinfo {
-    U8 kind,subtype,flags,access;
-    const char*package;
-    const char*name;
-    int slot;
+    SLOTINFO_HEAD;
     union {
         classinfo_t*return_type;
         classinfo_t*type;
@@ -97,19 +91,13 @@ struct _memberinfo {
     classinfo_t*parent;
 };
 struct _methodinfo /*extends memberinfo*/ {
-    U8 kind,subtype,flags,access;
-    const char*package;
-    const char*name;
-    int slot;
+    SLOTINFO_HEAD;
     classinfo_t*return_type;
     classinfo_t*parent;
     classinfo_list_t*params;
 };
 struct _varinfo /*extends memberinfo*/ {
-    U8 kind,subtype,flags,access;
-    const char*package;
-    const char*name;
-    int slot;
+    SLOTINFO_HEAD;
     classinfo_t*type;
     classinfo_t*parent;
     constant_t*value;

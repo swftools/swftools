@@ -187,6 +187,9 @@ void string_set2(string_t*str, const char*text, int len);
 string_t*string_dup3(string_t*s);
 int string_equals(string_t*str, const char*text);
 
+char* concat2(const char* t1, const char* t2);
+char* concat3(const char* t1, const char* t2, const char* t3);
+
 void stringarray_init(stringarray_t*sa, int hashsize);
 void stringarray_put(stringarray_t*sa, string_t str);
 

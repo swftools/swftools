@@ -135,17 +135,19 @@
      T_USHR = 351,
      T_SHR = 352,
      prec_none = 353,
-     below_semicolon = 354,
-     below_assignment = 355,
-     below_lt = 356,
-     below_minus = 357,
-     minusminus_prefix = 358,
-     plusplus_prefix = 359,
-     below_curly = 360,
-     new2 = 361,
-     above_identifier = 362,
-     below_else = 363,
-     above_function = 364
+     prec_var_read = 354,
+     below_semicolon = 355,
+     below_assignment = 356,
+     below_lt = 357,
+     below_minus = 358,
+     minusminus_prefix = 359,
+     plusplus_prefix = 360,
+     below_curly = 361,
+     new2 = 362,
+     below_identifier = 363,
+     above_identifier = 364,
+     below_else = 365,
+     above_function = 366
    };
 #endif
 
@@ -153,13 +155,13 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union 
-/* Line 1685 of skeleton.m4  */
-#line 47 "parser.y"
+/* Line 1749 of skeleton.m4  */
+#line 48 "parser.y"
 tokenunion
 {
 
-/* Line 1685 of skeleton.m4  */
-#line 47 "parser.y"
+/* Line 1749 of skeleton.m4  */
+#line 48 "parser.y"
 
     enum yytokentype token;
 
@@ -193,8 +195,8 @@ tokenunion
 
 
 
-/* Line 1685 of skeleton.m4  */
-#line 198 "parser.tab.h"
+/* Line 1749 of skeleton.m4  */
+#line 200 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

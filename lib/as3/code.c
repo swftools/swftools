@@ -255,10 +255,10 @@ code_t* code_atposition(codelookup_t*l, int pos)
 
 void lookupswitch_print(lookupswitch_t*l)
 {
-    printf("default: %08x\n", (int)l->def);
+    printf("default: %p\n", l->def);
     code_list_t*t = l->targets;
     while(t) {
-        printf("target: %08x\n", (int)t->code);
+        printf("target: %p\n", t->code);
         t = t->next;
     }
 }
@@ -844,7 +844,7 @@ static currentstats_t* code_get_stats(code_t*code, abc_exception_list_t*exceptio
     for(t=0;t<num;t++) {
         opcode_t*op = opcode_get(c->opcode);
         if(op->flags & (OP_JUMP|OP_BRANCH)) {
-            printf("%05d) %s %08x\n", t, op->name, c->branch);
+            printf("%05d) %s %p\n", t, op->name, c->branch);
         } else if(op->params[0]=='2') {
             printf("%05d) %s %s\n", t, op->name, multiname_tostring(c->data[0]));
         } else if(op->params[0]=='N') {
@@ -989,13 +989,13 @@ int code_dump2(code_t*c, abc_exception_list_t*exceptions, abc_file_t*file, char*
                     if(c->branch)
                         fprintf(fo, "->%d", c->branch->pos);
                     else
-                        fprintf(fo, "%08x", (unsigned int)c->branch);
+                        fprintf(fo, "%p", c->branch);
                 } else if(*p == 's') {
                     char*s = string_escape((string_t*)data);
                     fprintf(fo, "\"%s\"", s);
                     free(s);
                 } else if(*p == 'D') {
-                    fprintf(fo, "[register %02x=%s]", (ptroff_t)c->data[1], (char*)c->data[0]);
+                    fprintf(fo, "[register %02x=%s]", (int)(ptroff_t)c->data[1], (char*)c->data[0]);
                 } else if(*p == 'S') {
                     lookupswitch_t*l = c->data[0];
                     fprintf(fo, "[");
