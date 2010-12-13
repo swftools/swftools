@@ -23,7 +23,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 from __future__ import division
-import os
+import os, sys
 import wx
 import time
 import pickle
@@ -38,6 +38,8 @@ from gui.gmain import (PdfFrame,
                       ID_ONE_PAGE_PER_FILE,
                       ID_SELECT_EVEN, ID_DOC_INFO,
                      )
+from lib import error
+from lib import utils
 
 
 def GetDataDir():
@@ -70,11 +72,13 @@ class Pdf2Swf:
 
         self.view = PdfFrame()
         wx.GetApp().SetTopWindow(self.view)
+        sys.excepthook = error.ErrorFrame(self.view)
+
         # Call Show after the current and pending event
         # handlers have been completed. Otherwise on MSW
         # we see the frame been draw and after that we saw
         # the menubar appear
-        wx.CallAfter(self.view.Show)
+        wx.CallAfter(self.Show)
 
         self.options = OptionsDialog(self.view)
         self.__ReadConfigurationFile()
@@ -258,9 +262,9 @@ class Pdf2Swf:
         name = wx.GetApp().GetAppName()
         filename = os.path.basename(self.__doc.filename)
         if self.__doc.title != "n/a":
-            t = "%s - %s (%s)" % (name, filename, self.__doc.title)
+            t = u"%s - %s (%s)" % (name, filename, self.__doc.title)
         else:
-            t = "%s - %s" % (name, filename)
+            t = u"%s - %s" % (name, filename)
         self.view.SetTitle(t)
 
     def OnFileLoaded(self, message):
@@ -514,6 +518,11 @@ class Pdf2Swf:
         except Exception:
             pass
         #d = pickle.load(f)
+
+    def Show(self):
+        self.view.Show()
+        if len(sys.argv) == 2:
+            self.__Load(utils.force_unicode(sys.argv[1]))
 
     def Message(self, message):
         dlg = wx.MessageDialog(self.view,

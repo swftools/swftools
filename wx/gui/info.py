@@ -41,15 +41,6 @@ class InfoList(wx.ListCtrl):
         self.__data = []
         for item in PDF_INFO:
             val = getattr(doc, item)
-            # This will be the fallback value
-            sane_val = repr(val)[1:-1]
-            # Maybe more enconding, which ones?
-            for encoding in ["utf-8", "iso-8859-15",]:
-                try:
-                    sane_val = utils.force_unicode(val, encoding)
-                    break
-                except utils.GPdf2SwfUnicodeDecodeError:
-                    pass
-
+            sane_val = utils.force_unicode(val)
             self.append([item, sane_val])
 
