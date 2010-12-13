@@ -344,15 +344,19 @@ class PdfFrame(wx.Frame):
 
         self.toolbar.AddSeparator()
 
+        self.toolbar.AddControl(wx.StaticText(self.toolbar,
+                label="Rendering mode:"))
         self.toolbar_preview_type = wx.Choice(
                 self.toolbar, ID_PREVIEW_TYPE,
-                choices=["everything to bitmaps",
-                         "fonts to fonts, everything else to bitmaps",
-                         "polygons to polygons and fonts to fonts"],
+                choices=["convert everything to bitmaps",
+                         "convert fonts to fonts, everything else to bitmaps",
+                         "convert polygons to polygons and fonts to fonts",
+                         "convert text only"
+                         ],
                 size=(350,-1)
                 )
         # I'm not sure about the utility of this, so Show False
-        self.toolbar_preview_type.Show(False)
+        self.toolbar_preview_type.Show(True)
         self.toolbar.AddControl(self.toolbar_preview_type)
 
         self.toolbar.Realize()

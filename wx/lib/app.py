@@ -458,9 +458,14 @@ class Pdf2Swf:
         sel = self.view.toolbar_preview_type.GetSelection()
         #print sel
         PREV_TYPE = {
-            0 : [('bitmap', '1'), ('poly2bitmap', '0'), ('bitmapfonts', '1'),],
-            1 : [('bitmap', '0'), ('poly2bitmap', '1'), ('bitmapfonts', '0'),],
-            2 : [('bitmap', '0'), ('poly2bitmap', '0'), ('bitmapfonts', '0'),],
+            0 : [('bitmap', '1'), ('poly2bitmap', '0'), ('bitmapfonts', '1'),
+                ('textonly', '0')],
+            1 : [('bitmap', '0'), ('poly2bitmap', '1'), ('bitmapfonts', '0'),
+                ('textonly', '0')],
+            2 : [('bitmap', '0'), ('poly2bitmap', '0'), ('bitmapfonts', '0'),
+                ('textonly', '0')],
+            3 : [('bitmap', '0'), ('poly2bitmap', '0'), ('bitmapfonts', '0'),
+                ('textonly', '1')],
         }
         self.__doc.preview_parameters = PREV_TYPE[sel]
         wx.CallAfter(self.__doc.Load, filename)

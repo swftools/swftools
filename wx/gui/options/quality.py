@@ -32,11 +32,14 @@ class Quality(wx.Panel):
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         obj = fields.Radio(
-                        ("bitmap", "poly2bitmap", "bitmapfonts"),
+                        ("bitmap", "poly2bitmap", "bitmapfonts", "textonly"),
                          u"Rendering mode",
-                        [u"Convert polygons to polygons and fonts to fonts", (0, 0, 0),
-                         u"Convert fonts to fonts, everything else to bitmaps", (0, 1, 0),
-                         u"Convert everthing to bitmaps", (1, 0, 1),
+                        [u"Convert polygons to polygons and fonts to fonts",
+                            (0, 0, 0, 0),
+                         u"Convert fonts to fonts, everything else to bitmaps",
+                         (0, 1, 0, 0),
+                         u"Convert everthing to bitmaps", (1, 0, 1, 0),
+                         u"Convert text only", (0, 0, 0, 1),
                         ], 0)
 
         ra = obj.draw(self)
