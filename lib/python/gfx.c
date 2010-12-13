@@ -191,15 +191,19 @@ static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
     OutputObject* self = (OutputObject*)_self;
     char*filename = 0;
     static char *kwlist[] = {"filename", NULL};
+    int ret;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
 	return NULL;
 
+    Py_BEGIN_ALLOW_THREADS
     gfxresult_t*result = self->output_device->finish(self->output_device);
     self->output_device = 0;
-    if(result->save(result, filename) < 0) {
+    ret = result->save(result, filename);
+    result->destroy(result);
+    Py_END_ALLOW_THREADS
+    if(ret < 0) {
 	return PY_ERROR("Couldn't write to %s", filename);
     }
-    result->destroy(result);
     return PY_NONE;
 }
 
@@ -224,7 +228,9 @@ static PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwa
     int width=0, height=0;
     if (!PyArg_ParseTuple(args, "ii", &width, &height))
 	return NULL;
+    Py_BEGIN_ALLOW_THREADS
     self->output_device->startpage(self->output_device, width, height);
+    Py_END_ALLOW_THREADS
     return PY_NONE;
 }
 
@@ -415,7 +421,9 @@ static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwarg
     OutputObject* self = (OutputObject*)_self;
     if (!PyArg_ParseTuple(args, ""))
 	return NULL;
+    Py_BEGIN_ALLOW_THREADS
     self->output_device->endpage(self->output_device);
+    Py_END_ALLOW_THREADS
     return PY_NONE;
 }
 PyDoc_STRVAR(output_setparameter_doc, \
@@ -1123,10 +1131,12 @@ static PyObject* page_render(PyObject* _self, PyObject* args, PyObject* kwargs)
 	    return NULL;
     }
 
+    Py_BEGIN_ALLOW_THREADS
     if(x|y|cx1|cx2|cy1|cy2)
         self->page->rendersection(self->page, output->output_device,x,y,cx1,cy1,cx2,cy2);
     else
         self->page->render(self->page, output->output_device);
+    Py_END_ALLOW_THREADS
     return PY_NONE;
 }
 

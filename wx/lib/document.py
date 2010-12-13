@@ -74,8 +74,6 @@ class _SaveSWFThread:
         wx.CallAfter(Publisher.sendMessage, "SWF_BEGIN_SAVE",
                                             {'pages': pages,})
 
-        time.sleep(0.05)
-
         self.setparameters(gfx)
         self.__doc = gfx.open("pdf", self.__pdffilename)
 
@@ -96,7 +94,6 @@ class _SaveSWFThread:
             wx.CallAfter(Publisher.sendMessage, "SWF_PAGE_SAVED",
                                                 {'pagenr': pagenr,
                                                  'pages': pages,})
-            time.sleep(0.05)
 
             if self.__one_page_per_file:
                 form = '.%%0%dd.swf' % len(str(len(self.__pages)))
@@ -137,7 +134,6 @@ class _SaveSWFThread:
         del swf
 
         wx.CallAfter(Publisher.sendMessage, "SWF_FILE_SAVED")
-        time.sleep(0.05)
 
         self.__running = False
 

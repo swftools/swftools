@@ -190,6 +190,8 @@ class Pdf2Swf:
                  wx.PD_REMAINING_TIME|wx.PD_CAN_ABORT|
                  wx.PD_AUTO_HIDE
                 )
+        if self.__progress:
+            self.__progress.Destroy()
         self.__progress = ProgressDialog(u"Saving...",
                                        u"Start saving SWF pages",
                                        maximum=pages,
@@ -217,9 +219,6 @@ class Pdf2Swf:
             self.view.SetStatusText(u"SWF document saved successfully.")
         else:
             self.view.SetStatusText(u"")
-
-        self.__progress.Destroy()
-        self.__progress = None
 
     def OnCombineError(self, message):
         from wx.lib.dialogs import ScrolledMessageDialog
