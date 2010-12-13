@@ -26,6 +26,7 @@
 #include <zlib.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/log.h"
 #include "../lib/png.h"
 
 #define MAX_INPUT_FILES 1024
