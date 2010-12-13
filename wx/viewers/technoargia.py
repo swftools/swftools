@@ -27,8 +27,9 @@ from gui.fields import Choose, ChooseAndInt, Hidden
 order = 1
 type = "custom"
 name = u"technoargia Viewer"
-desc = (u"Simple viewer with home link from Laurent Lalanne"
-        u" (http://technoargia.free.fr/swftools/examples/viewer_home/viewer_home.html)")
+desc = (u"<p>Simple viewer with home link from Laurent Lalanne.</p>"
+        u"<br>Visit <a href=\"http://technoargia.free.fr/swftools/"
+        u"examples/viewer_home/viewer_home.html\">Website</a>")
 
 swf_options = [
     Hidden("flashversion", 6),

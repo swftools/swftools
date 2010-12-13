@@ -32,10 +32,22 @@ name = u"Flex Paper Viewer"
 if os.path.isfile(os.path.join(GPDF2SWF_BASEDIR, 'viewers', 'flexpaper', 'FlexPaperViewer.swf')):
 
     desc = u"""Provides a light weight document viewer with:
-        Printing, Searching, Fit width, Fit height, Flowbox mode
-        Zooming, Scrolling with Page Up/Down, Arrows, Drag,
-        Full screen mode, Navigation buttons (next/prev),
-        Print range. See http://flexpaper.devaldi.com/"""
+        <ul>
+        <li>Printing</li>
+        <li>Searching</li>
+        <li>Fit width</li>
+        <li>Fit height</li>
+        <li>Flowbox mode</li>
+        <li>Zooming</li>
+        <li>Scrolling with Page Up/Down</li>
+        <li>Arrows</li>
+        <li>Drag</li>
+        <li>Full screen mode</li>
+        <li>Navigation buttons (next/prev)</li>
+        <li>Print range</li>
+        </ul>
+        <p>See <a href="http://flexpaper.devaldi.com/"
+        >flexpaper.devaldi.com</a></p>"""
     
     swf_options = [
         Choose("flashversion", u"Flash version:",
@@ -166,17 +178,18 @@ if os.path.isfile(os.path.join(GPDF2SWF_BASEDIR, 'viewers', 'flexpaper', 'FlexPa
             #shutil.copytree(src+'/js', dst+'/js')
 
 else:
-    desc = u"""You can use devaldi FlexPaper Viewer.
-1. Just go to http://flexpaper.devaldi.com/
-   and download the flash version.
-   This was tested with FlexPaper 1.2.4 only.
-2. Unzip it and find FlexPaperViewer.swf file.
-3. Copy it into your swftools instalation directory under viewers.
+    desc = u"""<p>You can use devaldi FlexPaper Viewer:</p>
+<ol>
+<li>Just go to <a href="http://flexpaper.devaldi.com/">
+   flexpaper.devaldi.com</a> and download the flash version.
+   This was tested with FlexPaper 1.2.4 only.</li>
+<li>Unzip it and find FlexPaperViewer.swf file.</li>
+<li>Copy it into your swftools instalation directory under viewers.</li>
+</ol>
+<p>It should end up in, for eg:</p>
+<pre>c:\\program files\\swftools\\viewers\\flexpaper\\FlexPaperViewer.swf</pre>
 
-It should end up in, for eg:
-c:\\program files\\swftools\\viewers\\flexpaper\\FlexPaperViewer.swf
-
-For now this is just a placeholder and it is identical to "No Viewer".
+<p>For now this is just a placeholder and it is identical to "No Viewer".</p>
 """
     swf_options = [
         Choose("flashversion", u"Flash version:",

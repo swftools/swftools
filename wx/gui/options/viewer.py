@@ -35,6 +35,7 @@ import gui.fields
 import gui.plugin
 import shutil
 
+import wx.html
 #import viewers.raw
 #import viewers.simple
 #import viewers.rfx
@@ -79,6 +80,20 @@ class Viewers:
                 print "Could not load %s (%s)" % (file, e)
 
 
+class HtmlWindow(wx.html.HtmlWindow):
+    def __init__(self, parent, text=""):
+        wx.html.HtmlWindow.__init__(self, parent, size=(-1, 100))
+        self.SetFonts("arial", "courier", [7,8,9,10,11,12,13])
+        self.SetPage(text)
+        #self.Bind(wx.html.EVT_HTML_LINK_CLICKED, self.OnLinkClicked)
+
+    def OnLinkClicked(self, event):
+        if 'gtk2' in wx.PlatformInfo:
+            os.system('xdg-open "%s"' % event.GetHref())
+        elif 'msw' in wx.PlatformInfo():
+            os.system('start "%s"' % event.GetHref())
+        else: # MAC ???
+            pass
 
 class ViewerBook(wx.Listbook):
     def __init__(self, parent):
@@ -113,11 +128,10 @@ class ViewerBook(wx.Listbook):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         nameCtrl = BoldStaticText(p, label=mod.name)
-        sizer.Add(nameCtrl, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 10)
+        sizer.Add(nameCtrl, 0, wx.EXPAND|wx.TOP, 5)
 
-        t = wordwrap(mod.desc, 400, wx.ClientDC(p))
-        descCtrl = wx.StaticText(p, label=t)
-        sizer.Add(descCtrl, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 10)
+        descCtrl = HtmlWindow(p, mod.desc)
+        sizer.Add(descCtrl, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 5)
 
         #swf_options = []
 
