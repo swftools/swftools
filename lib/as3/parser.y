@@ -232,6 +232,7 @@ extern int a3_lex();
 // precedence: from low to high
 
 %left prec_none
+%left prec_var_read
 
 %left below_semicolon
 %left ';'
@@ -260,6 +261,7 @@ extern int a3_lex();
 %left new2
 %left '[' ']' "new" '{' "{ (dictionary)" '.' ".." "::" '@'
 
+%left below_identifier
 %left T_IDENTIFIER "arguments"
 %left above_identifier
 %left below_else
@@ -795,7 +797,8 @@ THROW : "throw" EXPRESSION {
     $$=$2.c;
     $$=abc_throw($$);
 }
-THROW : "throw" %prec prec_none {
+
+THROW : "throw" {
     if(!state->exception_name)
         syntaxerror("re-throw only possible within a catch block");
     variable_t*v = find_variable(state, state->exception_name);
@@ -1724,7 +1727,7 @@ E : E "as" E {$$ = mknode2(&node_as, $1, $3);}
 E : E "instanceof" E {$$ = mknode2(&node_instanceof, $1, $3);}
 E : E "is" E {$$ = mknode2(&node_is, $1, $3);}
 E : "typeof" E  {$$ = mknode1(&node_typeof, $2);}
-E : "void" E {$$ = mknode1(&node_void, $2);}
+E : "void" E  {$$ = mknode1(&node_void, $2);}
 E : "void" { $$ = mkconstnode(constant_new_undefined());}
 E : '(' COMMA_EXPRESSION ')' { $$=$2;}
 E : '-' E {$$ = mknode1(&node_neg, $2);}
@@ -1827,6 +1830,7 @@ E : E '.' '(' {PASS12 new_state();state->xmlfilter=1;} E ')' {
 
 ID_OR_NS : T_IDENTIFIER {$$=$1;}
 ID_OR_NS : '*' {$$="*";}
+
 SUBNODE: X_IDENTIFIER
        | '*' {$$="*";}
 
@@ -2137,8 +2141,10 @@ MEMBER : E '.' SUBNODE {
     }
 };
 
-VAR_READ : T_IDENTIFIER {
+NOTHING : %prec below_identifier
+VAR_READ : NOTHING T_IDENTIFIER {
     PASS1
+    char*name = $2;
     /* Queue unresolved identifiers for checking against the parent
        function's variables.
        We consider everything which is not a local variable "unresolved".
@@ -2147,17 +2153,17 @@ VAR_READ : T_IDENTIFIER {
        would shadow those.
        */
 
-    if(!find_variable(state, $1)) {
-        unknown_variable($1);
+    if(!find_variable(state, name)) {
+        unknown_variable(name);
         /* let the compiler know that it might want to check the current directory/package
            for this identifier- maybe there's a file $1.as defining $1. */
-        as3_schedule_class_noerror(state->package, $1);
+        as3_schedule_class_noerror(state->package, name);
     }
    
     $$ = 0;
     PASS2
 
-    $$ = resolve_identifier($1);
+    $$ = resolve_identifier(name);
 }
 
 // ----------------- namespaces -------------------------------------------------
