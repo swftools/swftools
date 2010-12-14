@@ -1,5 +1,5 @@
 
-/* A Bison parser, made by GNU Bison 2.4.1.  */
+/* A Bison parser, made by GNU Bison 2.4.2.  */
 
 /* Skeleton implementation for Bison's Yacc-like parsers in C
    
@@ -46,7 +46,7 @@
 #define YYBISON 1
 
 /* Bison version.  */
-#define YYBISON_VERSION "2.4.1"
+#define YYBISON_VERSION "2.4.2"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "./skeleton.m4"
@@ -242,12 +242,12 @@ extern int a3_lex();
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union 
-/* Line 231 of skeleton.m4  */
+/* Line 223 of skeleton.m4  */
 #line 48 "parser.y"
 tokenunion
 {
 
-/* Line 231 of skeleton.m4  */
+/* Line 223 of skeleton.m4  */
 #line 48 "parser.y"
 
     enum yytokentype token;
@@ -282,7 +282,7 @@ tokenunion
 
 
 
-/* Line 231 of skeleton.m4  */
+/* Line 223 of skeleton.m4  */
 #line 287 "parser.tab.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
@@ -7189,7 +7189,7 @@ PASS12
    
     (yyval.node) = 0;
     PASS2
-
+    char*name = (yyvsp[(2) - (2)].id);
     (yyval.node) = resolve_identifier(name);
 }
     }

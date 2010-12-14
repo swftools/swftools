@@ -31,6 +31,7 @@
 #else
   #include "xpdf/config.h"
   #include "SplashBitmap.h"
+  #include "SplashGlyphBitmap.h"
   #include "SplashPattern.h"
   #include "Splash.h"
 #endif
@@ -584,6 +585,60 @@ void BitmapOutputDev::dbg_newdata(char*newdata)
     dbg_btm_counter++;
 }
 
+static void getBitmapBBox(SplashBitmap*b, int*xmin, int*ymin, int*xmax, int*ymax)
+{
+    int width = b->getWidth();
+    int height = b->getHeight();
+    int width8 = (width+7)>>3;
+    Guchar*pixels = b->getDataPtr();
+    int x,y;
+    *xmin = *ymin = *xmax = *ymax = 0;
+    for(x=0;x<width8;x++) {
+        int xb;
+        for(xb=0;xb<8;xb++) {
+            for(y=0;y<height;y++) {
+                if(pixels[y*width8+x]&(0x80>>xb)) {
+                    *xmin = x*8+xb;
+                    break;
+                }
+            }
+        }
+        if(y<height) break;
+    }
+    for(x=width8-1;x>=0;x--) {
+        int xb;
+        for(xb=7;xb>=0;xb--) {
+            for(y=0;y<height;y++) {
+                if(pixels[y*width8+x]&(0x80>>xb)) {
+                    *xmax = x*8+xb;
+                    break;
+                }
+            }
+            if(y<height) break;
+        }
+    }
+    for(y=0;y<height;y++) {
+        for(x=0;x<width8;x++) {
+            if(pixels[y*width8+x]) {
+                *ymin = y;
+                break;
+            }
+        }
+        if(x<width8) break;
+    }
+    for(y=height-1;y>=0;y--) {
+        for(x=0;x<width8;x++) {
+            if(pixels[y*width8+x]) {
+                *ymax = y;
+                break;
+            }
+        }
+        if(x<width8) break;
+    }
+    assert(*xmin <= *xmax);
+    assert(*ymin <= *ymax);
+}
+
 GBool BitmapOutputDev::checkNewText(int x1, int y1, int x2, int y2)
 {
     /* called once some new text was drawn on booltextdev, and
@@ -668,6 +723,10 @@ GBool BitmapOutputDev::checkNewBitmap(int x1, int y1, int x2, int y2)
     if(intersection(boolpolybitmap, boolpolybitmap, UNKNOWN_BOUNDING_BOX)) {
 	writeAlpha(boolpolybitmap, "notempty.png");
         msg("<fatal> Polygon bitmap is not empty after clear. Bad bounding box?");
+        int _x1, _y1, _x2, _y2;
+        getBitmapBBox(boolpolybitmap, &_x1, &_y1, &_x2, &_y2);
+        printf("expected: %d %d %d %d <=> real: %d %d %d %d (%d,%d)\n",
+                x1, y1, x2, y2, _x1, _y1, _x2, _y2, movex, movey);
         exit(1);
     }
     clearBooleanBitmap(boolpolybitmap, UNKNOWN_BOUNDING_BOX);
@@ -1388,7 +1447,7 @@ void BitmapOutputDev::stroke(GfxState *state)
     msg("<debug> stroke");
     boolpolydev->stroke(state);
     gfxbbox_t bbox = getBBox(state);
-    double width = state->getTransformedLineWidth();
+    double width = ceil(state->getTransformedLineWidth());
     bbox.xmin -= width; bbox.ymin -= width;
     bbox.xmax += width; bbox.ymax += width;
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
@@ -1553,6 +1612,68 @@ void BitmapOutputDev::clearBoolTextDev()
 {
     clearBooleanBitmap(staletextbitmap, 0, 0, staletextbitmap->getWidth(), staletextbitmap->getHeight());
 }
+
+#define USE_GETGLYPH_BBOX
+
+static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, double y, double originX, double originY, CharCode code)
+{
+#ifdef USE_GETGLYPH_BBOX
+    /* use getglyph to derive bounding box */
+    if(splash->needFontUpdate) {
+        splash->doUpdateFont(state);
+    }
+    SplashGlyphBitmap glyph;
+    double xt,yt;
+    state->transform(x-originX, y-originY, &xt, &yt);
+    int x1 = (int)xt, x2 = (int)xt+1, y1 = (int)yt, y2 = (int)yt+1;
+    SplashFont*font = splash->getCurrentFont();
+    int x0 = splashFloor(xt);
+    int xFrac = splashFloor((xt - x0) * splashFontFraction);
+    int y0 = splashFloor(yt);
+    int yFrac = splashFloor((yt - y0) * splashFontFraction);
+
+    SplashCoord*matrix = font->getMatrix();
+
+    if(font && font->getGlyph(code, xFrac, yFrac, &glyph)) {
+        x1 = floor(x0-glyph.x);
+        y1 = floor(y0-glyph.y);
+        x2 = ceil(x0-glyph.x+glyph.w);
+        y2 = ceil(y0-glyph.y+glyph.h);
+        if (glyph.freeData) {
+          gfree(glyph.data);
+        }
+    }
+#else
+    /* derive bounding box from the polygon path */
+    double x0,y0;
+    state->transform(x-originX,y-originY,&x0,&y0);
+    int x1 = (int)x0, x2 = (int)x0+1, y1 = (int)y0, y2 = (int)y0+1;
+    SplashFont*font = clip0dev->getCurrentFont();
+    SplashPath*path = font?font->getGlyphPath(code):NULL;
+    if(path) {
+        path->offset((SplashCoord)x, (SplashCoord)y);
+        int t;
+        for(t=0;t<path->getLength();t++) {
+            double xx,yy;
+            Guchar f;
+            path->getPoint(t,&xx,&yy,&f);
+            state->transform(xx,yy,&xx,&yy);
+            int px = (int)xx;
+            int py = (int)yy;
+            if(!t) {
+                x1=x2=px;
+                y1=y2=py;
+            }
+            if(xx<x1) x1=px;
+            if(yy<y1) y1=py;
+            if(xx>=x2) x2=px+1;
+            if(yy>=y2) y2=py+1;
+        }
+        delete(path);path=0;
+    }
+#endif
+}
+
 void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 		      double dx, double dy,
 		      double originX, double originY,
@@ -1588,34 +1709,13 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
     } else {
 	// we're drawing a regular char
+        int x1, y1, x2, y2;
 
-	/* calculate the bbox of this character */
-	double x0,y0;
-	this->transformXY(state, x-originX, y-originY, &x0, &y0);
-	int x1 = (int)x0, x2 = (int)x0+1, y1 = (int)y0, y2 = (int)y0+1;
-        SplashFont*font = clip0dev->getCurrentFont();
-	SplashPath*path = font?font->getGlyphPath(code):NULL;
-	if(path) {
-	    path->offset((SplashCoord)x, (SplashCoord)y);
-	    int t;
-	    for(t=0;t<path->getLength();t++) {
-		double xx,yy;
-		Guchar f;
-		path->getPoint(t,&xx,&yy,&f);
-		this->transformXY(state, xx, yy, &xx, &yy);
-                int px = (int)xx;
-                int py = (int)yy;
-		if(!t) {
-		    x1=x2=px;
-		    y1=y2=py;
-		}
-		if(xx<x1) x1=px;
-		if(yy<y1) y1=py;
-		if(xx>=x2) x2=px+1;
-		if(yy>=y2) y2=py+1;
-	    }
-	    delete(path);path=0;
-	}
+        /* Calculate the bbox of this character (relative to splash's coordinate
+          system, which is offset from our coordinate system by (-movex,-movey))
+        */
+        getGlyphBbox(state, boolpolydev, x, y, originX, originY, code);
+
 	if(x1 < text_x1) text_x1 = x1;
 	if(y1 < text_y1) text_y1 = y1;
 	if(x2 > text_x2) text_x2 = x2;
@@ -1626,7 +1726,14 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
 	clip0dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 	clip1dev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 
-	char char_is_outside = (x1<0 || y1<0 || x2>this->width || y2>this->height);
+        int page_area_x1 = -this->movex;
+        int page_area_y1 = -this->movey;
+        int page_area_x2 = this->width-this->movex;
+        int page_area_y2 = this->width-this->movey;
+	char char_is_outside = (x1<page_area_x1 ||
+                                y1<page_area_y1 ||
+                                x2>page_area_x2 ||
+                                y2>page_area_y2);
 
 	/* if this character is affected somehow by the various clippings (i.e., it looks
 	   different on a device without clipping), then draw it on the bitmap, not as

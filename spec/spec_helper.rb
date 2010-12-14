@@ -3,11 +3,13 @@ require 'rubygems'
 require 'RMagick'
 
 class WrongColor < Exception
-  def initialize(pixel)
+  def initialize(pixel, is_color, desired_color)
     @pixel = pixel
+    @is_color = is_color
+    @desired_color = desired_color
   end
   def to_s
-    "Wrong color at #{@pixel}"
+    "Wrong color at %s (is: %06x should be: %06x)" % [@pixel.to_s, @is_color, @desired_color]
   end
 end
 class AreaError < Exception
@@ -46,7 +48,7 @@ class Area
   end
   def should_be_plain_colored
     @rgb = @file.get_area(@x1,@y1,@x2,@y2) unless @rgb
-    @rgb.min == @rgb.max or raise AreaError.new(self,"is not plain colored")
+    @rgb.min == @rgb.max or raise AreaError.new(self,"is not plain colored: colors go from %06x to %06x" % [rgb_to_int(@rgb.min), rgb_to_int(@rgb.max)])
   end
   def should_not_be_plain_colored
     @rgb = @file.get_area(@x1,@y1,@x2,@y2) unless @rgb
@@ -77,7 +79,7 @@ class Pixel
   end
   def should_be_of_color(color2)
     color1 = rgb_to_int(@rgb)
-    color1 == color2 or raise WrongColor.new(self)
+    color1 == color2 or raise WrongColor.new(self, color1, color2)
   end
   def should_be_brighter_than(pixel)
     gray1 = @rgb.inject(0) {|sum,e| sum+e}
@@ -116,7 +118,7 @@ class DocFile
     `pdfinfo #{@filename}` =~ /Page size:\s*([0-9]+) x ([0-9]+) pts/
     width,height = $1,$2
     dpi = (72.0 * 612 / width.to_i).to_i
-    output = `pdf2swf -f --flatten -s zoom=#{dpi} -p #{@page} #{@filename} -o #{@swfname} 2>&1`
+    output = `pdf2swf -f -s poly2bitmap -s zoom=#{dpi} -p #{@page} #{@filename} -o #{@swfname} 2>&1`
     #output = `pdf2swf -s zoom=#{dpi} --flatten -p #{@page} #{@filename} -o #{@swfname} 2>&1`
     raise ConversionFailed.new(output,@swfname) unless File.exists?(@swfname)
   end

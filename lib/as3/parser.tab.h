@@ -1,5 +1,5 @@
 
-/* A Bison parser, made by GNU Bison 2.4.1.  */
+/* A Bison parser, made by GNU Bison 2.4.2.  */
 
 /* Skeleton interface for Bison's Yacc-like parsers in C
    
@@ -155,12 +155,12 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union 
-/* Line 1749 of skeleton.m4  */
+/* Line 1685 of skeleton.m4  */
 #line 48 "parser.y"
 tokenunion
 {
 
-/* Line 1749 of skeleton.m4  */
+/* Line 1685 of skeleton.m4  */
 #line 48 "parser.y"
 
     enum yytokentype token;
@@ -195,7 +195,7 @@ tokenunion
 
 
 
-/* Line 1749 of skeleton.m4  */
+/* Line 1685 of skeleton.m4  */
 #line 200 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
