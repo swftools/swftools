@@ -1733,7 +1733,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
         int page_area_x1 = -this->movex;
         int page_area_y1 = -this->movey;
         int page_area_x2 = this->width-this->movex;
-        int page_area_y2 = this->width-this->movey;
+        int page_area_y2 = this->height-this->movey;
 	char char_is_outside = (x1<page_area_x1 ||
                                 y1<page_area_y1 ||
                                 x2>page_area_x2 ||
