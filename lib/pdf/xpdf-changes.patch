@@ -1701,49 +1701,6 @@
  #include "GString.h"
  #include "SplashFontFile.h"
  #include "SplashFontFileID.h"
---- xpdf/SplashOutputDev.cc.orig	2010-08-16 14:02:38.000000000 -0700
-+++ xpdf/SplashOutputDev.cc	2010-08-16 14:02:38.000000000 -0700
-@@ -13,6 +13,7 @@
- #endif
- 
- #include <string.h>
-+#include <unistd.h>
- #include <math.h>
- #include "gfile.h"
- #include "GlobalParams.h"
-@@ -2646,9 +2647,9 @@
- 
-   softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
- 			      1, splashModeMono8, gFalse);
--  memset(softMask->getDataPtr(), 0,
--	 softMask->getRowSize() * softMask->getHeight());
-+  memset(softMask->getDataPtr(), 0x00, softMask->getRowSize()*softMask->getHeight());
-   p = softMask->getDataPtr() + ty * softMask->getRowSize() + tx;
-+  if (tx<softMask->getWidth() && ty<softMask->getHeight())
-   for (y = 0; y < tBitmap->getHeight(); ++y) {
-     for (x = 0; x < tBitmap->getWidth(); ++x) {
-       tBitmap->getPixel(x, y, color);
---- xpdf/SplashOutputDev.h.orig	2010-08-16 14:02:38.000000000 -0700
-+++ xpdf/SplashOutputDev.h	2010-08-16 14:02:38.000000000 -0700
-@@ -196,6 +196,9 @@
-   virtual void setVectorAntialias(GBool vaa);
- #endif
- 
-+  void doUpdateFont(GfxState *state);
-+  
-+  SplashPath *convertPath(GfxState *state, GfxPath *path);
- private:
- 
-   void setupScreenParams(double hDPI, double vDPI);
-@@ -204,8 +207,6 @@
- #else
-   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
- #endif
--  SplashPath *convertPath(GfxState *state, GfxPath *path);
--  void doUpdateFont(GfxState *state);
-   void drawType3Glyph(T3FontCache *t3Font,
- 		      T3FontCacheTag *tag, Guchar *data);
-   static GBool imageMaskSrc(void *data, SplashColorPtr line);
 --- xpdf/SplashScreen.cc.orig	2010-08-16 14:02:38.000000000 -0700
 +++ xpdf/SplashScreen.cc	2010-08-16 14:02:38.000000000 -0700
 @@ -363,6 +363,8 @@
@@ -2192,3 +2149,55 @@
  /*
   * Same as free, but checks for and ignores NULL pointers.
  
+--- xpdf/SplashOutputDev.h.orig	2010-12-14 11:15:36.000000000 -0800
++++ xpdf/SplashOutputDev.h	2010-12-14 11:20:24.000000000 -0800
+@@ -196,6 +196,10 @@
+   virtual void setVectorAntialias(GBool vaa);
+ #endif
+ 
++  void doUpdateFont(GfxState *state);
++  GBool needFontUpdate;		// set when the font needs to be updated
++  
++  SplashPath *convertPath(GfxState *state, GfxPath *path);
+ private:
+ 
+   void setupScreenParams(double hDPI, double vDPI);
+@@ -204,8 +208,6 @@
+ #else
+   SplashPattern *getColor(GfxGray gray, GfxRGB *rgb);
+ #endif
+-  SplashPath *convertPath(GfxState *state, GfxPath *path);
+-  void doUpdateFont(GfxState *state);
+   void drawType3Glyph(T3FontCache *t3Font,
+ 		      T3FontCacheTag *tag, Guchar *data);
+   static GBool imageMaskSrc(void *data, SplashColorPtr line);
+@@ -237,7 +239,6 @@
+   T3GlyphStack *t3GlyphStack;	// Type 3 glyph context stack
+ 
+   SplashFont *font;		// current font
+-  GBool needFontUpdate;		// set when the font needs to be updated
+   SplashPath *textClipPath;	// clipping path built with text object
+ 
+   SplashTransparencyGroup *	// transparency group stack
+--- xpdf/SplashOutputDev.cc.orig	2010-12-14 11:15:36.000000000 -0800
++++ xpdf/SplashOutputDev.cc	2010-12-14 11:20:14.000000000 -0800
+@@ -13,6 +13,7 @@
+ #endif
+ 
+ #include <string.h>
++#include <unistd.h>
+ #include <math.h>
+ #include "gfile.h"
+ #include "GlobalParams.h"
+@@ -2646,9 +2647,9 @@
+ 
+   softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
+ 			      1, splashModeMono8, gFalse);
+-  memset(softMask->getDataPtr(), 0,
+-	 softMask->getRowSize() * softMask->getHeight());
++  memset(softMask->getDataPtr(), 0x00, softMask->getRowSize()*softMask->getHeight());
+   p = softMask->getDataPtr() + ty * softMask->getRowSize() + tx;
++  if (tx<softMask->getWidth() && ty<softMask->getHeight())
+   for (y = 0; y < tBitmap->getHeight(); ++y) {
+     for (x = 0; x < tBitmap->getWidth(); ++x) {
+       tBitmap->getPixel(x, y, color);
