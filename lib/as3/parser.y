@@ -2162,7 +2162,7 @@ VAR_READ : NOTHING T_IDENTIFIER {
    
     $$ = 0;
     PASS2
-
+    char*name = $2;
     $$ = resolve_identifier(name);
 }
 
