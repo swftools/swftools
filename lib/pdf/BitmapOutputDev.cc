@@ -1615,7 +1615,7 @@ void BitmapOutputDev::clearBoolTextDev()
 
 #define USE_GETGLYPH_BBOX
 
-static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, double y, double originX, double originY, CharCode code)
+static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, double y, double originX, double originY, CharCode code, int*_x1, int*_y1, int*_x2, int*_y2)
 {
 #ifdef USE_GETGLYPH_BBOX
     /* use getglyph to derive bounding box */
@@ -1672,6 +1672,10 @@ static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, doubl
         delete(path);path=0;
     }
 #endif
+    *_x1 = x1;
+    *_y1 = y1;
+    *_x2 = x2;
+    *_y2 = y2;
 }
 
 void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
@@ -1714,7 +1718,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
         /* Calculate the bbox of this character (relative to splash's coordinate
           system, which is offset from our coordinate system by (-movex,-movey))
         */
-        getGlyphBbox(state, boolpolydev, x, y, originX, originY, code);
+        getGlyphBbox(state, boolpolydev, x, y, originX, originY, code, &x1, &y1, &x2, &y2);
 
 	if(x1 < text_x1) text_x1 = x1;
 	if(y1 < text_y1) text_y1 = y1;
