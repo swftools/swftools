@@ -82,7 +82,7 @@ def convert_to_ppm(pdf):
     width,heigth = re.compile(r"Page size:\s*([0-9]+) x ([0-9]+) pts").findall(info)[0]
     dpi = int(72.0 * 612 / int(width))
     if TESTMODE:
-        os.system("pdf2swf -s zoom="+str(dpi)+" -p1 "+pdf+" -o test.swf")
+        os.system("pdf2swf -s poly2bitmap -s zoom="+str(dpi)+" -p1 "+pdf+" -o test.swf")
         os.system("swfrender --legacy test.swf -o test.png")
         os.unlink("test.swf")
         return "test.png"
