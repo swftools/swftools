@@ -1216,22 +1216,29 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
     gfxresult_t*result = dev2.finish(&dev2);
     gfximage_t*img = (gfximage_t*)result->get(result,"page0");
     int l = img->width*img->height;
-    unsigned char*data = (unsigned char*)malloc(img->width*img->height*3);
+    int ll = l*3;
+    unsigned char*data = (unsigned char*)malloc(ll);
     int s,t;
     for(t=0,s=0;t<l;s+=3,t++) {
 	data[s+0] = img->data[t].r;
 	data[s+1] = img->data[t].g;
 	data[s+2] = img->data[t].b;
     }
-    result->destroy(result);
+    result->destroy(result); result=0;
+    free(img->data); free(img);
+
+    PyObject *ret;
+#ifdef PYTHON3
+    ret = PyByteArray_FromStringAndSize((char*)data,ll);
+#else
+    ret = PyString_FromStringAndSize((char*)data,ll);
+#endif
+    free(data);
+
     if (allow_threads) {
         Py_BLOCK_THREADS
     }
-#ifdef PYTHON3
-    return PyByteArray_FromStringAndSize((char*)data,img->width*img->height*3);
-#else
-    return PyString_FromStringAndSize((char*)data,img->width*img->height*3);
-#endif
+    return ret;
 }
 
 static PyMethodDef page_methods[] =
