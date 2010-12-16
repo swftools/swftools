@@ -815,10 +815,11 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	if((!different_y || config_space_between_lines) &&
 	   !last_char_was_space) {
 	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
-            if(different_y)
-                expected_x = 0;
 	    int space = current_fontinfo->space_char;
 	    float width = fmax(m.m00*current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
+            if(different_y) {
+                expected_x = m.tx - width/2;
+            }
 	    if(m.tx - expected_x >= width*4/10) {
 		msg("<debug> There's a %f pixel gap between char %d and char %d (expected no more than %f), I'm inserting a space here", 
 			m.tx-expected_x,
