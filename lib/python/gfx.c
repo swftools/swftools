@@ -586,11 +586,11 @@ static PyObject* convert_matrix(gfxmatrix_t*m)
     PyObject*column1 = PyTuple_New(2);
     PyTuple_SetItem(column1, 0, PyFloat_FromDouble(m->m01));
     PyTuple_SetItem(column1, 1, PyFloat_FromDouble(m->m11));
-    PyTuple_SetItem(columns, 1, column0);
+    PyTuple_SetItem(columns, 1, column1);
     PyObject*column2 = PyTuple_New(2);
     PyTuple_SetItem(column2, 0, PyFloat_FromDouble(m->tx));
     PyTuple_SetItem(column2, 1, PyFloat_FromDouble(m->ty));
-    PyTuple_SetItem(columns, 2, column0);
+    PyTuple_SetItem(columns, 2, column2);
     return columns;
 }
 static PyObject* convert_color(gfxcolor_t*col)

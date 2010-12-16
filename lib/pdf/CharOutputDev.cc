@@ -507,6 +507,7 @@ CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int 
     this->config_bigchar=0;
     this->config_extrafontdata = 0;
     this->config_detectspaces = 1;
+    this->config_space_between_lines = 0;
     this->config_linkdatafile = 0;
     this->page2page = 0;
     this->num_pages = 0;
@@ -522,6 +523,8 @@ void CharOutputDev::setParameter(const char*key, const char*value)
 {
     if(!strcmp(key,"detectspaces")) {
         this->config_detectspaces = atoi(value);
+    } else if(!strcmp(key,"space_between_lines")) {
+        this->config_space_between_lines = atoi(value);
     } else if(!strcmp(key,"extrafontdata")) {
         this->config_extrafontdata = atoi(value);
     } else if(!strcmp(key,"linkdatafile")) {
@@ -809,11 +812,14 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	//bool different_y = last_char_y - m.ty;
 	bool different_y = m.ty < last_char_y - last_ascent*last_char_y_fontsize
 	                || m.ty > last_char_y + last_descent*last_char_y_fontsize;
-	if(!different_y &&
+	if((!different_y || config_space_between_lines) &&
 	   !last_char_was_space) {
 	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
 	    int space = current_fontinfo->space_char;
 	    float width = fmax(m.m00*current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
+            if(different_y) {
+                expected_x = m.tx - width/2;
+            }
 	    if(m.tx - expected_x >= width*4/10) {
 		msg("<debug> There's a %f pixel gap between char %d and char %d (expected no more than %f), I'm inserting a space here", 
 			m.tx-expected_x,
