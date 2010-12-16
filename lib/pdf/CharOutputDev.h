@@ -89,6 +89,7 @@ public:
   int config_extrafontdata;
   int config_bigchar;
   int config_detectspaces;
+  int config_space_between_lines;
   double config_fontquality;
   char* config_linkdatafile;
 };
