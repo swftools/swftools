@@ -31,6 +31,8 @@ extern "C" {
 #endif
 
 #define NEW(t,y) t*y = (t*)rfx_calloc(sizeof(t));
+#define PTR_AS_INT(p) (((char*)(p))-((char*)NULL))
+#define INT_AS_PTR(i) (((char*)NULL)+(int)(i))
 
 /* dynamically growing mem section */
 typedef struct _mem_t {
