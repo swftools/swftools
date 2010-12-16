@@ -191,15 +191,19 @@ static PyObject* output_save(PyObject* _self, PyObject* args, PyObject* kwargs)
     OutputObject* self = (OutputObject*)_self;
     char*filename = 0;
     static char *kwlist[] = {"filename", NULL};
+    int ret;
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s", kwlist, &filename))
 	return NULL;
 
+    Py_BEGIN_ALLOW_THREADS
     gfxresult_t*result = self->output_device->finish(self->output_device);
     self->output_device = 0;
-    if(result->save(result, filename) < 0) {
+    ret = result->save(result, filename);
+    result->destroy(result);
+    Py_END_ALLOW_THREADS
+    if(ret < 0) {
 	return PY_ERROR("Couldn't write to %s", filename);
     }
-    result->destroy(result);
     return PY_NONE;
 }
 
@@ -224,7 +228,9 @@ static PyObject* output_startpage(PyObject* _self, PyObject* args, PyObject* kwa
     int width=0, height=0;
     if (!PyArg_ParseTuple(args, "ii", &width, &height))
 	return NULL;
+    Py_BEGIN_ALLOW_THREADS
     self->output_device->startpage(self->output_device, width, height);
+    Py_END_ALLOW_THREADS
     return PY_NONE;
 }
 
@@ -415,7 +421,9 @@ static PyObject* output_endpage(PyObject* _self, PyObject* args, PyObject* kwarg
     OutputObject* self = (OutputObject*)_self;
     if (!PyArg_ParseTuple(args, ""))
 	return NULL;
+    Py_BEGIN_ALLOW_THREADS
     self->output_device->endpage(self->output_device);
+    Py_END_ALLOW_THREADS
     return PY_NONE;
 }
 PyDoc_STRVAR(output_setparameter_doc, \
@@ -1123,10 +1131,12 @@ static PyObject* page_render(PyObject* _self, PyObject* args, PyObject* kwargs)
 	    return NULL;
     }
 
+    Py_BEGIN_ALLOW_THREADS
     if(x|y|cx1|cx2|cy1|cy2)
         self->page->rendersection(self->page, output->output_device,x,y,cx1,cy1,cx2,cy2);
     else
         self->page->render(self->page, output->output_device);
+    Py_END_ALLOW_THREADS
     return PY_NONE;
 }
 
@@ -1182,15 +1192,20 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
 {
     PageObject* self = (PageObject*)_self; 
     
-    static char *kwlist[] = {"width", "height", NULL};
+    static char *kwlist[] = {"width", "height", "allow_threads", NULL};
     int width=0,height=0;
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii", kwlist, &width, &height))
+    int allow_threads=0;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii|i", kwlist, &width, &height, &allow_threads))
 	return NULL;
 
     if(!width || !height) {
 	return PY_ERROR("invalid dimensions: %dx%d", width,height);
     }
 
+    PyThreadState *_save=0;
+    if (allow_threads) {
+        Py_UNBLOCK_THREADS
+    }
     gfxdevice_t dev1,dev2;
     gfxdevice_render_init(&dev1);
     dev1.setparameter(&dev1, "antialise", "2");
@@ -1209,6 +1224,9 @@ static PyObject* page_asImage(PyObject* _self, PyObject* args, PyObject* kwargs)
 	data[s+2] = img->data[t].b;
     }
     result->destroy(result);
+    if (allow_threads) {
+        Py_BLOCK_THREADS
+    }
 #ifdef PYTHON3
     return PyByteArray_FromStringAndSize((char*)data,img->width*img->height*3);
 #else
@@ -1418,12 +1436,21 @@ static PyObject* f_open(PyObject* module, PyObject* args, PyObject* kwargs)
     }
    
     state_t*state = STATE(module);
-    if(!strcmp(type,"pdf"))
-	self->doc = state->pdfdriver->open(state->pdfdriver,filename);
-    else if(!strcmp(type, "image") || !strcmp(type, "img"))  
-	self->doc = state->imagedriver->open(state->imagedriver, filename);
-    else if(!strcmp(type, "swf") || !strcmp(type, "SWF"))
-	self->doc = state->swfdriver->open(state->imagedriver, filename);
+    if(!strcmp(type,"pdf")) {
+        Py_BEGIN_ALLOW_THREADS
+        self->doc = state->pdfdriver->open(state->pdfdriver,filename);
+        Py_END_ALLOW_THREADS
+    }
+    else if(!strcmp(type, "image") || !strcmp(type, "img")) {
+        Py_BEGIN_ALLOW_THREADS
+        self->doc = state->imagedriver->open(state->imagedriver, filename);
+        Py_END_ALLOW_THREADS
+    }
+    else if(!strcmp(type, "swf") || !strcmp(type, "SWF")) {
+        Py_BEGIN_ALLOW_THREADS
+        self->doc = state->swfdriver->open(state->imagedriver, filename);
+        Py_END_ALLOW_THREADS
+    }
     else
 	return PY_ERROR("Unknown type %s", type);
 

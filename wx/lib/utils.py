@@ -1,3 +1,4 @@
+# coding: utf-8
 import wx
 
 def blank_bmp(w, h, color="white"):
@@ -11,45 +12,42 @@ def clear_bmp(bmp, color):
     dc.SetBackground(wx.Brush(color))
     dc.Clear()
 
+encodings = [
+'UTF-8',        #
+#'US-ASCII',     # (basic English)
+#'ISO-8859-1',   # (Western Europe)
+#'ISO-8859-2',   # (Central Europe)
+#'ISO-8859-3',   # (Southern Europe)
+#'ISO-8859-4',   # (Baltic)
+#'ISO-8859-5',   # (Cyrillic)
+#'ISO-8859-6',   # (Arabic)
+#'ISO-8859-7',   # (Greek)
+#'ISO-8859-8',   # (Hebrew)
+#'ISO-8859-9',   # (Turkish)
+'ISO-8859-15',  # (Latin 9)
+#'Windows-1250', # (Central Europe)
+#'Windows-1251', # (Cyrillic)
+'Windows-1252', # (Western Europe)
+#'Windows-1253', # (Greek)
+#'Windows-1254', # (Turkish)
+#'Windows-1255', # (Hebrew)
+#'Windows-1256', # (Arabic)
+#'Windows-1257', # (Baltic Rim)
+#'Windows-1258', # (Vietnam)
+#'SHIFT_JIS',    # (Japanese, Win/Mac)
+#'BIG5',         # (Traditional Chinese)
+#'GB18030',      # (Simplified Chinese)
+]
 
-# Taken and adapt from django.utils.encoding
-class GPdf2SwfUnicodeDecodeError(UnicodeDecodeError):
-    def __init__(self, obj, *args):
-        self.obj = obj
-        UnicodeDecodeError.__init__(self, *args)
+def force_unicode(s):
+    if isinstance(s, unicode):
+        return s
 
-    def __str__(self):
-        original = UnicodeDecodeError.__str__(self)
-        return '%s. You passed in %r (%s)' % (original, self.obj,
-                type(self.obj))
-
-def force_unicode(s, encoding='utf-8', strings_only=False, errors='strict'):
-    try:
-        if not isinstance(s, basestring,):
-            if hasattr(s, '__unicode__'):
-                s = unicode(s)
-            else:
-                try:
-                    s = unicode(str(s), encoding, errors)
-                except UnicodeEncodeError:
-                    if not isinstance(s, Exception):
-                        raise
-                    # If we get to here, the caller has passed in an Exception
-                    # subclass populated with non-ASCII data without special
-                    # handling to display as a string. We need to handle this
-                    # without raising a further exception. We do an
-                    # approximation to what the Exception's standard str()
-                    # output should be.
-                    s = ' '.join([force_unicode(arg, encoding, strings_only,
-                            errors) for arg in s])
-        elif not isinstance(s, unicode):
-            # Note: We use .decode() here, instead of unicode(s, encoding,
-            # errors), so that if s is a SafeString, it ends up being a
-            # SafeUnicode at the end.
-            s = s.decode(encoding, errors)
-    except UnicodeDecodeError, e:
-        raise GPdf2SwfUnicodeDecodeError(s, *e.args)
-        #raise UnicodeDecodeError(*e.args)
-    return s
-
-
+    sane = repr(s)[1:-2]
+    for enc in encodings:
+        try:
+            sane = s.decode(enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    return sane

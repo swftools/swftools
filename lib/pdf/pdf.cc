@@ -20,6 +20,7 @@
 #include "pdf.h"
 #define NO_ARGPARSER
 #include "../args.h"
+#include "../utf8.h"
 
 static double zoom = 72; /* xpdf: 86 */
 static int zoomtowidth = 0;
@@ -320,6 +321,7 @@ static char*getInfoString(Dict *infoDict, const char *key)
     Object obj;
     GString *s1, *s2;
     int i;
+    unsigned int u;
 
     if (infoDict && infoDict->lookup((char*)key, &obj)->isString()) {
 	s1 = obj.getString();
@@ -327,13 +329,8 @@ static char*getInfoString(Dict *infoDict, const char *key)
 	    (s1->getChar(1) & 0xff) == 0xff) {
 	    s2 = new GString();
 	    for (i = 2; i < obj.getString()->getLength(); i += 2) {
-	      if (s1->getChar(i) == '\0') {
-		s2->append(s1->getChar(i+1));
-	      } else {
-		delete s2;
-		s2 = new GString("<unicode>");
-		break;
-	      }
+              u = ((s1->getChar(i) & 0xff) << 8) | (s1->getChar(i+1) & 0xff);
+              s2->append(getUTF8(u));
 	    }
 	    char*ret = strdup(s2->getCString());
 	    delete s2;

@@ -41,6 +41,7 @@ ID_ONE_PAGE_PER_FILE = wx.NewId()
 ID_DOC_INFO = wx.NewId()
 ID_PREVIEW_TYPE = wx.NewId()
 
+lock = thread.allocate_lock()
 
 class _AppendThumbnailThread:
     def __init__(self, win, thumbs):
@@ -70,16 +71,18 @@ class _AppendThumbnailThread:
                            different_sizes = True
                            wx.CallAfter(Publisher.sendMessage, "DIFF_SIZES")
 
-            wx.CallAfter(self.__win.AppendThumbnail, pos,
-                         thumb.asImage(ICON_SIZE, ICON_SIZE), thumb)
+            lock.acquire()
+            img_str = thumb.asImage(ICON_SIZE, ICON_SIZE, allow_threads=True)
+            lock.release()
+            wx.CallAfter(self.__win.AppendThumbnail, pos, img_str, thumb)
             wx.CallAfter(Publisher.sendMessage, "THUMBNAIL_ADDED",
                                                 {'pagenr':pos+1,})
-            time.sleep(.01)
+            #time.sleep(.01)
             if not self.__keep_running:
                 break
 
         wx.CallAfter(Publisher.sendMessage, "THUMBNAIL_DONE")
-        time.sleep(.10)
+        #time.sleep(.10)
 
         self.running = False
 
@@ -133,8 +136,10 @@ class PagePreviewWindow(wx.ScrolledWindow):
     def __DisplayPageThread(self, page):
         w = page['width']
         h = page['height']
-        time.sleep(.02)
-        page = page["page"].asImage(w, h)
+        #time.sleep(.02)
+        lock.acquire()
+        page = page["page"].asImage(w, h, allow_threads=True)
+        lock.release()
         wx.CallAfter(self.__DisplayPage, w, h, page)
 
 
@@ -339,15 +344,19 @@ class PdfFrame(wx.Frame):
 
         self.toolbar.AddSeparator()
 
+        self.toolbar.AddControl(wx.StaticText(self.toolbar,
+                label="Rendering mode:"))
         self.toolbar_preview_type = wx.Choice(
                 self.toolbar, ID_PREVIEW_TYPE,
-                choices=["everything to bitmaps",
-                         "fonts to fonts, everything else to bitmaps",
-                         "polygons to polygons and fonts to fonts"],
+                choices=["convert everything to bitmaps",
+                         "convert fonts to fonts, everything else to bitmaps",
+                         "convert polygons to polygons and fonts to fonts",
+                         "convert text only"
+                         ],
                 size=(350,-1)
                 )
         # I'm not sure about the utility of this, so Show False
-        self.toolbar_preview_type.Show(False)
+        self.toolbar_preview_type.Show(True)
         self.toolbar.AddControl(self.toolbar_preview_type)
 
         self.toolbar.Realize()

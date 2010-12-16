@@ -23,146 +23,190 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 from gui.fields import Choose, ChooseAndInt
+from gui.plugin import Plugin
+import os, sys
 
 order = 2
 type = "custom"
 name = u"Flex Paper Viewer"
-desc = u"""Provides a light weight document viewer with:
-    Printing, Searching, Fit width, Fit height, Flowbox mode
-    Zooming, Scrolling with Page Up/Down, Arrows, Drag,
-    Full screen mode, Navigation buttons (next/prev),
-    Print range. See http://flexpaper.devaldi.com/"""
+if os.path.isfile(os.path.join(GPDF2SWF_BASEDIR, 'viewers', 'flexpaper', 'FlexPaperViewer.swf')):
 
-swf_options = [
-    Choose("flashversion", u"Flash version:",
-           (u"9", 9,), 0),
-]
+    desc = u"""Provides a light weight document viewer with:
+        <ul>
+        <li>Printing</li>
+        <li>Searching</li>
+        <li>Fit width</li>
+        <li>Fit height</li>
+        <li>Flowbox mode</li>
+        <li>Zooming</li>
+        <li>Scrolling with Page Up/Down</li>
+        <li>Arrows</li>
+        <li>Drag</li>
+        <li>Full screen mode</li>
+        <li>Navigation buttons (next/prev)</li>
+        <li>Print range</li>
+        </ul>
+        <p>See <a href="http://flexpaper.devaldi.com/"
+        >flexpaper.devaldi.com</a></p>"""
+    
+    swf_options = [
+        Choose("flashversion", u"Flash version:",
+               (u"9", 9,), 0),
+    ]
+    
+    viewer_options = [
+        Choose("scale", u"Scale:",
+               (u"0.1", 0.1,
+                u"0.2", 0.2,
+                u"0.3", 0.3,
+                u"0.4", 0.4,
+                u"0.5", 0.5,
+                u"0.6", 0.6,
+                u"0.7", 0.7,
+                u"0.8", 0.8,
+                u"0.9", 0.9,
+                u"1.0", 1.0,
+               ), 5),
+        Choose("zoomtransition", u"Zoom transition:",
+               ('easenone', 'easenone',
+                'easeout', 'easeout',
+                'linear', 'linear',
+                'easeoutquad', 'easeoutquad',
+               ), 1),
+        Choose("zoomtime", u"Zoom time:",
+               (u"0.0", '0.0',
+                u"0.1", '0.1',
+                u"0.2", '0.2',
+                u"0.3", '0.3',
+                u"0.4", '0.4',
+                u"0.5", '0.5',
+                u"0.6", '0.6',
+                u"0.7", '0.7',
+                u"0.8", '0.8',
+                u"0.9", '0.9',
+                u"1.0", '1.0',
+               ), 5),
+        Choose("zoominterval", u"Zoom interval:",
+               (u"0.1", '0.1',
+                u"0.2", '0.2',
+                u"0.3", '0.3',
+                u"0.4", '0.4',
+                u"0.5", '0.5',
+                u"0.6", '0.6',
+                u"0.7", '0.7',
+                u"0.8", '0.8',
+                u"0.9", '0.9',
+                u"1.0", '1.0',
+               ), 0),
+        Choose("fitpageonload", u"Fit page on load:",
+               (u"no", 'false', u"yes", 'true', ), 0),
+        Choose("localechain", u"Locale chain:",
+               (
+                'English',             'en_US',
+                'French',              'fr_FR',
+                'Chinese, Simple',     'zh_CN',
+                'Spanish',             'es_ES',
+                'Brazilian Portugese', 'pt_BR',
+                'Russian',             'ru_RU',
+                'Finnish',             'fi_FN',
+                'German',              'de_DE',
+                'Netherlands',         'nl_NL',
+                'Turkish',             'tr_TR',
+                'Swedish',             'se_SE',
+                'Portugese',           'pt_PT',
+                'Greek',               'el_EL',
+                'Danish',              'da_DN',
+                'Czech',               'cz_CS',
+                'Italian',             'it_IT',
+                'Polish',              'pl_PL',
+                'Finnish',             'pv_FN',
+                'Hungarian',           'hu_HU',
+               ), 0),
+    ]
+    
+    
+    html_template = open('viewers/flexpaper/FlexPaperViewer.html').read()
 
-viewer_options = [
-    Choose("scale", u"Scale:",
-           (u"0.1", 0.1,
-            u"0.2", 0.2,
-            u"0.3", 0.3,
-            u"0.4", 0.4,
-            u"0.5", 0.5,
-            u"0.6", 0.6,
-            u"0.7", 0.7,
-            u"0.8", 0.8,
-            u"0.9", 0.9,
-            u"1.0", 1.0,
-           ), 5),
-    Choose("zoomtransition", u"Zoom transition:",
-           ('easenone', 'easenone',
-            'easeout', 'easeout',
-            'linear', 'linear',
-            'easeoutquad', 'easeoutquad',
-           ), 1),
-    Choose("zoomtime", u"Zoom time:",
-           (u"0.0", '0.0',
-            u"0.1", '0.1',
-            u"0.2", '0.2',
-            u"0.3", '0.3',
-            u"0.4", '0.4',
-            u"0.5", '0.5',
-            u"0.6", '0.6',
-            u"0.7", '0.7',
-            u"0.8", '0.8',
-            u"0.9", '0.9',
-            u"1.0", '1.0',
-           ), 5),
-    Choose("zoominterval", u"Zoom interval:",
-           (u"0.1", '0.1',
-            u"0.2", '0.2',
-            u"0.3", '0.3',
-            u"0.4", '0.4',
-            u"0.5", '0.5',
-            u"0.6", '0.6',
-            u"0.7", '0.7',
-            u"0.8", '0.8',
-            u"0.9", '0.9',
-            u"1.0", '1.0',
-           ), 0),
-    Choose("fitpageonload", u"Fit page on load:",
-           (u"no", 'false', u"yes", 'true', ), 0),
-    Choose("localechain", u"Locale chain:",
-           (
-            'English',             'en_US',
-            'French',              'fr_FR',
-            'Chinese, Simple',     'zh_CN',
-            'Spanish',             'es_ES',
-            'Brazilian Portugese', 'pt_BR',
-            'Russian',             'ru_RU',
-            'Finnish',             'fi_FN',
-            'German',              'de_DE',
-            'Netherlands',         'nl_NL',
-            'Turkish',             'tr_TR',
-            'Swedish',             'se_SE',
-            'Portugese',           'pt_PT',
-            'Greek',               'el_EL',
-            'Danish',              'da_DN',
-            'Czech',               'cz_CS',
-            'Italian',             'it_IT',
-            'Polish',              'pl_PL',
-            'Finnish',             'pv_FN',
-            'Hungarian',           'hu_HU',
-           ), 0),
-]
+    class FlexPaper(Plugin):
+        def __init__(self, swf, filename):
+            self.__swf = swf
+            self.__filename = filename
+    
+            for opt in swf_options:
+                setattr(self, "_%s" % opt.name, opt.value)
+    
+            for opt in viewer_options:
+                setattr(self, "_%s" % opt.name, opt.value)
+    
+        def after_save(self, page):
+            template_vars = {
+                             'swffilename': os.path.basename(self.__filename),
+                             'scale': self._scale,
+                             'zoomtransition': self._zoomtransition,
+                             'zoomtime': self._zoomtime,
+                             'zoominterval': self._zoominterval,
+                             'fitpageonload': self._fitpageonload,
+                             'localechain': self._localechain,
+                            }
+    
+            htmlfilename = self._swap_extension(self.__filename, "html")
+            f = open(htmlfilename, "wb")
+            f.write(html_template % template_vars)
+            f.close()
+    
+    
+            import shutil
+            opj = os.path.join
+            basedir = GPDF2SWF_BASEDIR
+            src = opj(basedir, 'viewers', 'flexpaper')
+            dst = os.path.dirname(self.__filename)
+            shutil.copy(opj(src, 'FlexPaperViewer.swf'), dst)
+    
+            try:
+                os.mkdir(opj(dst, 'js'))
+            except OSError:
+                pass
+            shutil.copy(opj(src, 'js', 'jquery.js'), opj(dst,'js'))
+    
+            try:
+                os.mkdir(opj(dst, 'js', 'swfobject'))
+            except OSError:
+                pass
+            shutil.copy(opj(src, 'js', 'swfobject', 'expressInstall.swf'), opj(dst,'js', 'swfobject'))
+            shutil.copy(opj(src, 'js', 'swfobject', 'swfobject.js'), opj(dst,'js', 'swfobject'))
+    
+            #shutil.copytree(src+'/js', dst+'/js')
 
+else:
+    desc = u"""<p>You can use devaldi FlexPaper Viewer:</p>
+<ol>
+<li>Just go to <a href="http://flexpaper.devaldi.com/">
+   flexpaper.devaldi.com</a> and download the flash version.
+   This was tested with FlexPaper 1.2.4 only.</li>
+<li>Unzip it and find FlexPaperViewer.swf file.</li>
+<li>Copy it into your swftools instalation directory under viewers.</li>
+</ol>
+<p>It should end up in, for eg:</p>
+<pre>c:\\program files\\swftools\\viewers\\flexpaper\\FlexPaperViewer.swf</pre>
 
-html_template = open('viewers/flexpaper/FlexPaperViewer.html').read()
+<p>For now this is just a placeholder and it is identical to "No Viewer".</p>
+"""
+    swf_options = [
+        Choose("flashversion", u"Flash version:",
+               (u"4", 4, u"5", 5, u"6", 6, u"7", 7, u"8", 8, u"9", 9), 2),
+        Choose("insertstop", u"Insert stop after each frame:",
+               (u"no", 0, u"yes", 1), 0),
+        Choose("transparent", u"Make SWF file transparent:",
+               (u"no", 0, u"yes", 1), 0),
+        ]
 
-from gui.plugin import Plugin
-import os, sys
+    viewer_options = []
 
-class FlexPaper(Plugin):
-    def __init__(self, swf, filename):
-        self.__swf = swf
-        self.__filename = filename
-
-        for opt in swf_options:
-            setattr(self, "_%s" % opt.name, opt.value)
-
-        for opt in viewer_options:
-            setattr(self, "_%s" % opt.name, opt.value)
-
-    def after_save(self, page):
-        template_vars = {
-                         'swffilename': os.path.basename(self.__filename),
-                         'scale': self._scale,
-                         'zoomtransition': self._zoomtransition,
-                         'zoomtime': self._zoomtime,
-                         'zoominterval': self._zoominterval,
-                         'fitpageonload': self._fitpageonload,
-                         'localechain': self._localechain,
-                        }
-
-        htmlfilename = self._swap_extension(self.__filename, "html")
-        f = open(htmlfilename, "wb")
-        f.write(html_template % template_vars)
-        f.close()
-
-
-        import shutil
-        opj = os.path.join
-        basedir = GPDF2SWF_BASEDIR
-        src = opj(basedir, 'viewers', 'flexpaper')
-        dst = os.path.dirname(self.__filename)
-        shutil.copy(opj(src, 'FlexPaperViewer.swf'), dst)
-
-        try:
-            os.mkdir(opj(dst, 'js'))
-        except OSError:
-            pass
-        shutil.copy(opj(src, 'js', 'jquery.js'), opj(dst,'js'))
-
-        try:
-            os.mkdir(opj(dst, 'js', 'swfobject'))
-        except OSError:
-            pass
-        shutil.copy(opj(src, 'js', 'swfobject', 'expressInstall.swf'), opj(dst,'js', 'swfobject'))
-        shutil.copy(opj(src, 'js', 'swfobject', 'swfobject.js'), opj(dst,'js', 'swfobject'))
-
-        #shutil.copytree(src+'/js', dst+'/js')
+    class FlexPaper(Plugin):
+        one_page_per_file = False
+        def __init__(self, swf, filename):
+            for opt in swf_options:
+                swf.setparameter(opt.name, str(opt.value))
 
 def init(swf, filename):
     return FlexPaper(swf, filename)

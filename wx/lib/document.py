@@ -23,17 +23,19 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 from __future__ import division
-import os
+import os, sys
 import time
 import thread
 import gfx
 import wx
 from wx.lib.pubsub import Publisher
 from subprocess import Popen, PIPE
+import lib.utils as utils
 
 class _SaveSWFThread:
     def __init__(self, pdffilename, filename, one_page_per_file, doc, pages, options):
         #self.__doc = doc
+        filename = filename.encode(sys.getfilesystemencoding())
         self.__filename = filename
         self.__pdffilename = pdffilename
         self.__pages = pages or range(1, doc.pages+1)
@@ -72,8 +74,6 @@ class _SaveSWFThread:
         wx.CallAfter(Publisher.sendMessage, "SWF_BEGIN_SAVE",
                                             {'pages': pages,})
 
-        time.sleep(0.05)
-
         self.setparameters(gfx)
         self.__doc = gfx.open("pdf", self.__pdffilename)
 
@@ -94,7 +94,6 @@ class _SaveSWFThread:
             wx.CallAfter(Publisher.sendMessage, "SWF_PAGE_SAVED",
                                                 {'pagenr': pagenr,
                                                  'pages': pages,})
-            time.sleep(0.05)
 
             if self.__one_page_per_file:
                 form = '.%%0%dd.swf' % len(str(len(self.__pages)))
@@ -135,7 +134,6 @@ class _SaveSWFThread:
         del swf
 
         wx.CallAfter(Publisher.sendMessage, "SWF_FILE_SAVED")
-        time.sleep(0.05)
 
         self.__running = False
 
@@ -179,11 +177,11 @@ class Document(object):
 
     def __getattr__(self, name):
         if name in PDF_INFO:
-            return self.__pdf.getInfo(name) or "n/a"
+            return utils.force_unicode(self.__pdf.getInfo(name)) or "n/a"
         raise AttributeError, name
 
     def filename(self):
-        return self.__pdffilename
+        return unicode(self.__pdffilename or "", sys.getfilesystemencoding())
     filename = property(filename)
 
     def __get_lastsavefile(self):
@@ -211,6 +209,7 @@ class Document(object):
 
     def Load(self, filename):
         self.__lastsavefile = self.__SwapExtension(filename, "swf")
+        filename = filename.encode(sys.getfilesystemencoding())
         self.__pdffilename = filename
 
         #print 'Load',self.__preview_parameters
