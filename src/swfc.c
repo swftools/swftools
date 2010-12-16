@@ -2504,7 +2504,7 @@ static double parseNameOrTwip(const char*s)
     int l = 0;
     double v;
     if(defines_initialized) {
-        l = (int)dict_lookup(&defines, s);
+        l = PTR_AS_INT(dict_lookup(&defines, s));
     }
     if(l) {
         return *(int*)&define_values.buffer[l-1];
@@ -2988,7 +2988,7 @@ SPOINT getPoint(SRECT r, const char*name)
 
 
     if(points_initialized)
-        l = (int)dict_lookup(&points, name);
+        l = PTR_AS_INT(dict_lookup(&points, name));
     if(l==0) {
         syntaxerror("Invalid point: \"%s\".", name);
     }
@@ -3219,7 +3219,7 @@ static int c_define(map_t*args)
     }
     int val = parseTwip(value);
     int pos = mem_put(&define_values, &val, sizeof(val));
-    dict_put(&defines, name, (void*)(pos+1));
+    dict_put(&defines, name, INT_AS_PTR(pos + 1));
     return 0;
 }
 static int c_point(map_t*args)
@@ -3235,7 +3235,7 @@ static int c_point(map_t*args)
     p.x = parseTwip(lu(args, "x"));
     p.y = parseTwip(lu(args, "y"));
     pos = mem_put(&mpoints, &p, sizeof(p));
-    dict_put(&points, name, (void*)(pos+1));
+    dict_put(&points, name, INT_AS_PTR(pos+1));
     return 0;
 }
 static int c_play(map_t*args)
