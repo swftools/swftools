@@ -32,7 +32,7 @@
 #define MAX_INPUT_FILES 1024
 #define VERBOSE(x) (global.verbose>=x)
 
-struct {
+static struct {
     float framerate;
     int max_image_width;
     int max_image_height;
@@ -47,7 +47,7 @@ struct {
     float scale;
 } global;
 
-struct {
+static struct {
     char *filename;
 } image[MAX_INPUT_FILES];
 
