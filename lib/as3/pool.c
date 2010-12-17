@@ -966,7 +966,7 @@ int pool_find_namespace(pool_t*pool, namespace_t*ns)
     int i = array_find(pool->x_namespaces, ns);
     if(i<0) {
         char*s = namespace_tostring(ns);
-        fprintf(stderr, "Couldn't find namespace \"%s\" %08x in constant pool\n", s, (int)ns);
+        fprintf(stderr, "Couldn't find namespace \"%s\" %p in constant pool\n", s, (int)ns);
         free(s);
         return 0;
     }

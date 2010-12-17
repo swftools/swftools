@@ -466,7 +466,7 @@ static trait_list_t* traits_parse(TAG*tag, pool_t*pool, abc_file_t*file)
 	} else if(kind == TRAIT_CLASS) { // class
 	    trait->slot_id = swf_GetU30(tag);
 	    trait->cls = (abc_class_t*)array_getvalue(file->classes, swf_GetU30(tag));
-	    DEBUG printf("  class %s %d %08x\n", name, trait->slot_id, (int)trait->cls);
+	    DEBUG printf("  class %s %d %p\n", name, trait->slot_id, (int)trait->cls);
 	} else if(kind == TRAIT_SLOT || kind == TRAIT_CONST) { // slot, const
 	    trait->slot_id = swf_GetU30(tag);
             trait->type_name = multiname_clone(pool_lookup_multiname(pool, swf_GetU30(tag)));
