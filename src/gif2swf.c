@@ -34,7 +34,7 @@
 #define AS_FIRSTFRAME "if(!n) n=0;"
 #define AS_LASTFRAME "if(n<%d){n=n+1;gotoAndPlay(1);}else stop();"
 
-struct {
+static struct {
     float framerate;
     int max_image_width;
     int max_image_height;
