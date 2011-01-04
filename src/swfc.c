@@ -2131,7 +2131,7 @@ void s_includeswf(const char*name, const char*filename, const char*as3name)
 
     s_addcharacter(name, id, tag, r);
     
-    if(as3name) {
+    if(*as3name) {
         tag = swf_InsertTag(tag, ST_SYMBOLCLASS);
         swf_SetU16(tag, 1);
         swf_SetU16(tag, id);
