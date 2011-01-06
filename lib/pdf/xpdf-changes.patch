@@ -1538,76 +1538,6 @@
  
  class GString;
  class GfxState;
---- xpdf/SplashFTFont.cc.orig	2010-08-16 14:02:38.000000000 -0700
-+++ xpdf/SplashFTFont.cc	2010-08-16 14:02:38.000000000 -0700
-@@ -46,6 +46,7 @@
-   int x, y;
- 
-   face = fontFileA->face;
-+  
-   if (FT_New_Size(face, &sizeObj)) {
-     return;
-   }
-@@ -54,6 +55,10 @@
-   if (FT_Set_Pixel_Sizes(face, 0, (int)size)) {
-     return;
-   }
-+ 
-+  this->ascender = face->ascender;
-+  this->descender = face->descender;
-+
-   // if the textMat values are too small, FreeType's fixed point
-   // arithmetic doesn't work so well
-   textScale = splashSqrt(textMat[2]*textMat[2] + textMat[3]*textMat[3]) / size;
-@@ -228,6 +233,12 @@
-   GBool needClose;
- };
- 
-+int SplashFTFont::getNumChars()
-+{
-+  SplashFTFontFile* ff = (SplashFTFontFile *)fontFile;
-+  return ff->face->num_glyphs;
-+}
-+
- SplashPath *SplashFTFont::getGlyphPath(int c) {
-   static FT_Outline_Funcs outlineFuncs = {
- #if FREETYPE_MINOR <= 1
-@@ -249,6 +260,8 @@
-   FT_UInt gid;
-   FT_Glyph glyph;
- 
-+  this->last_advance = -1;
-+
-   ff = (SplashFTFontFile *)fontFile;
-   ff->face->size = sizeObj;
-   FT_Set_Transform(ff->face, &textMatrix, NULL);
-@@ -262,17 +275,24 @@
-     // skip the TrueType notdef glyph
-     return NULL;
-   }
--  if (FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP)) {
-+  int error = 0;
-+  if ((error=FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP))) {
-+      fprintf(stderr, "Truetype wasn't able to load glyph %d, error %d\n", gid, error);
-     return NULL;
-   }
-   if (FT_Get_Glyph(slot, &glyph)) {
-     return NULL;
-   }
-+  this->last_advance = glyph->advance.x/65536.0;
-+
-   path.path = new SplashPath();
-   path.textScale = textScale;
-   path.needClose = gFalse;
--  FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
-+  error = FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
- 		       &outlineFuncs, &path);
-+  if(error) {
-+      fprintf(stderr, "Truetype wasn't able to read glyph %d, error %d\n", gid, error);
-+  }
-   if (path.needClose) {
-     path.path->close();
-   }
 --- xpdf/SplashFTFont.h.orig	2010-08-16 14:02:38.000000000 -0700
 +++ xpdf/SplashFTFont.h	2010-08-16 14:02:38.000000000 -0700
 @@ -42,6 +42,9 @@
@@ -2201,3 +2131,76 @@
    for (y = 0; y < tBitmap->getHeight(); ++y) {
      for (x = 0; x < tBitmap->getWidth(); ++x) {
        tBitmap->getPixel(x, y, color);
+--- xpdf/SplashFTFont.cc.orig	2010-12-14 11:36:18.000000000 -0800
++++ xpdf/SplashFTFont.cc	2011-01-06 12:41:38.000000000 -0800
+@@ -46,6 +46,7 @@
+   int x, y;
+ 
+   face = fontFileA->face;
++  
+   if (FT_New_Size(face, &sizeObj)) {
+     return;
+   }
+@@ -54,6 +55,10 @@
+   if (FT_Set_Pixel_Sizes(face, 0, (int)size)) {
+     return;
+   }
++ 
++  this->ascender = face->ascender;
++  this->descender = face->descender;
++
+   // if the textMat values are too small, FreeType's fixed point
+   // arithmetic doesn't work so well
+   textScale = splashSqrt(textMat[2]*textMat[2] + textMat[3]*textMat[3]) / size;
+@@ -228,6 +233,12 @@
+   GBool needClose;
+ };
+ 
++int SplashFTFont::getNumChars()
++{
++  SplashFTFontFile* ff = (SplashFTFontFile *)fontFile;
++  return ff->face->num_glyphs;
++}
++
+ SplashPath *SplashFTFont::getGlyphPath(int c) {
+   static FT_Outline_Funcs outlineFuncs = {
+ #if FREETYPE_MINOR <= 1
+@@ -249,6 +260,8 @@
+   FT_UInt gid;
+   FT_Glyph glyph;
+ 
++  this->last_advance = -1;
++
+   ff = (SplashFTFontFile *)fontFile;
+   ff->face->size = sizeObj;
+   FT_Set_Transform(ff->face, &textMatrix, NULL);
+@@ -262,17 +275,26 @@
+     // skip the TrueType notdef glyph
+     return NULL;
+   }
+-  if (FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP)) {
+-    return NULL;
++  int error = 0;
++  if ((error=FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP))) {
++    if ((error=FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP|FT_LOAD_NO_HINTING))) {
++      fprintf(stderr, "Truetype wasn't able to load glyph %d, error %d\n", gid, error);
++      return NULL;
++    }
+   }
+   if (FT_Get_Glyph(slot, &glyph)) {
+     return NULL;
+   }
++  this->last_advance = glyph->advance.x/65536.0;
++
+   path.path = new SplashPath();
+   path.textScale = textScale;
+   path.needClose = gFalse;
+-  FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
++  error = FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
+ 		       &outlineFuncs, &path);
++  if(error) {
++      fprintf(stderr, "Truetype wasn't able to read glyph %d, error %d\n", gid, error);
++  }
+   if (path.needClose) {
+     path.path->close();
+   }

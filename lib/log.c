@@ -193,10 +193,10 @@ void msg_str(const char* buf)
 }
 
 char char2loglevel[32] =
-/*   a  b  c           d           e            f            g            h   i  j  k   l  m           n  o */
+/*   a  b  c           d           e            f            g            h   i  j  k  l  m           n  o */
 {-1,-1,-1,-1, /*debug*/5, /*error*/1,  /*fatal*/0,          -1,          -1, -1,-1,-1,-1,-1,/*notice*/3,-1,
 /*   p  q  r           s           t            u            v            w   x  y  z                       */
- -1,-1,-1,-1,         -1, /*trace*/6,          -1,/*verbose*/4,/*warning*/2, -1,-1,-1,-1,-1,         -1,-1};
+    -1,-1,-1,         -1, /*trace*/6,          -1,/*verbose*/4,/*warning*/2, -1,-1,-1, -1,-1,-1,-1,-1};
 
 int msg_internal(const char* format, ...)
 {
