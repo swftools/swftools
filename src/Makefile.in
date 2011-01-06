@@ -143,9 +143,9 @@ uninstall:
 
 clean: 
 	rm -f *.o *.obj *.lo *.la *~ gmon.out
-	rm -f as3compile gif2swf swfbbox swfbytes swfbytes swfdump pdf2swf wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf pdf2pdf gfx2gfx
-	@rm -f gif2swf.exe swfbytes.exe swfbytes.exe pdf2swf.exe swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe pdf2pdf.exe gfx2gfx.exe
-	@rm -f gif2swf$(E) pdf2swf$(E) swfbytes$(E) swfbytes$(E) swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E) pdf2pdf$(E) gfx2gfx$(E)
+	rm -f as3compile gif2swf swfbbox swfbytes swfbytes swfdump pdf2swf wav2swf png2swf swfcombine swfextract swfstrings png2swf jpeg2swf swfc font2swf pdf2pdf gfx2gfx swfrender ttftool
+	@rm -f as3compile.exe gif2swf.exe swfbytes.exe swfbytes.exe pdf2swf.exe swfbbox.exe swfdump.exe wav2swf.exe png2swf.exe swfcombine.exe swfextract.exe swfstrings.exe png2swf.exe jpeg2swf.exe swfc.exe font2swf.exe pdf2pdf.exe gfx2gfx.exe swfrender.exe ttftool.exe
+	@rm -f as3compile$(E) gif2swf$(E) pdf2swf$(E) swfbytes$(E) swfbytes$(E) swfbbox$(E) swfdump$(E) wav2swf$(E) png2swf$(E) swfcombine$(E) swfextract$(E) swfstrings$(E) png2swf$(E) jpeg2swf$(E) swfc$(E) font2swf$(E) pdf2pdf$(E) gfx2gfx$(E) swfrender$(E) ttftool$(E)
 
 doc:
 	perl ../parsedoc.pl wav2swf.doc
