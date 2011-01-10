@@ -2002,6 +2002,10 @@ PyObject * PyInit_gfx(void)
     PyDict_SetItemString(module_dict, "Doc", (PyObject*)&DocClass);
     PyDict_SetItemString(module_dict, "Page", (PyObject*)&PageClass);
     PyDict_SetItemString(module_dict, "Output", (PyObject*)&OutputClass);
+    PyDict_SetItemString(module_dict, "Char", (PyObject*)&CharClass);
+    PyDict_SetItemString(module_dict, "Font", (PyObject*)&FontClass);
+    PyDict_SetItemString(module_dict, "KDTree", (PyObject*)&KDTreeClass);
+    PyDict_SetItemString(module_dict, "Bitmap", (PyObject*)&BitmapClass);
 
     return module;
 }
