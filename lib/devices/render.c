@@ -535,10 +535,7 @@ void newclip(struct _gfxdevice*dev)
     c->data = (U32*)rfx_calloc(sizeof(U32) * i->bitwidth * i->height2);
     c->next = i->clipbuf;
     i->clipbuf = c;
-    if(c->next)
-	memcpy(c->data, c->next->data, i->bitwidth*i->height2);
-    else
-	memset(c->data, 0, sizeof(U32)*i->bitwidth*i->height2);
+    memset(c->data, 0, sizeof(U32)*i->bitwidth*i->height2);
 }
 
 void endclip(struct _gfxdevice*dev, char removelast)
