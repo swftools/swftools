@@ -952,6 +952,28 @@ void hexdumpTag(TAG*tag, char* prefix)
     }
 }
 
+void handleImportAssets(TAG*tag, char* prefix, int assets2)
+{
+    int num;
+    U16 id;
+    char* url, *name;
+    int t;
+    url = swf_GetString(tag);
+    printf("%sfrom %s\n", prefix, url);
+    if(assets2)
+    {
+        swf_GetU8(tag); // Reserved: Must be 1
+        swf_GetU8(tag); // Reserved: Must be 0
+    }
+    num = swf_GetU16(tag);
+    for(t=0;t<num;t++)
+    {
+        id = swf_GetU16(tag);
+        name = swf_GetString(tag);
+        printf("%s  import %04d named \"%s\"\n", prefix, id, name);
+    }
+}
+
 void handleExportAssets(TAG*tag, char* prefix)
 {
     int num;
@@ -1521,6 +1543,9 @@ int main (int argc,char ** argv)
 	    spriteframelabel = 0;
 	    if(tag->len)
 		dumperror("End Tag not empty");
+        }
+        else if(tag->id == ST_IMPORTASSETS || tag->id == ST_IMPORTASSETS2) {
+            handleImportAssets(tag, myprefix, tag->id==ST_IMPORTASSETS2?1:0);
         }
 	else if(tag->id == ST_EXPORTASSETS || tag->id == ST_SYMBOLCLASS) {
 	    handleExportAssets(tag, myprefix);
