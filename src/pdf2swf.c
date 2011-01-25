@@ -849,6 +849,7 @@ int main(int argn, char *argv[])
 		}
 		result->destroy(result);result=0;
 		out = create_output_device();;
+                pdf->prepare(pdf, out);
 		msg("<notice> Writing SWF file %s", buf);
 	    }
 	}
