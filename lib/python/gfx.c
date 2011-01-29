@@ -43,6 +43,8 @@
 #include "../gfxdevice.h"
 #include "../gfximage.h"
 
+#define PYTHON_GFX_VERSION VERSION
+
 #if PY_MAJOR_VERSION >= 3
 #define PYTHON3
 #define M_FLAGS (METH_VARARGS|METH_KEYWORDS)
@@ -2006,6 +2008,7 @@ PyObject * PyInit_gfx(void)
     PyDict_SetItemString(module_dict, "Font", (PyObject*)&FontClass);
     PyDict_SetItemString(module_dict, "KDTree", (PyObject*)&KDTreeClass);
     PyDict_SetItemString(module_dict, "Bitmap", (PyObject*)&BitmapClass);
+    PyDict_SetItemString(module_dict, "VERSION", (PyObject*)pystring_fromstring(PYTHON_GFX_VERSION));
 
     return module;
 }
