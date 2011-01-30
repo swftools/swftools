@@ -101,18 +101,54 @@ class FileDropTarget(wx.FileDropTarget):
                                    {'filenames': filenames}
                                  )
 
+from Queue import Queue, Full as QueueFull
+
+class _DisplayPageThread:
+    def __init__(self, win, q):
+        self.win = win
+        self.q = q
+        thread.start_new_thread(self.Run, ())
+
+    def Run(self):
+        for page in iter(self.q.get, None):
+            w = page['width']
+            h = page['height']
+            #time.sleep(.02)
+            lock.acquire()
+            page = page["page"].asImage(w, h, allow_threads=True)
+            lock.release()
+            wx.CallAfter(self.win._DisplayPage, w, h, page)
+ 
 class PagePreviewWindow(wx.ScrolledWindow):
     def __init__(self, parent):
         wx.ScrolledWindow.__init__(self, parent)
         self.SetBackgroundColour('grey')
         self.SetScrollRate(20, 20)
 
+        self.put_in_queue_timer = None
         self.__buffer = wx.EmptyBitmap(1, 1)
+        self.q = Queue(1)
+
+        _DisplayPageThread(self, self.q)
 
         self.Bind(wx.EVT_PAINT, self.__OnPaint)
 
+    def __del__(self):
+        if self.put_in_queue_timer:
+            self.put_in_queue.timer.Stop()
+        self.q.put(None, block=True)
+
     def DisplayPage(self, page):
-        thread.start_new_thread(self.__DisplayPageThread, (page,))
+        if self.put_in_queue_timer:
+            self.put_in_queue_timer.Stop()
+
+        self.put_in_queue_timer = wx.FutureCall(300, self.__PutInQueue, page)
+
+    def __PutInQueue(self, page):
+        try:
+            self.q.put(page, block=False)
+        except QueueFull:
+            pass
 
     def Clear(self):
         self.__buffer = wx.EmptyBitmap(1, 1)
@@ -121,7 +157,7 @@ class PagePreviewWindow(wx.ScrolledWindow):
     def __OnPaint(self, event):
         dc = wx.BufferedPaintDC(self, self.__buffer, wx.BUFFER_VIRTUAL_AREA)
 
-    def __DisplayPage(self, w, h, page):
+    def _DisplayPage(self, w, h, page):
         self.SetVirtualSize((w, h))
         self.__buffer = wx.EmptyBitmap(w+2, h+2)
         dc = wx.BufferedDC(None, self.__buffer)
@@ -132,15 +168,6 @@ class PagePreviewWindow(wx.ScrolledWindow):
                        wx.ImageFromData(w, h, page)), 1, 1, True)
 
         self.Refresh()
-
-    def __DisplayPageThread(self, page):
-        w = page['width']
-        h = page['height']
-        #time.sleep(.02)
-        lock.acquire()
-        page = page["page"].asImage(w, h, allow_threads=True)
-        lock.release()
-        wx.CallAfter(self.__DisplayPage, w, h, page)
 
 
 class PageListCtrl(wx.ListView):
