@@ -123,7 +123,10 @@ class PagePreviewWindow(wx.ScrolledWindow):
     def __init__(self, parent):
         wx.ScrolledWindow.__init__(self, parent)
         self.SetBackgroundColour('grey')
+        self.__bg_brush = wx.Brush(self.GetBackgroundColour())
         self.SetScrollRate(20, 20)
+
+        self.__page = None
 
         self.put_in_queue_timer = None
         self.__buffer = wx.EmptyBitmap(1, 1)
@@ -132,6 +135,7 @@ class PagePreviewWindow(wx.ScrolledWindow):
         _DisplayPageThread(self, self.q)
 
         self.Bind(wx.EVT_PAINT, self.__OnPaint)
+        self.Bind(wx.EVT_SIZE, self.__OnSize)
 
     def __del__(self):
         if self.put_in_queue_timer:
@@ -154,18 +158,35 @@ class PagePreviewWindow(wx.ScrolledWindow):
         self.__buffer = wx.EmptyBitmap(1, 1)
         self.Refresh()
 
+    def __OnSize(self, event):
+        if self.__page:
+            self.__DisplayPage()
+        event.Skip()
+
     def __OnPaint(self, event):
         dc = wx.BufferedPaintDC(self, self.__buffer, wx.BUFFER_VIRTUAL_AREA)
 
     def _DisplayPage(self, w, h, page):
+        self.__page = page
+        self.__page_size = (w, h)
         self.SetVirtualSize((w, h))
-        self.__buffer = wx.EmptyBitmap(w+2, h+2)
+        self.__DisplayPage()
+
+    def __DisplayPage(self):
+        w, h = self.__page_size
+        page = self.__page
+        cw, ch = self.GetClientSize()
+        x = max(0, (cw - w) / 2)
+        w2 = w + 2
+        h2 = h + 2
+        self.__buffer = wx.EmptyBitmap(max(cw,w2), h2)
         dc = wx.BufferedDC(None, self.__buffer)
+        dc.SetBackground(self.__bg_brush)
         dc.Clear()
-        dc.DrawRectangle(0, 0, w+2, h+2)
+        dc.DrawRectangle(x, 0, w2, h2)
         #dc.DrawBitmap(wx.BitmapFromBuffer(w, h, page), 1, 1, True)
         dc.DrawBitmap(wx.BitmapFromImage(
-                       wx.ImageFromData(w, h, page)), 1, 1, True)
+                       wx.ImageFromData(w, h, page)), x, 0, True)
 
         self.Refresh()
 
