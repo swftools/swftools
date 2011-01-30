@@ -24,7 +24,7 @@
 
 from __future__ import division
 import os
-
+import gfx
 import wx
 from lib.wordwrap import wordwrap
 
@@ -113,7 +113,7 @@ class InfoDialog(wx.Dialog):
 class AboutDialog:
     def __init__(self, parent):
         appname = wx.GetApp().GetAppName()
-        version = u"0.9.1"
+        version = " - part of SWFTools %s" % gfx.VERSION
         copyright = (u"Copyright (c) 2008,2009,2010\n"
                      u"Matthias Kramm <kramm@quiss.org>")
         description = u"A graphical user interface for pdf2swf"
