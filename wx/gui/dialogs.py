@@ -31,11 +31,19 @@ from lib.wordwrap import wordwrap
 from gui.options import Quality, ViewerBook
 
 
-class ProgressDialog(wx.ProgressDialog):
+class _ProgressDialog(wx.ProgressDialog):
     def __init__(self, title, message, maximum=100, parent=None,
                  style=wx.PD_AUTO_HIDE|wx.PD_APP_MODAL):
         wx.ProgressDialog.__init__(self, title, message, maximum=maximum,
                                    parent=parent, style=style)
+
+
+if wx.VERSION[:2] == (2, 6):
+    ProgressDialog = _ProgressDialog
+else:
+    class ProgressDialog(_ProgressDialog):
+        def Update(self, *args, **kwargs):
+            return wx.ProgressDialog.Update(self, *args, **kwargs)[0]
 
 class OptionsDialog(wx.Dialog):
     def __init__(self, parent):

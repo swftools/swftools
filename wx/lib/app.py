@@ -211,6 +211,7 @@ class Pdf2Swf:
         if not keep_running and self.__threads.has_key("progress"):
             self.view.SetStatusText(u"Cancelling...")
             self.__threads.pop("progress").Stop()
+            self.__progress.Hide()
 
 
     def OnProgressDone(self, message):
