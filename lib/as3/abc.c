@@ -81,7 +81,7 @@ static void parse_metadata(TAG*tag, abc_file_t*file, pool_t*pool)
         int num = swf_GetU30(tag);
         int s;
         DEBUG printf("  %s\n", entry_name);
-        array_t*items = array_new();
+        array_t*items = array_new1();
         for(s=0;s<num;s++) {
             int i1 = swf_GetU30(tag);
             int i2 = swf_GetU30(tag);
@@ -106,12 +106,12 @@ abc_file_t*abc_file_new()
 {
     abc_file_t*f = malloc(sizeof(abc_file_t));
     memset(f, 0, sizeof(abc_file_t));
-    f->metadata = array_new();
+    f->metadata = array_new1();
 
-    f->methods = array_new();
-    f->classes = array_new();
-    f->scripts = array_new();
-    f->method_bodies = array_new();
+    f->methods = array_new1();
+    f->classes = array_new1();
+    f->scripts = array_new1();
+    f->method_bodies = array_new1();
     f->flags = ABCFILE_LAZY;
 
     return f;

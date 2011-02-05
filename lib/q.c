@@ -1492,7 +1492,7 @@ void map_destroy(map_t*map)
 
 // ------------------------------- array_t --------------------------------------
 
-array_t* array_new() {
+array_t* array_new1() {
     array_t*d = malloc(sizeof(array_t));
     memset(d, 0, sizeof(array_t));
     d->entry2pos = dict_new();
