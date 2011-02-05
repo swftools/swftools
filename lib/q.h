@@ -267,7 +267,7 @@ mtf_t* mtf_new(type_t*type);
 void mtf_increase(mtf_t*m, const void*key);
 void mtf_destroy(mtf_t*m);
 
-array_t* array_new();
+array_t* array_new1();
 array_t* array_new2(type_t*type);
 void array_free(array_t*array);
 void*array_getkey(array_t*array, int nr);
