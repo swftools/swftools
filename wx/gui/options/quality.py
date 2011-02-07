@@ -62,7 +62,7 @@ class Quality(wx.Panel):
         box = wx.StaticBox(self, label=u"Quality")
         bsizer = wx.StaticBoxSizer(box, wx.VERTICAL)
 
-        flex = wx.FlexGridSizer(rows=1, cols=2, hgap=0, vgap=0)
+        flex = wx.FlexGridSizer(cols=2, hgap=0, vgap=0)
         flex.AddGrowableCol(0)
         flex.AddGrowableCol(1)
         for ctrl, opt, label, range, value in quality:
