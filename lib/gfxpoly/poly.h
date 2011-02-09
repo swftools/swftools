@@ -72,6 +72,11 @@ typedef struct _segment {
 #endif
 } segment_t;
 
+typedef struct _moments {
+    double area;
+    double m[3][3];
+} moments_t;
+
 #define LINE_EQ(p,s) ((double)(s)->delta.y*(p).x - (double)(s)->delta.x*(p).y - (s)->k)
 
 /* x1 + ((x2-x1)*(y-y1)) / dy = 
@@ -96,10 +101,12 @@ int gfxpoly_size(gfxpoly_t*poly);
 void gfxpoly_dump(gfxpoly_t*poly);
 void gfxpoly_save(gfxpoly_t*poly, const char*filename);
 void gfxpoly_save_arrows(gfxpoly_t*poly, const char*filename);
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule, windcontext_t*context);
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule, windcontext_t*context, moments_t*moments);
 
 gfxpoly_t* gfxpoly_intersect(gfxpoly_t*p1, gfxpoly_t*p2);
 gfxpoly_t* gfxpoly_union(gfxpoly_t*p1, gfxpoly_t*p2);
+double gfxpoly_area(gfxpoly_t*p);
+double gfxpoly_intersection_area(gfxpoly_t*p1, gfxpoly_t*p2);
 
 #ifndef CHECKS
 #ifdef assert

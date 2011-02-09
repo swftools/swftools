@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <math.h>
+#include <limits.h>
 #include "../mem.h"
 #include "../types.h"
 #include "poly.h"
@@ -9,6 +10,7 @@
 #include "wind.h"
 #include "convert.h"
 #include "heap.h"
+#include "moments.h"
 
 #ifdef HAVE_MD5
 #include "MD5.h"
@@ -1498,14 +1500,17 @@ static void check_status(status_t*status)
 }
 #endif
 
-gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule, windcontext_t*context)
+gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule, windcontext_t*context, moments_t*moments)
 {
     current_polygon = poly1;
 
     status_t status;
     memset(&status, 0, sizeof(status_t));
     status.gridsize = poly1->gridsize;
-    
+    status.windrule = windrule;
+    status.context = context;
+    status.actlist = actlist_new();
+
     queue_init(&status.queue);
     gfxpoly_enqueue(poly1, &status.queue, 0, /*polygon nr*/0);
     if(poly2) {
@@ -1513,14 +1518,13 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
 	gfxpoly_enqueue(poly2, &status.queue, 0, /*polygon nr*/1);
     }
 
-    status.windrule = windrule;
-    status.context = context;
-    status.actlist = actlist_new();
-
 #ifdef CHECKS
     status.seen_crossings = dict_new2(&point_type);
-    int32_t lasty=-0x80000000;
 #endif
+    int32_t lasty = INT_MIN;
+    if(moments) {
+        memset(moments, 0, sizeof(moments_t));
+    }
 
     status.xrow = xrow_new();
 
@@ -1529,8 +1533,7 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
 	assert(e->s1->fs);
         status.y = e->p.y;
 #ifdef CHECKS
-	assert(status.y>=lasty);
-	lasty = status.y;
+	assert(status.y > lasty);
         status.intersecting_segs = dict_new2(&ptr_type);
         status.segs_with_point = dict_new2(&ptr_type);
 #endif
@@ -1542,6 +1545,10 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
 #ifdef CHECKS
         actlist_verify(status.actlist, status.y-1);
 #endif
+        if(moments && lasty > INT_MIN) {
+            update_moments(moments, status.actlist, lasty, status.y);
+        }
+
         xrow_reset(status.xrow);
 	horiz_reset(&status.horiz);
 
@@ -1572,6 +1579,7 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
         dict_destroy(status.intersecting_segs);
         dict_destroy(status.segs_with_point);
 #endif
+	lasty = status.y;
     }
 #ifdef CHECKS
     dict_destroy(status.seen_crossings);
@@ -1597,12 +1605,31 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
     return p;
 }
 
+static windcontext_t onepolygon = {1};
 static windcontext_t twopolygons = {2};
 gfxpoly_t* gfxpoly_intersect(gfxpoly_t*p1, gfxpoly_t*p2)
 {
-    return gfxpoly_process(p1, p2, &windrule_intersect, &twopolygons);
+    return gfxpoly_process(p1, p2, &windrule_intersect, &twopolygons, 0);
 }
 gfxpoly_t* gfxpoly_union(gfxpoly_t*p1, gfxpoly_t*p2)
 {
-    return gfxpoly_process(p1, p2, &windrule_union, &twopolygons);
+    return gfxpoly_process(p1, p2, &windrule_union, &twopolygons, 0);
+}
+double gfxpoly_area(gfxpoly_t*p)
+{
+    moments_t moments;
+    gfxpoly_t*p2 = gfxpoly_process(p, 0, &windrule_evenodd, &onepolygon, &moments);
+    gfxpoly_destroy(p2);
+    return moments.area * p->gridsize * p->gridsize;
+}
+double gfxpoly_intersection_area(gfxpoly_t*p1, gfxpoly_t*p2)
+{
+    moments_t moments;
+    gfxpoly_t*p3 = gfxpoly_process(p1, p2, &windrule_intersect, &twopolygons, &moments);
+    gfxpoly_destroy(p3);
+    printf("%f %f %f\n",
+            moments.m[0][0],
+            moments.m[1][0],
+            moments.m[2][0]);
+    return moments.area * p1->gridsize * p2->gridsize;
 }

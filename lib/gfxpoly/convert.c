@@ -533,7 +533,7 @@ static windcontext_t onepolygon = {1};
 gfxline_t* gfxpoly_circular_to_evenodd(gfxline_t*line, double gridsize)
 {
     gfxpoly_t*poly = gfxpoly_from_fill(line, gridsize);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_circular, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_circular, &onepolygon, 0);
     gfxline_t*line2 = gfxline_from_gfxpoly(poly2);
     gfxpoly_destroy(poly);
     gfxpoly_destroy(poly2);
