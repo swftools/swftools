@@ -14,7 +14,7 @@ as12compiler_objects = action/assembler.$(O) action/compile.$(O) action/lex.swf4
 as12compiler_in_source = $(as12compiler_objects)
 
 as3compiler_objects = as3/abc.$(O) as3/pool.$(O) as3/files.$(O) as3/opcodes.$(O) as3/code.$(O) as3/registry.$(O) as3/builtin.$(O) as3/tokenizer.yy.$(O) as3/parser.tab.$(O) as3/scripts.$(O) as3/compiler.$(O) as3/import.$(O) as3/expr.$(O) as3/parser_help.$(O) as3/state.$(O) as3/common.$(O) as3/initcode.$(O) as3/assets.$(O)
-gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfxpoly/renderpoly.$(O) gfxpoly/stroke.$(O) gfxpoly/wind.$(O) gfxpoly/xrow.$(O)
+gfxpoly_objects = gfxpoly/active.$(O) gfxpoly/convert.$(O) gfxpoly/poly.$(O) gfxpoly/renderpoly.$(O) gfxpoly/stroke.$(O) gfxpoly/wind.$(O) gfxpoly/xrow.$(O) gfxpoly/moments.$(O)
 
 rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c modules/swfcgi.c modules/swfbutton.c modules/swftext.c modules/swffont.c modules/swftools.c modules/swfsound.c modules/swfshape.c modules/swfobject.c modules/swfdraw.c modules/swffilter.c modules/swfrender.c h.263/swfvideo.c modules/swfalignzones.c
 

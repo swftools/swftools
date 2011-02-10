@@ -131,7 +131,7 @@ int test_speed()
 	gfxline_transform(l, &m);
 	gfxpoly_t*poly = gfxpoly_from_fill(b, 0.05);
 
-	gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
+	gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon, 0);
 	gfxpoly_destroy(poly);
 	gfxpoly_destroy(poly2);
 	gfxline_free(l);

@@ -158,7 +158,7 @@ int test_speed()
 	gfxline_transform(l, &m);
 	gfxpoly_t*poly = gfxpoly_from_fill(b, 0.05);
 
-	gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
+	gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon, 0);
 	gfxpoly_destroy(poly);
 	gfxpoly_destroy(poly2);
 	gfxline_free(l);
@@ -175,7 +175,7 @@ int testbox(int argn, char*argv[])
     gfxline_free(box1);
     gfxline_free(box2);
     
-    gfxpoly_t*poly12 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
+    gfxpoly_t*poly12 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons, 0);
     gfxpoly_dump(poly12);
     assert(gfxpoly_check(poly12, 0));
     gfxpoly_destroy(poly12);
@@ -215,7 +215,7 @@ int test0(int argn, char*argv[])
     gfxline_free(box2);
     
     //gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
-    gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons);
+    gfxpoly_t*poly3 = gfxpoly_process(poly1, poly2, &windrule_intersect, &twopolygons, 0);
     gfxpoly_dump(poly3);
     
     gfxline_t*line = gfxline_from_gfxpoly(poly3);
@@ -262,7 +262,7 @@ int test1(int argn, char*argv[])
     gfxline_free(star);
 
     //gfxpoly_dump(poly);
-    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly, 0, &windrule_evenodd, &onepolygon, 0);
     //gfxpoly_dump(poly2);
     gfxpoly_save_arrows(poly2, "test.ps");
     gfxpoly_destroy(poly);
@@ -287,7 +287,7 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     gfxline_free(line);
 
     windrule_t*rule = &windrule_circular;
-    gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon, 0);
     if(bitmaptest) {
         intbbox_t bbox = intbbox_new(0, 0, width, height);
         unsigned char*bitmap1 = render_polygon(poly1, &bbox, 1.0, rule, &onepolygon);
@@ -301,6 +301,35 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
     }
     gfxpoly_destroy(poly1);
     gfxpoly_destroy(poly2);
+}
+
+int test_area()
+{
+    int t;
+    for(t=0;t<50;t++) {
+
+        gfxline_t*line1 = gfxline_makerectangle(50, 50, 150, 150);
+        gfxline_t*line2 = gfxline_makerectangle(100, 100, 200, 200);
+
+        double ua = (M_PI*2*t) / 50.0;
+
+        gfxmatrix_t matrix;
+        memset(&matrix, 0, sizeof(gfxmatrix_t));
+        matrix.m00= cos(ua); matrix.m10=sin(ua);
+        matrix.m01=-sin(ua); matrix.m11=cos(ua);
+        gfxline_transform(line1, &matrix);
+        gfxline_transform(line2, &matrix);
+
+        gfxpoly_t*poly1 = gfxpoly_from_fill(line1, 0.05);
+        gfxpoly_t*poly2 = gfxpoly_from_fill(line2, 0.05);
+        double area = gfxpoly_intersection_area(poly1, poly2);
+        printf("%f\n", area);
+
+        gfxpoly_destroy(poly1);
+        gfxpoly_destroy(poly2);
+        gfxline_free(line1);
+        gfxline_free(line2);
+    }
 }
 
 int test2(int argn, char*argv[])
@@ -361,7 +390,7 @@ void test3(int argn, char*argv[])
 
         gfxpoly_t*poly1 = gfxpoly_from_fill(l, 0.05);
 
-        gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+        gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon, 0);
 	assert(gfxpoly_check(poly2, 0));
 
         tag = swf_InsertTag(tag, ST_DEFINESHAPE);
@@ -478,7 +507,7 @@ void test4(int argn, char*argv[])
 	    goto end_of_loop;
         }
 
-        gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+        gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon, 0);
 	gfxpoly_dump(poly2);
 	assert(gfxpoly_check(poly2, 1));
 
@@ -560,7 +589,7 @@ void extract_polygons_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
         fprintf(stderr, "bad polygon or error in renderer\n");
         return;
     }
-    gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon);
+    gfxpoly_t*poly2 = gfxpoly_process(poly1, 0, rule, &onepolygon, 0);
     unsigned char*bitmap2 = render_polygon(poly2, &bbox, zoom, &windrule_evenodd, &onepolygon);
     if(!bitmap_ok(&bbox, bitmap2)) {
         save_two_bitmaps(&bbox, bitmap1, bitmap2, "error.png");
@@ -672,6 +701,6 @@ void test5(int argn, char*argv[])
 
 int main(int argn, char*argv[])
 {
-    test0(argn, argv);
+    test_area(argn, argv);
 }
 
