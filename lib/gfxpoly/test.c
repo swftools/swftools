@@ -323,7 +323,7 @@ int test_area()
         gfxpoly_t*poly1 = gfxpoly_from_fill(line1, 0.05);
         gfxpoly_t*poly2 = gfxpoly_from_fill(line2, 0.05);
         double area = gfxpoly_intersection_area(poly1, poly2);
-        printf("%f\n", area);
+        //printf("%f\n", area);
 
         gfxpoly_destroy(poly1);
         gfxpoly_destroy(poly2);

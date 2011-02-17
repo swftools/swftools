@@ -1546,7 +1546,7 @@ gfxpoly_t* gfxpoly_process(gfxpoly_t*poly1, gfxpoly_t*poly2, windrule_t*windrule
         actlist_verify(status.actlist, status.y-1);
 #endif
         if(moments && lasty > INT_MIN) {
-            update_moments(moments, status.actlist, lasty, status.y);
+            moments_update(moments, status.actlist, lasty, status.y);
         }
 
         xrow_reset(status.xrow);
@@ -1620,16 +1620,21 @@ double gfxpoly_area(gfxpoly_t*p)
     moments_t moments;
     gfxpoly_t*p2 = gfxpoly_process(p, 0, &windrule_evenodd, &onepolygon, &moments);
     gfxpoly_destroy(p2);
-    return moments.area * p->gridsize * p->gridsize;
+    moments_normalize(&moments, p->gridsize);
+    return moments.area;
 }
 double gfxpoly_intersection_area(gfxpoly_t*p1, gfxpoly_t*p2)
 {
     moments_t moments;
     gfxpoly_t*p3 = gfxpoly_process(p1, p2, &windrule_intersect, &twopolygons, &moments);
     gfxpoly_destroy(p3);
+
+    moments_normalize(&moments, p1->gridsize);
+
     printf("%f %f %f\n",
             moments.m[0][0],
             moments.m[1][0],
             moments.m[2][0]);
+
     return moments.area * p1->gridsize * p2->gridsize;
 }
