@@ -652,9 +652,9 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
 	    U8*aline = &alphadata[y*cinfo.output_width];
 	    int x;
 	    for(x=0;x<cinfo.output_width;x++) {
-		line[x].r = line[x].r < aline[x] ? line[x].r : aline[x]; //MIN(line[x].r, aline[x]);
-		line[x].g = line[x].g < aline[x] ? line[x].g : aline[x]; //MIN(line[x].r, aline[x]);
-		line[x].b = line[x].b < aline[x] ? line[x].b : aline[x]; //MIN(line[x].r, aline[x]);
+		line[x].r = line[x].r < aline[x] ? line[x].r : aline[x];
+		line[x].g = line[x].g < aline[x] ? line[x].g : aline[x];
+		line[x].b = line[x].b < aline[x] ? line[x].b : aline[x];
 		line[x].a = aline[x];
 	    }
 	}
