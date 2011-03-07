@@ -177,7 +177,7 @@ extern int a3_lex();
 %token<token> T_USHR ">>>"
 %token<token> T_SHR ">>"
 
-%type <number_int> CONDITIONAL_COMPILATION EMBED_START
+%type <number_int> EMBED_START // CONDITIONAL_COMPILATION 
 %type <for_start> FOR_START
 %type <id> X_IDENTIFIER PACKAGE FOR_IN_INIT MAYBE_IDENTIFIER ID_OR_NS SUBNODE
 %type <namespace_decl>  NAMESPACE_ID
@@ -301,7 +301,7 @@ PROGRAM_CODE: PACKAGE_DECLARATION
             | FUNCTION_DECLARATION
             | SLOT_DECLARATION
             | PACKAGE_INITCODE
-            | CONDITIONAL_COMPILATION '{' MAYBE_PROGRAM_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}
+/*            | CONDITIONAL_COMPILATION '{' MAYBE_PROGRAM_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}*/
             | ';'
 
 MAYBE_INPACKAGE_CODE_LIST: | INPACKAGE_CODE_LIST
@@ -313,7 +313,7 @@ INPACKAGE_CODE: INTERFACE_DECLARATION
               | FUNCTION_DECLARATION
               | SLOT_DECLARATION
               | PACKAGE_INITCODE
-              | CONDITIONAL_COMPILATION '{' MAYBE_INPACKAGE_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}
+/*              | CONDITIONAL_COMPILATION '{' MAYBE_INPACKAGE_CODE_LIST '}' {PASS_ALWAYS as3_pass=$1;}*/
               | '[' EMBED_START E ']' {PASS_ALWAYS as3_pass=$2;PASS1 as3_warning("embed command ignored");}
               | ';'
 
@@ -350,6 +350,8 @@ CODEPIECE: BREAK
 CODEPIECE: CONTINUE
 CODEPIECE: RETURN
 CODEPIECE: THROW
+
+/*
 CODEPIECE: CONDITIONAL_COMPILATION '{' CODE '}' {
     PASS_ALWAYS 
     if(as3_pass) {
@@ -358,7 +360,7 @@ CODEPIECE: CONDITIONAL_COMPILATION '{' CODE '}' {
         $$ = 0;
     }
     as3_pass=$1;
-}
+}*/
 
 //CODEBLOCK :  '{' CODE '}' {$$=$2;}
 //CODEBLOCK :  '{' '}'      {$$=0;}
@@ -386,7 +388,7 @@ EMBED_START: %prec above_function {
 
 /* ------------ conditional compilation ------------- */
 
-CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
+/*CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
     PASS12
     $$=as3_pass;
     char*key = concat3($1,"::",$3);
@@ -394,7 +396,7 @@ CONDITIONAL_COMPILATION: T_IDENTIFIER "::" T_IDENTIFIER {
         as3_pass=0;
     }
     free(key);
-}
+}*/
 
 /* ------------ variables --------------------------- */
 
@@ -927,9 +929,11 @@ MODIFIER : KW_PUBLIC {PASS12 $$.flags=FLAG_PUBLIC;$$.ns=0;}
          | KW_OVERRIDE {PASS12 $$.flags=FLAG_OVERRIDE;$$.ns=0;}
          | KW_NATIVE {PASS12 $$.flags=FLAG_NATIVE;$$.ns=0;}
          | KW_INTERNAL {PASS12 $$.flags=FLAG_PACKAGEINTERNAL;$$.ns=0;}
+/*
          | T_IDENTIFIER {PASS12 $$.flags=FLAG_NAMESPACE;
                                $$.ns=$1;
                        }
+*/
 
 EXTENDS : {PASS12 $$=0;}
 EXTENDS : KW_EXTENDS CLASS_SPEC {PASS12 $$=$2;}
@@ -960,7 +964,7 @@ MAYBE_CLASS_BODY : CLASS_BODY
 CLASS_BODY : CLASS_BODY_ITEM
 CLASS_BODY : CLASS_BODY CLASS_BODY_ITEM
 CLASS_BODY_ITEM : ';'
-CLASS_BODY_ITEM : CONDITIONAL_COMPILATION '{' MAYBE_CLASS_BODY '}' {PASS_ALWAYS as3_pass=$1;}
+/*CLASS_BODY_ITEM : CONDITIONAL_COMPILATION '{' MAYBE_CLASS_BODY '}' {PASS_ALWAYS as3_pass=$1;}*/
 CLASS_BODY_ITEM : SLOT_DECLARATION
 CLASS_BODY_ITEM : FUNCTION_DECLARATION
 CLASS_BODY_ITEM : '[' EMBED_START E ']' {PASS_ALWAYS as3_pass=$2;PASS1 as3_warning("embed command ignored");}
@@ -1828,7 +1832,7 @@ E : E '.' '(' {PASS12 new_state();state->xmlfilter=1;} E ')' {
     $$ = mkcodenode(r);
 }
 
-ID_OR_NS : T_IDENTIFIER {$$=$1;}
+//ID_OR_NS : T_IDENTIFIER {$$=$1;}
 ID_OR_NS : '*' {$$="*";}
 
 SUBNODE: X_IDENTIFIER
@@ -2141,10 +2145,10 @@ MEMBER : E '.' SUBNODE {
     }
 };
 
-NOTHING : %prec below_identifier
-VAR_READ : NOTHING T_IDENTIFIER {
+/*NOTHING : %prec below_identifier*/
+VAR_READ : T_IDENTIFIER {
     PASS1
-    char*name = $2;
+    char*name = $1;
     /* Queue unresolved identifiers for checking against the parent
        function's variables.
        We consider everything which is not a local variable "unresolved".
@@ -2162,7 +2166,7 @@ VAR_READ : NOTHING T_IDENTIFIER {
    
     $$ = 0;
     PASS2
-    char*name = $2;
+    char*name = $1;
     $$ = resolve_identifier(name);
 }
 
