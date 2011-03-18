@@ -5,7 +5,6 @@
 
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
-#include "../MD5.h"
 #include "../types.h"
 
 #include <math.h>
@@ -14,10 +13,6 @@
 #include <GL/glut.h>
 
 #include <stdarg.h>
-
-//#define ZSTEP (1/65536.0)
-#define ZSTEP (1/32.0)
-//#define ZSTEP (1/4.0)
 
 typedef struct _fontlist {
     gfxfont_t*font;
@@ -30,6 +25,8 @@ typedef struct _internal {
     fontlist_t* fontlist;
     int width, height;
     int currentz;
+
+    double zstep;
    
     int config_polygonoutlines;
    
@@ -122,6 +119,8 @@ int opengl_setparameter(struct _gfxdevice*dev, const char*key, const char*value)
     dbg("setparameter %s=%s", key, value);
     if(!strcmp(key, "polygonoutlines")) {
         i->config_polygonoutlines = atoi(value);
+    } else if(!strcmp(key, "zstep")) {
+        i->zstep = atof(value);
     }
     return 0;
 }
@@ -149,7 +148,7 @@ void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
 {
     dbg("stroke");
     internal_t*i = (internal_t*)dev->internal;
-    i->currentz++;
+    i->currentz+=1;
     char running = 0;
     gfxline_t*l=0;
 
@@ -160,7 +159,7 @@ void opengl_stroke(struct _gfxdevice*dev, gfxline_t*line, gfxcoord_t width, gfxc
         width = 1.0;
     }
     glLineWidth(width);
-    double z = i->currentz*ZSTEP;
+    double z = i->currentz*i->zstep;
 
     glPolygonOffset(0.0, 500.0);
 
@@ -273,7 +272,7 @@ void opengl_fill(struct _gfxdevice*dev, gfxline_t*line, gfxcolor_t*color)
     glColor4f(color->r/255.0, color->g/255.0, color->b/255.0, color->a/255.0);
     
     i->currentz ++;
-    z = (i->currentz*ZSTEP);
+    z = (i->currentz*i->zstep);
     tesselatePolygon(i->tesselator, z, line);
 
     //tesselatePolygon(i->tesselator_line, z, line);
@@ -306,7 +305,8 @@ static gfxhash_t gfximage_hash(gfximage_t*img)
     int size = img->width*img->height*4;
     U8*data = (U8*)img->data;
     gfxhash_t hash;
-    hash_md5(data, size, hash.d);
+    memset(&hash, 0, sizeof(hash));
+    *(int*)&hash.d[0] = string_hash3(data, size);
     return hash;
 }
 
@@ -448,7 +448,7 @@ void opengl_fillbitmap(struct _gfxdevice*dev, gfxline_t*line, gfximage_t*img, gf
 
 	xyz[len*5+0] = l->x;
 	xyz[len*5+1] = l->y;
-	xyz[len*5+2] = (i->currentz*ZSTEP);
+	xyz[len*5+2] = (i->currentz*i->zstep);
 	xyz[len*5+3] = 0;
 	xyz[len*5+4] = 0;
 	gfxmatrix_transform(&m2, /*src*/&xyz[len*5+0], /*dest*/&xyz[len*5+3]);
@@ -600,6 +600,8 @@ void gfxdevice_opengl_init(gfxdevice_t*dev)
     dev->drawlink = opengl_drawlink;
     dev->endpage = opengl_endpage;
     dev->finish = opengl_finish;
+
+    i->zstep = 1.0 / 32;
 
     i->tesselator = gluNewTess();
     gluTessCallback(i->tesselator, GLU_TESS_ERROR, (callbackfunction_t)errorCallback);
