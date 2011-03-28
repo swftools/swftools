@@ -33,7 +33,7 @@ extern "C" {
 #include "gfxtools.h"
 
 /* A "grid" value is the granularity at which polygon intersection operates.
-   It usually makes sense this to the smallest value that can actually be represented
+   It usually makes sense to set this to the smallest value that can actually be represented
    in the output device (like 0.05 = 1 twip for SWF).  */
 #define DEFAULT_GRID (0.05)
 
