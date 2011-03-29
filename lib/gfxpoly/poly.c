@@ -1630,11 +1630,5 @@ double gfxpoly_intersection_area(gfxpoly_t*p1, gfxpoly_t*p2)
     gfxpoly_destroy(p3);
 
     moments_normalize(&moments, p1->gridsize);
-
-    printf("%f %f %f\n",
-            moments.m[0][0],
-            moments.m[1][0],
-            moments.m[2][0]);
-
     return moments.area * p1->gridsize * p2->gridsize;
 }
