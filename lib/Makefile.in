@@ -20,7 +20,7 @@ rfxswf_modules =  modules/swfbits.c modules/swfaction.c modules/swfdump.c module
 
 base_objects=q.$(O) base64.$(O) utf8.$(O) png.$(O) jpeg.$(O) wav.$(O) mp3.$(O) os.$(O) bitio.$(O) log.$(O) mem.$(O) xml.$(O) ttf.$(O) kdtree.$(O) graphcut.$(O)
 devices=devices/dummy.$(O) devices/file.$(O) devices/render.$(O) devices/text.$(O) devices/record.$(O) devices/ops.$(O) devices/polyops.$(O) devices/bbox.$(O) devices/rescale.$(O) @DEVICE_OPENGL@ @DEVICE_PDF@
-filters=filters/alpha.$(O) filters/remove_font_transforms.$(O) filters/one_big_font.$(O) filters/vectors_to_glyphs.$(O)
+filters=filters/alpha.$(O) filters/remove_font_transforms.$(O) filters/one_big_font.$(O) filters/vectors_to_glyphs.$(O) filters/remove_invisible_characters.$(O)
 gfx_objects=gfximage.$(O) gfxtools.$(O) gfxfont.$(O) gfxfilter.$(O) $(devices) $(filters)
 
 rfxswf_objects=modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O) modules/swfalignzones.$(O)
