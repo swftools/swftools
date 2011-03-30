@@ -126,7 +126,9 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
 {
     internal_t*i = (internal_t*)f->internal;
     i->count++;
-    i->render.drawchar(&i->render, font, glyphnr, color, matrix);
+    gfxcolor_t c;
+    *(uint32_t*)&c = i->count<<8|0xff;
+    i->render.drawchar(&i->render, font, glyphnr, &c, matrix);
     out->drawchar(out, font, glyphnr, color, matrix);
 }
 static gfxresult_t*pass1_finish(gfxfilter_t*f, gfxdevice_t*out)
@@ -165,7 +167,7 @@ static gfxresult_t*pass2_finish(gfxfilter_t*f, gfxdevice_t*out)
     return out->finish(out);
 }
 
-void gfxtwopassfilter_one_big_font_init(gfxtwopassfilter_t*f)
+void gfxtwopassfilter_remove_invisible_characters_init(gfxtwopassfilter_t*f)
 {
     internal_t*i = (internal_t*)rfx_calloc(sizeof(internal_t));
 

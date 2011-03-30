@@ -388,6 +388,9 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 	    } else if(!strcmp(cmd, "remove_font_transforms")) {
 		f = malloc(sizeof(gfxtwopassfilter_t));
 		gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
+	    } else if(!strcmp(cmd, "remove_invisible_characters")) {
+		f = malloc(sizeof(gfxtwopassfilter_t));
+		gfxtwopassfilter_remove_invisible_characters_init((gfxtwopassfilter_t*)f);
 	    } else if(!strcmp(cmd, "vectors_to_glyphs")) {
 		f = malloc(sizeof(gfxtwopassfilter_t));
 		gfxtwopassfilter_vectors_to_glyphs_init((gfxtwopassfilter_t*)f);

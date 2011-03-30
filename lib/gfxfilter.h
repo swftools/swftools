@@ -98,6 +98,7 @@ void gfxfilter_maketransparent_init(gfxfilter_t*f, U8 alpha);
 void gfxtwopassfilter_remove_font_transforms_init(gfxtwopassfilter_t*f);
 void gfxtwopassfilter_one_big_font_init(gfxtwopassfilter_t*f);
 void gfxtwopassfilter_vectors_to_glyphs_init(gfxtwopassfilter_t*f);
+void gfxtwopassfilter_remove_invisible_characters_init(gfxtwopassfilter_t*f);
 
 
 #ifdef __cplusplus
