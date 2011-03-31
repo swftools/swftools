@@ -2204,3 +2204,18 @@
    if (path.needClose) {
      path.path->close();
    }
+--- xpdf/FoFiTrueType.cc.orig	2011-03-31 15:20:48.000000000 -0700
++++ xpdf/FoFiTrueType.cc	2011-03-31 15:21:57.000000000 -0700
+@@ -1917,7 +1917,11 @@
+       } else {
+ 	pos = getU16BE(tables[i].offset + j*2, &parsedOk);
+       }
+-      if (pos < 0 || pos > len) {
++      if(pos > len) {
++          nGlyphs = j;
++          break;
++      }
++      if (pos < 0) {
+ 	parsedOk = gFalse;
+       }
+     }
