@@ -517,6 +517,11 @@ void VectorGraphicOutputDev::strokeGfxline(GfxState *state, gfxline_t*line, int 
             warnfeature("non-ortogonally dashed strokes", 0);
         double f = (d1+d2)/2;
 
+        if(!dashStart && dashLength==1 && !dashPattern[0]) {
+            // zero phase and zero dashlength make the line invisible
+            return;
+        }
+
 	msg("<trace> %d dashes", dashLength);
 	msg("<trace> |  phase: %f", dashStart);
 	for(t=0;t<dashLength;t++) {
