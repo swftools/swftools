@@ -57,6 +57,7 @@ static void pass1_startpage(gfxfilter_t*f, int width, int height, gfxdevice_t*ou
 static void pass1_endpage(gfxfilter_t*f, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
+    i->render.endpage(&i->render);
     out->endpage(out);
     gfxresult_t*result = i->render.finish(&i->render);
 
@@ -119,7 +120,9 @@ static void pass1_endclip(gfxfilter_t*f, gfxdevice_t*out)
 static void pass1_addfont(gfxfilter_t*f, gfxfont_t*font, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
-    i->render.addfont(&i->render, font);
+    /* Don't pass this to device->render(). We're not in a page
+       yet, and the render device doesn't need addfont() */
+    //i->render.addfont(&i->render, font);
     out->addfont(out, font);
 }
 static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix, gfxdevice_t*out)
