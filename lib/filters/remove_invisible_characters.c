@@ -68,7 +68,7 @@ static void pass1_endpage(gfxfilter_t*f, gfxdevice_t*out)
         i->last_page->next = page;
         i->last_page = page;
     }
-    page->size = i->count;
+    page->size = i->count + 1;
     page->size8 = (page->size+7) >> 3;
     page->visible = (uint8_t*)rfx_calloc(page->size8);
 
