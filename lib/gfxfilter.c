@@ -336,9 +336,47 @@ gfxdevice_t*gfxtwopassfilter_apply(gfxtwopassfilter_t*_twopass, gfxdevice_t*out)
     return dev;
 }
 
+static void add_to_chain(char*cmd, dict_t*params, gfxfilterchain_t**chain, gfxfilterchain_t**next)
+{
+    gfxfilterbase_t*f = 0;
+    if(!strcmp(cmd, "maketransparent")) {
+        char*alphastr = dict_lookup(params, "alpha");
+        int alpha = 255;
+        if(alphastr) alpha=atoi(alphastr);
+        f = malloc(sizeof(gfxfilter_t));
+        gfxfilter_maketransparent_init((gfxfilter_t*)f, alpha);
+    } else if(!strcmp(cmd, "flatten")) {
+        f = malloc(sizeof(gfxfilter_t));
+        gfxfilter_flatten_init((gfxfilter_t*)f);
+    } else if(!strcmp(cmd, "remove_font_transforms")) {
+        f = malloc(sizeof(gfxtwopassfilter_t));
+        gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
+    } else if(!strcmp(cmd, "remove_invisible_characters")) {
+        f = malloc(sizeof(gfxtwopassfilter_t));
+        gfxtwopassfilter_remove_invisible_characters_init((gfxtwopassfilter_t*)f);
+    } else if(!strcmp(cmd, "vectors_to_glyphs")) {
+        f = malloc(sizeof(gfxtwopassfilter_t));
+        gfxtwopassfilter_vectors_to_glyphs_init((gfxtwopassfilter_t*)f);
+    } else if(!strcmp(cmd, "one_big_font")) {
+        f = malloc(sizeof(gfxtwopassfilter_t));
+        gfxtwopassfilter_one_big_font_init((gfxtwopassfilter_t*)f);
+    } else {
+        fprintf(stderr, "Unknown filter: %s\n", cmd);
+    }
+    dict_clear(params);
+    gfxfilterchain_t*n = rfx_calloc(sizeof(gfxfilterchain_t));
+    if(!(*chain)) {
+        (*chain) = (*next) = n;
+    } else {
+        (*next)->next = n;
+        (*next) = n;
+    }
+    n->filter = f;
+}
+
 gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 {
-    char*filterexpr = strdup(_filterexpr);    
+    char*filterexpr = strdup(_filterexpr);
     char*f = filterexpr;
     char*end = filterexpr+strlen(filterexpr);
     dict_t* params = dict_new2(&charptr_type);
@@ -347,22 +385,14 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
     gfxfilterchain_t*chain = 0;
     gfxfilterchain_t*next = 0;
 
-    if(!*f)
-	return 0;
-
-    while(1) {
+    while(*f) {
 	char* eq = strchr(f, '=');
 	char* colon = strchr(f, ':');
-	char lastitem = 0;
 	if(!colon) {
 	    colon = end;
-	    lastitem = 1;
 	}
 	*colon = 0;
-	char*newcmd = 0;
-	char param = 0;
-	
-	/* fixme: change this from a dict_t to gfxparams_t? */
+
 	if(eq && eq < colon) { // parameter
 	    *eq = 0;
 	    if(!cmd) {
@@ -370,55 +400,22 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 		return 0;
 	    }
 	    dict_put(params, f, strdup(eq+1));
-	    param = 1;
 	} else {
-	    newcmd = f;
-	}
-	if(!param || lastitem) {
-	    if(!cmd && lastitem) 
-		cmd = newcmd;
-	    assert(cmd);
-	    gfxfilterbase_t*f = 0;
-	    if(!strcmp(cmd, "maketransparent")) {
-		char*alphastr = dict_lookup(params, "alpha");
-		int alpha = 255;
-		if(alphastr) alpha=atoi(alphastr);
-		f = malloc(sizeof(gfxfilter_t));
-		gfxfilter_maketransparent_init((gfxfilter_t*)f, alpha);
-            } else if(!strcmp(cmd, "flatten")) {
-		f = malloc(sizeof(gfxfilter_t));
-		gfxfilter_flatten_init((gfxfilter_t*)f);
-	    } else if(!strcmp(cmd, "remove_font_transforms")) {
-		f = malloc(sizeof(gfxtwopassfilter_t));
-		gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
-	    } else if(!strcmp(cmd, "remove_invisible_characters")) {
-		f = malloc(sizeof(gfxtwopassfilter_t));
-		gfxtwopassfilter_remove_invisible_characters_init((gfxtwopassfilter_t*)f);
-	    } else if(!strcmp(cmd, "vectors_to_glyphs")) {
-		f = malloc(sizeof(gfxtwopassfilter_t));
-		gfxtwopassfilter_vectors_to_glyphs_init((gfxtwopassfilter_t*)f);
-	    } else if(!strcmp(cmd, "one_big_font")) {
-		f = malloc(sizeof(gfxtwopassfilter_t));
-		gfxtwopassfilter_one_big_font_init((gfxtwopassfilter_t*)f);
-	    } else {
-		fprintf(stderr, "Unknown filter: %s\n", cmd);
-		return 0;
-	    }
-	    dict_clear(params);
-	    gfxfilterchain_t*n = rfx_calloc(sizeof(gfxfilterchain_t));
-	    if(!chain) {
-		chain = next = n;
-	    } else {
-		next->next = n;
-		next = n;
-	    }
-	    n->filter = f;
-
-	    cmd = newcmd;
-	    if(lastitem) break;
-	}
+            if(cmd) {
+                add_to_chain(cmd, params, &chain, &next);
+                cmd = 0;
+            }
+            cmd = f;
+        }
+        if(colon == end)
+            break;
 	f = colon+1;
     }
+    if(cmd) {
+        add_to_chain(cmd, params, &chain, &next);
+    }
+    free(filterexpr);
+
     dict_destroy(params);
     return chain;
 }
