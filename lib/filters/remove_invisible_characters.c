@@ -70,7 +70,7 @@ static void pass1_endpage(gfxfilter_t*f, gfxdevice_t*out)
     }
     page->size = i->count;
     page->size8 = (page->size+7) >> 3;
-    page->visible = (uint8_t*)malloc(page->size8);
+    page->visible = (uint8_t*)rfx_calloc(page->size8);
 
     gfximage_t*img = (gfximage_t*)result->get(result, "page0");
     int size = img->width*img->height;
@@ -160,6 +160,7 @@ static void pass2_addfont(gfxfilter_t*f, gfxfont_t*font, gfxdevice_t*out)
 static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
+    i->count++;
     if(i->current_page->visible[i->count>>3]&(1<<(i->count&7))) {
         out->drawchar(out, font, glyphnr, color, matrix);
     }
