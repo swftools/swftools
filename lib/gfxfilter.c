@@ -385,6 +385,9 @@ gfxfilterchain_t* gfxfilterchain_parse(const char*_filterexpr)
 		if(alphastr) alpha=atoi(alphastr);
 		f = malloc(sizeof(gfxfilter_t));
 		gfxfilter_maketransparent_init((gfxfilter_t*)f, alpha);
+            } else if(!strcmp(cmd, "flatten")) {
+		f = malloc(sizeof(gfxfilter_t));
+		gfxfilter_flatten_init((gfxfilter_t*)f);
 	    } else if(!strcmp(cmd, "remove_font_transforms")) {
 		f = malloc(sizeof(gfxtwopassfilter_t));
 		gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
