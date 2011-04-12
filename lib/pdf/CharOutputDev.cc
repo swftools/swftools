@@ -804,7 +804,12 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 
     gfxbbox_t bbox;
 
-    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d> '%c') CID=%d render=%d glyphid=%d font=%p",m.tx,m.ty,(charid&127)>=32?charid:'?', charid, u, uLen, u, font->isCIDFont(), render, glyphid, current_gfxfont);
+    msg("<debug> drawChar(%f,%f,c='%c' (%d), u=%d <%d> '%c') CID=%d render=%d glyphid=%d font=%p size=%f",
+            m.tx, m.ty, (charid&127)>=32?charid:'?', charid, u, uLen, u,
+            font->isCIDFont(), render, glyphid, current_gfxfont,
+            m.m00);
+
+    gfxglyph_t* gfxglyph = &current_gfxfont->glyphs[glyphid];
 
     int space = current_fontinfo->space_char;
     if(config_extrafontdata && config_detectspaces && space>=0 && m.m00 && !m.m01) {
@@ -812,14 +817,16 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	//bool different_y = last_char_y - m.ty;
 	bool different_y = m.ty < last_char_y - last_ascent*last_char_y_fontsize
 	                || m.ty > last_char_y + last_descent*last_char_y_fontsize;
+        double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
+        double rightx = m.tx + gfxglyph->advance * m.m00;
+        if(different_y) {
+            expected_x = m.tx - width/2;
+        }
+
 	if((!different_y || config_space_between_lines) &&
 	   !last_char_was_space && !current_fontinfo->usesSpaces()) {
-	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
 	    int space = current_fontinfo->space_char;
 	    float width = fmax(m.m00*current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);
-            if(different_y) {
-                expected_x = m.tx - width/2;
-            }
 	    if(m.tx - expected_x >= width*4/10) {
 		msg("<debug> There's a %f pixel gap between char %d and char %d (expected no more than %f), I'm inserting a space here", 
 			m.tx-expected_x,
@@ -827,7 +834,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 			width*4/10
 			);
 #ifdef VISUALIZE_CHAR_GAPS
-		bbox = gfxline_getbbox(current_gfxfont->glyphs[glyphid].line);
+		bbox = gfxline_getbbox(gfxglyph->line);
 		gfxline_t*rect = gfxline_makerectangle(last_char_x,m.ty,m.tx,m.ty+10);
 		gfxcolor_t red = {255,255,0,0};
 		device->fill(device, rect, &red);
@@ -843,7 +850,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	    }
 	}
 	last_average_advance = current_fontinfo->average_advance;
-	last_char_advance = current_gfxfont->glyphs[glyphid].advance;
+	last_char_advance = gfxglyph->advance;
 	last_char_x_fontsize = m.m00;
 	last_char_y_fontsize = -m.m11;
 	last_char = glyphid;
@@ -851,7 +858,14 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	last_char_y = m.ty;
 	last_ascent = current_gfxfont->ascent;
 	last_descent = fmax(current_gfxfont->descent, current_gfxfont->ascent/3);
-	last_char_was_space = GLYPH_IS_SPACE(&current_gfxfont->glyphs[glyphid]);
+	last_char_was_space = GLYPH_IS_SPACE(gfxglyph);
+
+        if(m.tx < expected_x && rightx < expected_x + 1 && GLYPH_IS_SPACE(gfxglyph)) {
+            msg("<debug> Dropping dedented space char at %f-%f (before %f)",
+                    m.tx, rightx, expected_x);
+            return;
+        }
+
     }
     device->drawchar(device, current_gfxfont, glyphid, &col, &m);
     
