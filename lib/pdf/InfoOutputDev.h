@@ -86,6 +86,8 @@ public:
     gfxmatrix_t get_gfxmatrix(GfxState*state);
     gfxfont_t* getGfxFont();
 
+    char usesSpaces();
+
     double lastx,lasty;
     int lastchar;
     double lastadvance;
@@ -103,6 +105,9 @@ public:
     char seen;
     int space_char;
     float average_advance;
+
+    int num_chars;
+    int num_spaces;
 };
 
 extern char*getFontID(GfxFont*font);

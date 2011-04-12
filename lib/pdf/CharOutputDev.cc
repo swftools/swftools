@@ -813,7 +813,7 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
 	bool different_y = m.ty < last_char_y - last_ascent*last_char_y_fontsize
 	                || m.ty > last_char_y + last_descent*last_char_y_fontsize;
 	if((!different_y || config_space_between_lines) &&
-	   !last_char_was_space) {
+	   !last_char_was_space && !current_fontinfo->usesSpaces()) {
 	    double expected_x = last_char_x + last_char_advance*last_char_x_fontsize;
 	    int space = current_fontinfo->space_char;
 	    float width = fmax(m.m00*current_fontinfo->average_advance, last_char_x_fontsize*last_average_advance);

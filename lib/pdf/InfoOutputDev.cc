@@ -149,6 +149,8 @@ FontInfo::FontInfo(fontclass_t*fontclass)
     this->ascender = 0;
     this->descender = 0;
     this->scale = 1.0;
+    this->num_chars = 0;
+    this->num_spaces = 0;
     resetPositioning();
 }
 FontInfo::~FontInfo()
@@ -171,6 +173,15 @@ FontInfo::~FontInfo()
 	fontclass_type.free(this->fontclass);
 	this->fontclass=0;
     }
+}
+
+char FontInfo::usesSpaces()
+{
+    if(this->num_chars &&
+       this->num_spaces / (double)this->num_chars >= 0.05) {
+        return 1;
+    }
+    return 0;
 }
 
 void FontInfo::resetPositioning()
@@ -748,10 +759,14 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
 	msg("<error> Internal error: No current splash fontinfo");
 	return; //error
     }
-    if(fontinfo && fontinfo->max_size < len) {
+    if(fontinfo->max_size < len) {
 	fontinfo->max_size = len;
     }
-    
+    fontinfo->num_chars++;
+    if(uLen && u[0]==32) {
+        fontinfo->num_spaces++;
+    }
+
     average_char_size += fmax(lenx,leny);
     num_chars++;
 
