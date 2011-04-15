@@ -306,24 +306,38 @@ int test_square(int width, int height, int num, double gridsize, char bitmaptest
 int test_area()
 {
     int t;
-    for(t=0;t<50;t++) {
+    for(t=0;t<50;t++) 
+    {
+        int x1 = lrand48()%200;
+        int y1 = lrand48()%200;
+        int x2 = x1 + 10+(lrand48()%200);
+        int y2 = y1 + 10+(lrand48()%200);
+        gfxline_t*line1 =
+            gfxline_append(
+                    gfxline_makerectangle(50, 50, 150, 150),
+                    gfxline_makerectangle(75, 75, 125, 125)
+            );
+        gfxline_t*line2 = gfxline_makerectangle(x1, y1, x2, y2);
 
-        gfxline_t*line1 = gfxline_makerectangle(50, 50, 150, 150);
-        gfxline_t*line2 = gfxline_makerectangle(100, 100, 200, 200);
-
-        double ua = (M_PI*2*t) / 50.0;
-
-        gfxmatrix_t matrix;
-        memset(&matrix, 0, sizeof(gfxmatrix_t));
-        matrix.m00= cos(ua); matrix.m10=sin(ua);
-        matrix.m01=-sin(ua); matrix.m11=cos(ua);
-        gfxline_transform(line1, &matrix);
-        gfxline_transform(line2, &matrix);
+        gfxmatrix_t m;
+        m.m00 = cos(t*M_PI/180.0);
+        m.m01 = sin(t*M_PI/180.0);
+        m.m10 = -sin(t*M_PI/180.0);
+        m.m11 = cos(t*M_PI/180.0);
+        m.tx = 0;
+        m.ty = 0;
+        gfxline_clone(line1);
+        gfxline_clone(line2);
+        gfxline_transform(line1, &m);
+        gfxline_transform(line2, &m);
 
         gfxpoly_t*poly1 = gfxpoly_from_fill(line1, 0.05);
         gfxpoly_t*poly2 = gfxpoly_from_fill(line2, 0.05);
-        double area = gfxpoly_intersection_area(poly1, poly2);
-        //printf("%f\n", area);
+
+        gfxpoly_t*i = gfxpoly_intersect(poly1, poly2);
+        double area1 = gfxpoly_intersection_area(poly1, poly2);
+        double area2 = gfxpoly_area(i);
+        printf("%f %f\n", area1, area2);
 
         gfxpoly_destroy(poly1);
         gfxpoly_destroy(poly2);
