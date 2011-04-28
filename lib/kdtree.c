@@ -393,10 +393,12 @@ kdresult_list_t*kdtree_find_in_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_
     kdtree_modify_box(tree, x1, y1, x2, y2, add_to_dict, items);
     kdresult_list_t*list = 0;
     DICT_ITERATE_KEY(items, void*, d) {
-        NEW(kdresult_list_t,r);
-        r->data = d;
-        r->next = list;
-        list = r;
+        if(d) {
+            NEW(kdresult_list_t,r);
+            r->data = d;
+            r->next = list;
+            list = r;
+        }
     };
     dict_destroy(items);
     return list;
