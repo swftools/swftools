@@ -86,8 +86,6 @@ kdarea_t*kdbranch_follow(const kdbranch_t*tree, int32_t x, int32_t y)
     */
     int32_t s = x*vx[tree->type] + y*vy[tree->type];
     int32_t v = tree->xy*vsign[tree->type];
-    if(s == v)
-	return 0; //point is on the boundary
     return tree->side[s < v];
 }
 
@@ -380,6 +378,28 @@ static void* overwrite(void*user, void*data)
 void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data)
 {
     kdtree_modify_box(tree, x1, y1, x2, y2, overwrite, data);
+}
+
+static void* add_to_dict(void*user, void*data)
+{
+    dict_t*items = (dict_t*)user;
+    dict_put(items, data, data);
+    return data;
+}
+
+kdresult_list_t*kdtree_find_in_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2)
+{
+    dict_t*items = dict_new2(&ptr_type);
+    kdtree_modify_box(tree, x1, y1, x2, y2, add_to_dict, items);
+    kdresult_list_t*list = 0;
+    DICT_ITERATE_KEY(items, void*, d) {
+        NEW(kdresult_list_t,r);
+        r->data = d;
+        r->next = list;
+        list = r;
+    };
+    dict_destroy(items);
+    return list;
 }
 
 kdarea_t*kdarea_neighbor(kdarea_t*area, int dir, int xy)

@@ -76,12 +76,19 @@ typedef struct _kdarea_list {
     kdarea_t*area;
 } kdarea_list_t;
 
+typedef struct _kdresult_list {
+    void*data;
+    struct _kdresult_list*next;
+} kdresult_list_t;
+
 kdtree_t* kdtree_new();
 void kdarea_destroy(kdarea_t*area);
 void kdbranch_destroy(kdbranch_t*b);
 void kdtree_destroy(kdtree_t*tree);
 kdarea_t* kdtree_find(kdtree_t*tree, int x, int y);
 void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2, void*data);
+kdresult_list_t*kdtree_find_in_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+
 void kdtree_print(kdtree_t*tree);
 
 kdarea_t*kdarea_neighbor(kdarea_t*area, int dir, int xy);
