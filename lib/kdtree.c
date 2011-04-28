@@ -383,7 +383,9 @@ void kdtree_add_box(kdtree_t*tree, int32_t x1, int32_t y1, int32_t x2, int32_t y
 static void* add_to_dict(void*user, void*data)
 {
     dict_t*items = (dict_t*)user;
-    dict_put(items, data, data);
+    if(!dict_contains(items, data)) {
+        dict_put(items, data, data);
+    }
     return data;
 }
 
