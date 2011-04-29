@@ -117,6 +117,10 @@ gfxparams_t* gfxparams_new();
 void gfxparams_store(gfxparams_t*params, const char*name, const char*value);
 void gfxparams_free(gfxparams_t*params);
 
+void gfxline_normalize(gfxline_t*line, double sizex, double sizey);
+
+gfxbbox_t gfxbbox_transform(gfxbbox_t*bbox, gfxmatrix_t*m);
+
 #ifdef __cplusplus
 }
 #endif

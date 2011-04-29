@@ -1111,6 +1111,12 @@ static type_t gfxpoint_type = {
     free: (free_func)gfxpoint_destroy,
 };
 
+/* makes sure that a gfxline is drawn in a single stroke.
+   E.g. moveto 0,0 lineto 100,0 lineto 100,100
+        moveto 0,0 lineto 0,100 lineto 100,100
+   is converted to
+        moveto 0,0, lineto 0,100 lineto 100,100 lineto 100,0 lineto 0,0
+*/
 gfxline_t* gfxline_restitch(gfxline_t*line)
 {
     dict_t*ff = dict_new2(&gfxpoint_type);
@@ -1219,6 +1225,26 @@ gfxline_t* gfxline_reverse(gfxline_t*line)
     return b;
 }
 
+void gfxline_normalize(gfxline_t*line, double sizex, double sizey)
+{
+    gfxbbox_t b = gfxline_getbbox(line);
+    if(b.xmax == b.xmin || b.ymax == b.ymin)
+	return;
+    gfxmatrix_t m;
+    double w = b.xmax - b.xmin;
+    double h = b.ymax - b.ymin;
+    double fx = sizex/w;
+    double fy = sizey/h;
+    double s = fmin(fx,fy);
+
+    m.m00 = s;
+    m.m11 = s;
+    m.tx = -b.xmin * s;
+    m.ty = -b.ymin * s;
+    m.m01 = m.m10 = 0;
+    gfxline_transform(line, &m);
+}
+
 void gfxgradient_destroy(gfxgradient_t*gradient)
 {
     while(gradient) {
@@ -1270,5 +1296,26 @@ void gfxparams_free(gfxparams_t*params)
 	p = next;
     }
     free(params);
+}
+
+static void turnpoint(double x, double y, gfxmatrix_t* m, double *_x, double*_y)
+{
+    *_x = m->m00*x + m->m10*y + m->tx;
+    *_y = m->m01*x + m->m11*y + m->ty;
+}
+
+gfxbbox_t gfxbbox_transform(gfxbbox_t*bbox, gfxmatrix_t*m)
+{
+    double x1, y1, x2, y2, x3, y3, x4, y4;
+    turnpoint(bbox->xmin, bbox->xmin, m, &x1, &y1);
+    turnpoint(bbox->xmax, bbox->ymin, m, &x2, &y2);
+    turnpoint(bbox->xmin, bbox->ymax, m, &x3, &y3);
+    turnpoint(bbox->xmax, bbox->ymax, m, &x4, &y4);
+
+    gfxbbox_t new_bbox = {x1, y1, x1, y1};
+    new_bbox = gfxbbox_expand_to_point(new_bbox, x2, y2);
+    new_bbox = gfxbbox_expand_to_point(new_bbox, x3, y3);
+    new_bbox = gfxbbox_expand_to_point(new_bbox, x4, y4);
+    return new_bbox;
 }
 
