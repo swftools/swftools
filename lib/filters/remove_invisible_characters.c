@@ -132,11 +132,13 @@ static void pass1_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     gfxcolor_t c;
     *(uint32_t*)&c = i->count<<8|0xff;
 
-    //i->render.drawchar(&i->render, font, glyphnr, &c, matrix);
     double advance = font->glyphs[glyphnr].advance;
     gfxline_t*box = gfxline_makerectangle(0,0,advance,font->ascent);
     gfxline_transform(box, matrix);
     i->render.fill(&i->render, box, &c);
+    if(font->ascent < 512) {
+        i->render.drawchar(&i->render, font, glyphnr, &c, matrix);
+    }
     gfxline_free(box);
 
     out->drawchar(out, font, glyphnr, color, matrix);
