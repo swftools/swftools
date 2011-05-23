@@ -24,6 +24,8 @@
 #include "../gfxfilter.h"
 #include "../gfxtools.h"
 #include "../gfxfont.h"
+#include "../gfxpoly.h"
+#include "../gfximage.h"
 #include "../types.h"
 #include "../mem.h"
 #include "../devices/render.h"
@@ -38,6 +40,9 @@ typedef struct _page {
 typedef struct _internal {
     gfxdevice_t render;
     int count;
+
+    double area;
+
     page_t*first_page;
     page_t*last_page;
 
@@ -84,19 +89,31 @@ static void pass1_endpage(gfxfilter_t*f, gfxdevice_t*out)
 static void pass1_fill(gfxfilter_t*f, gfxline_t*line, gfxcolor_t*color, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
-    i->render.fill(&i->render, line, &black);
+    if(color->a == 255) {
+        i->render.fill(&i->render, line, &black);
+    }
     out->fill(out, line, color);
 }
 static void pass1_stroke(gfxfilter_t*f, gfxline_t*line, gfxcoord_t width, gfxcolor_t*color, gfx_capType cap_style, gfx_joinType joint_style, gfxcoord_t miterLimit, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
-    i->render.stroke(&i->render, line, width, &black, cap_style, joint_style, miterLimit);
+    if(color->a == 255) {
+        i->render.stroke(&i->render, line, width, &black, cap_style, joint_style, miterLimit);
+    }
     out->stroke(out, line, width, color, cap_style, joint_style, miterLimit);
 }
 static void pass1_fillbitmap(gfxfilter_t*f, gfxline_t*line, gfximage_t* bitmap, gfxmatrix_t*imgcoord2devcoord, gfxcxform_t*cxform, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
-    i->render.fill(&i->render, line, &black);
+    gfximage_t*img = gfximage_new(bitmap->width, bitmap->height);
+    int size = img->width*img->height;
+    memset(img->data, 0, size*sizeof(gfxcolor_t));
+    int t;
+    for(t=0;t<size;t++) {
+        img->data[t].a = bitmap->data[t].a == 255 ? 255 : 0;
+    }
+    i->render.fillbitmap(&i->render, line, img, imgcoord2devcoord, 0);
+    gfximage_free(img);
     out->fillbitmap(out, line, bitmap, imgcoord2devcoord, cxform);
 }
 static void pass1_fillgradient(gfxfilter_t*f, gfxline_t*line, gfxgradient_t*gradient, gfxgradienttype_t type, gfxmatrix_t*gradcoord2devcoord, gfxdevice_t*out)
@@ -172,11 +189,24 @@ static void pass2_drawchar(gfxfilter_t*f, gfxfont_t*font, int glyphnr, gfxcolor_
     i->count++;
     if(i->current_page->visible[i->count>>3]&(1<<(i->count&7))) {
         out->drawchar(out, font, glyphnr, color, matrix);
+    } else {
+#ifdef DEBUG_AREA
+        gfxline_t*line = gfxline_clone(font->glyphs[glyphnr].line);
+        gfxline_transform(line, matrix);
+        gfxpoly_t*poly = gfxpoly_from_fill(line, 0.05);
+        double area = gfxpoly_area(poly);
+        gfxpoly_destroy(poly);
+        gfxline_free(line);
+        i->area += area;
+#endif
     }
 }
 static gfxresult_t*pass2_finish(gfxfilter_t*f, gfxdevice_t*out)
 {
     internal_t*i = (internal_t*)f->internal;
+#ifdef DEBUG_AREA
+    printf("%f\n", i->area);
+#endif
     return out->finish(out);
 }
 
