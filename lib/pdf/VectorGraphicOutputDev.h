@@ -205,6 +205,7 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
   int config_multiply;
   int config_drawonlyshapes;
   int config_textonly;
+  int config_disable_tiling_pattern_fills;
 
   gfxdevice_t char_output_dev;
   CharOutputDev*charDev;

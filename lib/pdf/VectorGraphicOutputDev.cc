@@ -127,6 +127,8 @@ void VectorGraphicOutputDev::setParameter(const char*key, const char*value)
             this->config_multiply=1;
     } else if(!strcmp(key,"disable_polygon_conversion")) {
         this->config_disable_polygon_conversion = atoi(value);
+    } else if(!strcmp(key,"disable_tiling_pattern_fills")) {
+        this->config_disable_tiling_pattern_fills = atoi(value);
     }
     this->charDev->setParameter(key, value);
 }
@@ -256,6 +258,8 @@ GBool VectorGraphicOutputDev::useTilingPatternFill()
     infofeature("tiled patterns");
 //    if(config_convertgradients)
 //	return gTrue;
+    if(config_disable_tiling_pattern_fills) 
+        return gTrue;
     return gFalse;
 }
 GBool VectorGraphicOutputDev::useShadedFills()
