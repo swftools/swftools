@@ -44,6 +44,8 @@ typedef struct _clip {
 typedef struct _internal {
     clip_t*clip;
 
+    char config_dont_clip_characters;
+
     int good_polygons;
     int bad_polygons;
 } internal_t;
@@ -73,6 +75,9 @@ int flatten_setparameter(gfxfilter_t*dev, const char*key, const char*value, gfxd
 {
     dbg("flatten_setparameter");
     internal_t*i = (internal_t*)dev->internal;
+    if(!strcmp(key, "dont_clip_characters")) {
+        i->config_dont_clip_characters = atoi(value);
+    }
     return out->setparameter(out,key,value);
 }
 
@@ -312,7 +317,14 @@ void flatten_drawchar(gfxfilter_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*c
 			glyphnr, 
 			bbox.xmin,bbox.ymin,bbox.xmax,bbox.ymax,
 			bbox2.xmin,bbox2.ymin,bbox2.xmax,bbox2.ymax);
-		flatten_fill(dev, glyph, color, out);
+                if(!i->config_dont_clip_characters) {
+		    flatten_fill(dev, glyph, color, out);
+                } else {
+                    if(bbox.xmin < bbox.xmax &&
+                       bbox.ymin < bbox.ymax) {
+		        out->drawchar(out, font, glyphnr, color, matrix);
+                    }
+                }
 	    } else {
 		out->drawchar(out, font, glyphnr, color, matrix);
 	    }
