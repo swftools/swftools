@@ -320,8 +320,8 @@ void flatten_drawchar(gfxfilter_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*c
                 if(!i->config_dont_clip_characters) {
 		    flatten_fill(dev, glyph, color, out);
                 } else {
-                    if(bbox.xmin < bbox.xmax &&
-                       bbox.ymin < bbox.ymax) {
+                    if(bbox2.xmin < bbox2.xmax &&
+                       bbox2.ymin < bbox2.ymax) {
 		        out->drawchar(out, font, glyphnr, color, matrix);
                     }
                 }
