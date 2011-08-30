@@ -737,6 +737,14 @@ U8 reader_readU8(reader_t*r)
     }
     return b;
 }
+S8 reader_readS8(reader_t*r)
+{
+    S8 b = 0;
+    if(r->read(r, &b, 1)<1) {
+	fprintf(stderr, "bitio.c:reader_readU8: Read over end of memory region\n");
+    }
+    return b;
+}
 U16 reader_readU16(reader_t*r)
 {
     U8 b1=0,b2=0;
@@ -801,6 +809,38 @@ char*reader_readString(reader_t*r)
     g.finish(&g);
     return string;
 }
+uint32_t read_compressed_uint(reader_t*r)
+{
+    uint32_t u = 0;
+    uint32_t b;
+    do {
+        b = reader_readU8(r);
+        u = u<<7|b&0x7f;
+    } while(b&0x80);
+    return u;
+}
+int32_t read_compressed_int(reader_t*r)
+{
+    int32_t i = 0;
+    int32_t b;
+
+    b = reader_readS8(r);
+    i = b&0x7f;
+
+    if(b&0x40)
+        i|=0xffffff80; //sign extension
+
+    if(!(b&0x80))
+        return i;
+
+    do {
+        b = reader_readS8(r);
+        i = i<<7|b&0x7f;
+    } while(b&0x80);
+
+    return i;
+}
+
 
 void writer_writeString(writer_t*w, const char*s)
 {
@@ -868,4 +908,59 @@ void writer_writeDouble(writer_t*w, double f)
     w->write(w, &b6, 1);
     w->write(w, &b7, 1);
     w->write(w, &b8, 1);
+}
+void write_compressed_uint(writer_t*w, uint32_t u)
+{
+    if(u<0x80) {
+        writer_writeU8(w, u);
+    } else if(u<0x4000) {
+        writer_writeU8(w, u>>7|0x80);
+        writer_writeU8(w, u&0x7f);
+    } else if(u<0x200000) {
+        writer_writeU8(w, u>>14|0x80);
+        writer_writeU8(w, u>>7|0x80);
+        writer_writeU8(w, u&0x7f);
+    } else if(u<0x10000000) {
+        writer_writeU8(w, u>>21|0x80);
+        writer_writeU8(w, u>>14|0x80);
+        writer_writeU8(w, u>>7|0x80);
+        writer_writeU8(w, u&0x7f);
+    } else {
+        writer_writeU8(w, u>>28|0x80);
+        writer_writeU8(w, u>>21|0x80);
+        writer_writeU8(w, u>>14|0x80);
+        writer_writeU8(w, u>>7|0x80);
+        writer_writeU8(w, u&0x7f);
+    }
+}
+void write_compressed_int(writer_t*w, int32_t i)
+{
+    if(i>=-0x40 && i<0x40) {
+        writer_writeU8(w, i&0x7f);
+    } else if(i>=-0x1000 && i<0x1000) {
+        writer_writeU8(w, (i>>6)&0x7f|0x80);
+        writer_writeU8(w, i&0x7f);
+    } else if(i>=-0x40000 && i<0x40000) {
+        writer_writeU8(w, (i>>12)&0x7f|0x80);
+        writer_writeU8(w, (i>>6)&0x7f|0x80);
+        writer_writeU8(w, (i)&0x7f);
+    } else if(i>=-0x1000000 && i<0x1000000) {
+        writer_writeU8(w, (i>>18)&0x7f|0x80);
+        writer_writeU8(w, (i>>12)&0x7f|0x80);
+        writer_writeU8(w, (i>>6)&0x7f|0x80);
+        writer_writeU8(w, (i)&0x7f);
+    } else if(i>=-0x40000000 && i<0x40000000) {
+        writer_writeU8(w, (i>>24)&0x7f|0x80);
+        writer_writeU8(w, (i>>18)&0x7f|0x80);
+        writer_writeU8(w, (i>>12)&0x7f|0x80);
+        writer_writeU8(w, (i>>6)&0x7f|0x80);
+        writer_writeU8(w, (i)&0x7f);
+    } else {
+        writer_writeU8(w, (i>>30)&0x7f|0x80);
+        writer_writeU8(w, (i>>24)&0x7f|0x80);
+        writer_writeU8(w, (i>>18)&0x7f|0x80);
+        writer_writeU8(w, (i>>12)&0x7f|0x80);
+        writer_writeU8(w, (i>>6)&0x7f|0x80);
+        writer_writeU8(w, (i)&0x7f);
+    }
 }
