@@ -97,7 +97,7 @@ void reader_init_filereader(reader_t*r, int handle)
     r->bitpos = 8;
     r->pos = 0;
 }
-void reader_init_filereader2(reader_t*r, const char*filename)
+int reader_init_filereader2(reader_t*r, const char*filename)
 {
 #ifdef HAVE_OPEN64
     int fi = open64
@@ -111,6 +111,7 @@ void reader_init_filereader2(reader_t*r, const char*filename)
 	    O_RDONLY);
     reader_init_filereader(r, fi);
     r->type = READER_TYPE_FILE2;
+    return fi;
 }
 
 /* ---------------------------- mem reader ------------------------------- */
@@ -336,7 +337,10 @@ static int writer_filewrite_write(writer_t*w, void* data, int len)
 {
     filewrite_t * fw= (filewrite_t*)w->internal;
     w->pos += len;
-    return write(fw->handle, data, len);
+    int l = write(fw->handle, data, len);
+    if(l < len)
+	fprintf(stderr, "Error writing to file: %d/%d", l, len);
+    return l;
 }
 static void writer_filewrite_finish(writer_t*w)
 {
@@ -937,30 +941,23 @@ void write_compressed_int(writer_t*w, int32_t i)
 {
     if(i>=-0x40 && i<0x40) {
         writer_writeU8(w, i&0x7f);
-    } else if(i>=-0x1000 && i<0x1000) {
-        writer_writeU8(w, (i>>6)&0x7f|0x80);
+    } else if(i>=-0x2000 && i<0x2000) {
+        writer_writeU8(w, (i>>7)&0x7f|0x80);
         writer_writeU8(w, i&0x7f);
-    } else if(i>=-0x40000 && i<0x40000) {
-        writer_writeU8(w, (i>>12)&0x7f|0x80);
-        writer_writeU8(w, (i>>6)&0x7f|0x80);
+    } else if(i>=-0x100000 && i<0x100000) {
+        writer_writeU8(w, (i>>14)&0x7f|0x80);
+        writer_writeU8(w, (i>>7)&0x7f|0x80);
         writer_writeU8(w, (i)&0x7f);
-    } else if(i>=-0x1000000 && i<0x1000000) {
-        writer_writeU8(w, (i>>18)&0x7f|0x80);
-        writer_writeU8(w, (i>>12)&0x7f|0x80);
-        writer_writeU8(w, (i>>6)&0x7f|0x80);
-        writer_writeU8(w, (i)&0x7f);
-    } else if(i>=-0x40000000 && i<0x40000000) {
-        writer_writeU8(w, (i>>24)&0x7f|0x80);
-        writer_writeU8(w, (i>>18)&0x7f|0x80);
-        writer_writeU8(w, (i>>12)&0x7f|0x80);
-        writer_writeU8(w, (i>>6)&0x7f|0x80);
+    } else if(i>=-0x8000000 && i<0x8000000) {
+        writer_writeU8(w, (i>>21)&0x7f|0x80);
+        writer_writeU8(w, (i>>14)&0x7f|0x80);
+        writer_writeU8(w, (i>>7)&0x7f|0x80);
         writer_writeU8(w, (i)&0x7f);
     } else {
-        writer_writeU8(w, (i>>30)&0x7f|0x80);
-        writer_writeU8(w, (i>>24)&0x7f|0x80);
-        writer_writeU8(w, (i>>18)&0x7f|0x80);
-        writer_writeU8(w, (i>>12)&0x7f|0x80);
-        writer_writeU8(w, (i>>6)&0x7f|0x80);
+        writer_writeU8(w, (i>>28)&0x7f|0x80);
+        writer_writeU8(w, (i>>21)&0x7f|0x80);
+        writer_writeU8(w, (i>>14)&0x7f|0x80);
+        writer_writeU8(w, (i>>7)&0x7f|0x80);
         writer_writeU8(w, (i)&0x7f);
     }
 }

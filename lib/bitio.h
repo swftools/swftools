@@ -104,7 +104,7 @@ void write_compressed_int(writer_t*w, int32_t i);
 /* standard readers / writers */
 
 void reader_init_filereader(reader_t*r, int handle);
-void reader_init_filereader2(reader_t*r, const char*filename);
+int reader_init_filereader2(reader_t*r, const char*filename);
 void reader_init_zlibinflate(reader_t*r, reader_t*input);
 void reader_init_memreader(reader_t*r, void*data, int length);
 void reader_init_nullreader(reader_t*r);
