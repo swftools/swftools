@@ -247,12 +247,12 @@ int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int qu
     } else if(components == 4) {
         unsigned char*data2 = malloc(width*3);
         for(t=0;t<height;t++) {
-            unsigned char*in = &data[width*3*t];
+            unsigned char*line = &data[width*3*t];
             int x;
             for(x=0;x<width;x++) {
-                in[x*3+0] = data[x*4+1];
-                in[x*3+1] = data[x*4+2];
-                in[x*3+2] = data[x*4+3];
+                data2[x*3+0] = line[x*4+1];
+                data2[x*3+1] = line[x*4+2];
+                data2[x*3+2] = line[x*4+3];
             }
             jpeg_write_scanlines(&cinfo, &data2, 1);
         }
