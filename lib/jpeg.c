@@ -206,46 +206,64 @@ int jpeg_save_to_file(unsigned char*data, unsigned width, unsigned height, int q
   return 1;
 }
 
-int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int quality, unsigned char*_dest, int _destlen)
+int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int quality, unsigned char*_dest, int _destlen, int components)
 {
-  struct jpeg_destination_mgr mgr;
-  struct jpeg_compress_struct cinfo;
-  struct jpeg_error_mgr jerr;
-  int t;
+    struct jpeg_destination_mgr mgr;
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    int t;
 
-  memset(&cinfo, 0, sizeof(cinfo));
-  memset(&jerr, 0, sizeof(jerr));
-  memset(&mgr, 0, sizeof(mgr));
-  cinfo.err = jpeg_std_error(&jerr);
-  jpeg_create_compress(&cinfo);
+    memset(&cinfo, 0, sizeof(cinfo));
+    memset(&jerr, 0, sizeof(jerr));
+    memset(&mgr, 0, sizeof(mgr));
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_compress(&cinfo);
 
-  dest = _dest;
-  len = 0;
-  destlen = _destlen;
+    dest = _dest;
+    len = 0;
+    destlen = _destlen;
 
-  mgr.init_destination = mem_init_destination;
-  mgr.empty_output_buffer = mem_empty_output_buffer;
-  mgr.term_destination = mem_term_destination;
-  cinfo.dest = &mgr;
+    mgr.init_destination = mem_init_destination;
+    mgr.empty_output_buffer = mem_empty_output_buffer;
+    mgr.term_destination = mem_term_destination;
+    cinfo.dest = &mgr;
 
-  // init compression
-  
-  cinfo.image_width  = width;
-  cinfo.image_height = height;
-  cinfo.input_components = 3;
-  cinfo.in_color_space = JCS_RGB;
-  jpeg_set_defaults(&cinfo);
-  cinfo.dct_method = JDCT_IFAST;
-  jpeg_set_quality(&cinfo,quality,TRUE);
+    // init compression
 
-  jpeg_start_compress(&cinfo, FALSE);
-  for(t=0;t<height;t++) {
-    unsigned char*data2 = &data[width*3*t];
-    jpeg_write_scanlines(&cinfo, &data2, 1);
-  }
-  jpeg_finish_compress(&cinfo);
-  jpeg_destroy_compress(&cinfo);
-  return len;
+    cinfo.image_width  = width;
+    cinfo.image_height = height;
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+    jpeg_set_defaults(&cinfo);
+    cinfo.dct_method = JDCT_IFAST;
+    jpeg_set_quality(&cinfo,quality,TRUE);
+
+    jpeg_start_compress(&cinfo, FALSE);
+    if(components == 3) {
+        for(t=0;t<height;t++) {
+            unsigned char*data2 = &data[width*3*t];
+            jpeg_write_scanlines(&cinfo, &data2, 1);
+        }
+    } else if(components == 4) {
+        unsigned char*data2 = malloc(width*3);
+        for(t=0;t<height;t++) {
+            unsigned char*in = &data[width*3*t];
+            int x;
+            for(x=0;x<width;x++) {
+                in[x*3+0] = data[x*4+1];
+                in[x*3+1] = data[x*4+2];
+                in[x*3+2] = data[x*4+3];
+            }
+            jpeg_write_scanlines(&cinfo, &data2, 1);
+        }
+        free(data2);
+    } else {
+        fprintf(stderr, "unsupported number of components in jpeg_save_to_mem()\n");
+    }
+
+    jpeg_finish_compress(&cinfo);
+    jpeg_destroy_compress(&cinfo);
+    return len;
 }
 
 void mem_init_source (j_decompress_ptr cinfo)
