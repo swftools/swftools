@@ -323,3 +323,21 @@ char file_exists(const char*filename)
     return 0;
 #endif
 }
+
+int file_size(const char*filename)
+{
+#ifdef HAVE_STAT
+    struct stat sb;
+    if(stat(filename, &sb) >= 0) {
+        return sb.st_size;
+    }
+#endif
+    FILE*fi = fopen(filename, "rb");
+    if(fi>=0) {
+        fseek(fi, 0, SEEK_END);
+        int size = ftell(fi);
+        fclose(fi);
+        return size;
+    }
+    return 0;
+}
