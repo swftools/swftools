@@ -732,6 +732,9 @@ gfxbbox_t gfxbbox_expand_to_point(gfxbbox_t box, gfxcoord_t x, gfxcoord_t y)
 
 gfxbbox_t gfxbbox_expand_to_bbox(gfxbbox_t box, gfxbbox_t box2)
 {
+    if(box2.xmin==0 && box2.ymin==0 && box2.xmax==0 && box2.ymax==0) {
+        return box;
+    }
     box = gfxbbox_expand_to_point(box, box2.xmin, box2.ymin);
     box = gfxbbox_expand_to_point(box, box2.xmax, box2.ymax);
     return box;
