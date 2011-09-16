@@ -348,6 +348,9 @@ static void add_to_chain(char*cmd, dict_t*params, gfxfilterchain_t**chain, gfxfi
     } else if(!strcmp(cmd, "flatten")) {
         f = malloc(sizeof(gfxfilter_t));
         gfxfilter_flatten_init((gfxfilter_t*)f);
+    } else if(!strcmp(cmd, "rescale_images")) {
+        f = malloc(sizeof(gfxfilter_t));
+        gfxfilter_rescale_images_init((gfxfilter_t*)f);
     } else if(!strcmp(cmd, "remove_font_transforms")) {
         f = malloc(sizeof(gfxtwopassfilter_t));
         gfxtwopassfilter_remove_font_transforms_init((gfxtwopassfilter_t*)f);
