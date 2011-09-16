@@ -77,6 +77,7 @@ void rescale_images_fillbitmap(gfxfilter_t*dev, gfxline_t*line, gfximage_t*img, 
         m.m10 = (m.m10 * img->height) / new_height;
         m.m11 = (m.m11 * img->height) / new_height;
         out->fillbitmap(out, line, img, &m, cxform);
+        gfximage_free(new_image);
     } else {
         out->fillbitmap(out, line, img, matrix, cxform);
     }
