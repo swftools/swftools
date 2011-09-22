@@ -813,20 +813,20 @@ char*reader_readString(reader_t*r)
     g.finish(&g);
     return string;
 }
-uint32_t read_compressed_uint(reader_t*r)
+unsigned int read_compressed_uint(reader_t*r)
 {
-    uint32_t u = 0;
-    uint32_t b;
+    unsigned int u = 0;
+    unsigned int b;
     do {
         b = reader_readU8(r);
         u = u<<7|b&0x7f;
     } while(b&0x80);
     return u;
 }
-int32_t read_compressed_int(reader_t*r)
+int read_compressed_int(reader_t*r)
 {
-    int32_t i = 0;
-    int32_t b;
+    int i = 0;
+    int b;
 
     b = reader_readS8(r);
     i = b&0x7f;
@@ -913,7 +913,7 @@ void writer_writeDouble(writer_t*w, double f)
     w->write(w, &b7, 1);
     w->write(w, &b8, 1);
 }
-void write_compressed_uint(writer_t*w, uint32_t u)
+void write_compressed_uint(writer_t*w, unsigned int u)
 {
     if(u<0x80) {
         writer_writeU8(w, u);
@@ -937,7 +937,7 @@ void write_compressed_uint(writer_t*w, uint32_t u)
         writer_writeU8(w, u&0x7f);
     }
 }
-void write_compressed_int(writer_t*w, int32_t i)
+void write_compressed_int(writer_t*w, int i)
 {
     if(i>=-0x40 && i<0x40) {
         writer_writeU8(w, i&0x7f);
