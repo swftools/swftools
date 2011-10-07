@@ -236,7 +236,6 @@ ${name}/lib/gfxpoly.h \
 ${name}/lib/gfxtools.c \
 ${name}/lib/gfxfilter.h \
 ${name}/lib/gfxfilter.c \
-${name}/lib/gfxpoly.c \
 ${name}/lib/gfxpoly/active.c \
 ${name}/lib/gfxpoly/active.h \
 ${name}/lib/gfxpoly/convert.c \
