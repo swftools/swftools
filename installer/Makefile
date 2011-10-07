@@ -1,6 +1,6 @@
-CC=/opt/xmingw/bin/i386-mingw32msvc-gcc -DWIN32 -Wno-trigraphs
-STRIP=/opt/xmingw/bin/i386-mingw32msvc-strip 
-WINDRES=/opt/xmingw/bin/i386-mingw32msvc-windres
+CC=i686-pc-mingw32-gcc -DWIN32 -Wno-trigraphs
+STRIP=i686-pc-mingw32-strip 
+WINDRES=i686-pc-mingw32-windres
 
 LICENSE=gpl.c
 

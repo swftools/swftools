@@ -250,6 +250,8 @@ ${name}/lib/gfxpoly/wind.c \
 ${name}/lib/gfxpoly/wind.h \
 ${name}/lib/gfxpoly/xrow.c \
 ${name}/lib/gfxpoly/xrow.h \
+${name}/lib/gfxpoly/moments.c \
+${name}/lib/gfxpoly/moments.h \
 ${name}/lib/gfxpoly/heap.h \
 ${name}/lib/pdf/bbox.c \
 ${name}/lib/pdf/bbox.h \
@@ -285,6 +287,9 @@ ${name}/lib/filters/alpha.c \
 ${name}/lib/filters/one_big_font.c \
 ${name}/lib/filters/vectors_to_glyphs.c \
 ${name}/lib/filters/remove_font_transforms.c \
+${name}/lib/filters/remove_invisible_characters.c \
+${name}/lib/filters/flatten.c \
+${name}/lib/filters/rescale_images.c \
 ${name}/lib/pdf/popplercompat.cc \
 ${name}/lib/pdf/popplercompat.h \
 ${name}/lib/pdf/VectorGraphicOutputDev.h \

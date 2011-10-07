@@ -149,8 +149,14 @@ devices/ocr.$(O): devices/ocr.c devices/ocr.h gocr/gocr.h
 
 filters/alpha.$(O): filters/alpha.c gfxfilter.h
 	$(C) filters/alpha.c -o filters/alpha.$(O)
+filters/flatten.$(O): filters/flatten.c gfxfilter.h
+	$(C) filters/flatten.c -o filters/flatten.$(O)
 filters/remove_font_transform.$(O): filters/remove_font_transform.c gfxfilter.h
 	$(C) filters/remove_font_transform.c -o filters/remove_font_transform.$(O)
+filters/remove_invisible_characters.$(O): filters/remove_invisible_characters.c gfxfilter.h
+	$(C) filters/remove_invisible_characters.c -o filters/remove_invisible_characters.$(O)
+filters/rescale_images.$(O): filters/rescale_images.c gfxfilter.h
+	$(C) filters/rescale_images.c -o filters/rescale_images.$(O)
 
 readers/swf2.$(O): readers/swf.c readers/swf.h
 	$(C) readers/swf.c -o readers/swf2.$(O)
