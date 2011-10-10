@@ -3404,7 +3404,7 @@ static int c_placement(map_t*args, int type)
     const char* as = map_lookup(args, "as");
     const char* blendmode = lu(args, "blend");
     const char* filterstr = lu(args, "filter");
-    const char* noinstancenamestr = lu(args, "noinstancename");
+    const char* noinstancenamestr = "";
     U8 blend;
     MULADD r,g,b,a;
     float oldwidth;
@@ -3413,6 +3413,9 @@ static int c_placement(map_t*args, int type)
     MULADD luminance;
     parameters_t p;
     U16 set = 0x0000;
+
+    if(type==PT_PUT)
+        noinstancenamestr = lu(args, "noinstancename");
 
     if(type==9)
     { // (?) .rotate  or .arcchange
@@ -4131,7 +4134,9 @@ static char* readfile(char*filename)
     l = ftell(fi);
     fseek(fi, 0, SEEK_SET);
     text = rfx_alloc(l+1);
-    fread(text, l, 1, fi);
+    int r = fread(text, l, 1, fi);
+    if(r<1)
+	syntaxerror("Couldn't read file %s: %s", filename, strerror(errno));
     text[l]=0;
     fclose(fi);
     return text;
