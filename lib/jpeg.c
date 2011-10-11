@@ -478,7 +478,7 @@ int jpeg_save_to_file(unsigned char*data, unsigned width, unsigned height, int q
     fprintf(stderr, "jpeg_save_to_file: No JPEG support compiled in\n");
     return 0;
 }
-int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int quality, unsigned char*dest, int destsize)
+int jpeg_save_to_mem(unsigned char*data, unsigned width, unsigned height, int quality, unsigned char*_dest, int _destlen, int components)
 {
     fprintf(stderr, "jpeg_save_tomem: No JPEG support compiled in\n");
     return 0;
