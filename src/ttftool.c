@@ -29,11 +29,13 @@
 #include "../lib/ttf.h"
 
 static char * filename = 0;
+static char * output = 0;
 static int showname = 0;
 static int verbose = 0;
 
 static struct options_t options[] = {
 {"n", "name"},
+{"o", "output"},
 {0,0}
 };
 
@@ -48,6 +50,9 @@ int args_callback_option(char*name,char*val)
     } else if(!strcmp(name, "v")) {
 	verbose ++;
 	return 0;
+    } else if(!strcmp(name, "o")) {
+	output = strdup(val);
+	return 1;
     } else {
         printf("Unknown option: -%s\n", name);
 	exit(1);
@@ -86,6 +91,9 @@ int main(int argc, char ** argv)
     ttf_t* font = ttf_open(filename);
     if(showname && font->full_name) {
 	printf("%s\n", font->full_name);
+    }
+    if(output) {
+        ttf_save(font, output);
     }
     return 0;
 }
