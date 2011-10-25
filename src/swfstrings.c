@@ -208,7 +208,7 @@ int main (int argc,char ** argv)
 	if(!h) h = (swf.movieSize.ymax - swf.movieSize.ymin) / 20;
     }
 
-    id2tag = malloc(sizeof(TAG)*65536);
+    id2tag = rfx_calloc(sizeof(TAG)*65536);
 
     fontnum = 0;
     swf_FontEnumerate(&swf,&fontcallback1, 0);
