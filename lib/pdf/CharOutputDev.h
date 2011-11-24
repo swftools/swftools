@@ -113,6 +113,7 @@ class GFXGlobalParams:  public GlobalParams {
     GFXGlobalParams();
     ~GFXGlobalParams();
     virtual DisplayFontParam *getDisplayFont(GString *fontName);
+    virtual DisplayFontParam *getDisplayCIDFont(GString *fontName, GString *collection);
 };
 
 #endif //__charoutputdev_h__

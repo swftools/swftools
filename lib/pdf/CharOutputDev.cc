@@ -157,14 +157,18 @@ char* writeOutStdFont(fontentry* f)
     fi = fopen(namebuf2, "wb");
     if(!fi)
         return 0;
-    fwrite(f->afm, 1, f->afmlen, fi);
+    int written = fwrite(f->afm, 1, f->afmlen, fi);
+    if(written<0)
+        return 0;
     fclose(fi);
 
     sprintf(namebuf2, "%s.pfb", tmpFileName);
     fi = fopen(namebuf2, "wb");
     if(!fi)
         return 0;
-    fwrite(f->pfb, 1, f->pfblen, fi);
+    written = fwrite(f->pfb, 1, f->pfblen, fi);
+    if(written<0)
+        return 0;
     fclose(fi);
     return strdup(namebuf2);
 }
@@ -495,6 +499,15 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 	msg("<verbose> Font %s not found\n", name);
 	return GlobalParams::getDisplayFont(fontName);
     }
+}
+
+DisplayFontParam *GFXGlobalParams::getDisplayCIDFont(GString *fontName, GString *collection)
+{
+    DisplayFontParam*dfp = GlobalParams::getDisplayCIDFont(fontName, collection);
+    if(!dfp) {
+        dfp = this->getDisplayFont(fontName);
+    }
+    return dfp;
 }
 
 CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
