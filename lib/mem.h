@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
+
 #include "../config.h"
 
 #define ALLOC_ARRAY(type, num) (((type)*)rfxalloc(sizeof(type)*(num)))
