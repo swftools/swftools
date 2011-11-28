@@ -277,11 +277,6 @@
 #endif
 #endif
 
-// supply a substitute calloc function if necessary
-#ifndef HAVE_CALLOC
-#define calloc rfx_calloc_replacement
-#endif
-
 //#ifdef HAVE_BUILTIN_EXPECT
 #if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
 # define likely(x)      __builtin_expect((x), 1)
