@@ -1239,7 +1239,7 @@ int main (int argc,char ** argv)
 		   "   PLAY=\"true\" ALIGN=\"\" LOOP=\"true\" QUALITY=\"high\"\n"
 		   "   TYPE=\"application/x-shockwave-flash\"\n"
                    "   ALLOWSCRIPTACCESS=\"always\"\n"
-		   "   PLUGINSPAGE=\"http://www.macromedia.com/go/getflashplayer\">\n"
+		   "   PLUGINSPAGE=\"http://get.adobe.com/flashplayer/\">\n"
 		   "  </EMBED>\n" 
 		   "</OBJECT>\n", xsize, ysize, fileversions[swf.fileVersion], 
 				  filename, filename, xsize, ysize);

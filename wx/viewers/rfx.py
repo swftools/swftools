@@ -64,7 +64,7 @@ html_template = """<html>
                  play="true" ALIGN="" loop="true" quality="high"
                  type="application/x-shockwave-flash"
                  flashvars="%(flashvars)s"
-                 pluginspage="http://www.macromedia.com/go/getflashplayer">
+                 pluginspage="http://get.adobe.com/flashplayer/">
           </embed>
 </object>
 </body>
