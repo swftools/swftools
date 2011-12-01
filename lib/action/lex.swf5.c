@@ -1049,21 +1049,27 @@ static int lexBufferInput(char *buf, int max_size)
         /* very inefficient method of unescaping strings */
 static void unescape(char *buf)
 {
-  char *p, *p1;
+  char *p, *n;
 
-  for (p1=buf; (p=strchr(p1, '\\')) != 0; p1 = p+1) {
-    switch(p[1])
-    {
-    case 'b' : p[1] = '\b'; break;
-    case 'f' : p[1] = '\f'; break;
-    case 'n' : p[1] = '\n'; break;
-    case 'r' : p[1] = '\r'; break;
-    case 't' : p[1] = '\t'; break;
-    case 'x' :
-    case 'u' : warning("unsupported escape sequence");
+  n = p = buf;
+  while(*p) {
+    if(*p == '\\') {
+        switch(p[1])
+        {
+        case 'b' : *n++ = '\b'; break;
+        case 'f' : *n++ = '\f'; break;
+        case 'n' : *n++ = '\n'; break;
+        case 'r' : *n++ = '\r'; break;
+        case 't' : *n++ = '\t'; break;
+        case 'x' :
+        case 'u' : warning("unsupported escape sequence");
+        }
+        p+=2;
+    } else {
+        *n++ = *p++;
     }
-    strcpy(p, p+1);
   }
+  *n = 0;
 }
 
 void swf5ParseInit(const char *script, int debug)
@@ -1081,7 +1087,7 @@ void swf5ParseInit(const char *script, int debug)
 }
 
 
-#line 82 "swf5compiler.flex"
+#line 88 "swf5compiler.flex"
  // forward declaration needed by the following function
 #ifndef YY_PROTO
 #ifdef YY_USE_PROTOS
@@ -1093,7 +1099,7 @@ void swf5ParseInit(const char *script, int debug)
  static void yyunput YY_PROTO(( int c, char *buf_ptr ));
 
  void do_unput5(const char c) { unput(c); }
-#line 1097 "lex.swf5.c"
+#line 1103 "lex.swf5.c"
 
 #define INITIAL 0
 #define asm 1
@@ -1276,10 +1282,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 98 "swf5compiler.flex"
+#line 104 "swf5compiler.flex"
 
 
-#line 1283 "lex.swf5.c"
+#line 1289 "lex.swf5.c"
 
 	if ( !(yy_init) )
 		{
@@ -1364,580 +1370,580 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 100 "swf5compiler.flex"
+#line 106 "swf5compiler.flex"
 { count();	swf5lval.intVal = strtoul(swf5text, NULL, 0);
 					return INTEGER;		}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 102 "swf5compiler.flex"
+#line 108 "swf5compiler.flex"
 { count();	swf5lval.intVal = strtoul(swf5text, NULL, 0);
 					return INTEGER;		}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 104 "swf5compiler.flex"
+#line 110 "swf5compiler.flex"
 { count();	swf5lval.intVal = atoi(swf5text);
 					return INTEGER;		}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 106 "swf5compiler.flex"
+#line 112 "swf5compiler.flex"
 { count();	swf5lval.doubleVal = atof(swf5text);
 					return DOUBLE; 		}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 108 "swf5compiler.flex"
+#line 114 "swf5compiler.flex"
 { count();	swf5lval.intVal = 1;
 					return BOOLEAN;		}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 110 "swf5compiler.flex"
+#line 116 "swf5compiler.flex"
 { count();	swf5lval.intVal = 0;
 					return BOOLEAN;		}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 112 "swf5compiler.flex"
+#line 118 "swf5compiler.flex"
 { count();	return NULLVAL;		}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 113 "swf5compiler.flex"
+#line 119 "swf5compiler.flex"
 { count();	return BREAK;		}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 114 "swf5compiler.flex"
+#line 120 "swf5compiler.flex"
 { count();	return CONTINUE;	}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 115 "swf5compiler.flex"
+#line 121 "swf5compiler.flex"
 { count();	return FUNCTION;	}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 116 "swf5compiler.flex"
+#line 122 "swf5compiler.flex"
 { count();	return ELSE;		}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 117 "swf5compiler.flex"
+#line 123 "swf5compiler.flex"
 { count();	return SWITCH;		}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 118 "swf5compiler.flex"
+#line 124 "swf5compiler.flex"
 { count();	return CASE;		}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 119 "swf5compiler.flex"
+#line 125 "swf5compiler.flex"
 { count();	return DEFAULT;		}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 120 "swf5compiler.flex"
+#line 126 "swf5compiler.flex"
 { count();	return FOR;		}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 121 "swf5compiler.flex"
+#line 127 "swf5compiler.flex"
 { count();	return IN;		}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 122 "swf5compiler.flex"
+#line 128 "swf5compiler.flex"
 { count();	return IF;		}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 123 "swf5compiler.flex"
+#line 129 "swf5compiler.flex"
 { count();	return WHILE;		}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 124 "swf5compiler.flex"
+#line 130 "swf5compiler.flex"
 { count();	return DO;		}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 125 "swf5compiler.flex"
+#line 131 "swf5compiler.flex"
 { count();	return VAR;		}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 126 "swf5compiler.flex"
+#line 132 "swf5compiler.flex"
 { count();	return NEW;		}
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 127 "swf5compiler.flex"
+#line 133 "swf5compiler.flex"
 { count();	return DELETE;		}
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 128 "swf5compiler.flex"
+#line 134 "swf5compiler.flex"
 { count();	return RETURN;		}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 129 "swf5compiler.flex"
+#line 135 "swf5compiler.flex"
 { count();	return WITH;		}
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 130 "swf5compiler.flex"
+#line 136 "swf5compiler.flex"
 { count();	BEGIN(asm); return ASM;		}
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 131 "swf5compiler.flex"
+#line 137 "swf5compiler.flex"
 { count();	return EVAL;		}
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 132 "swf5compiler.flex"
+#line 138 "swf5compiler.flex"
 { count();	return TYPEOF; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 133 "swf5compiler.flex"
+#line 139 "swf5compiler.flex"
 { count();	return INSTANCEOF; }
 	YY_BREAK
 /* legacy functions */
 case 29:
 YY_RULE_SETUP
-#line 136 "swf5compiler.flex"
+#line 142 "swf5compiler.flex"
 { count();	return RANDOM;	}
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 137 "swf5compiler.flex"
+#line 143 "swf5compiler.flex"
 { count();	return GETTIMER;	}
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 138 "swf5compiler.flex"
+#line 144 "swf5compiler.flex"
 { count();	return LENGTH;	}
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 139 "swf5compiler.flex"
+#line 145 "swf5compiler.flex"
 { count();	return CONCAT;	}
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 140 "swf5compiler.flex"
+#line 146 "swf5compiler.flex"
 { count();	return SUBSTR;	}
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 141 "swf5compiler.flex"
+#line 147 "swf5compiler.flex"
 { count();	return TRACE;	}
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 142 "swf5compiler.flex"
+#line 148 "swf5compiler.flex"
 { count();	return INT;	}
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 143 "swf5compiler.flex"
+#line 149 "swf5compiler.flex"
 { count();	return ORD;	}
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 144 "swf5compiler.flex"
+#line 150 "swf5compiler.flex"
 { count();	return CHR;	}
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 145 "swf5compiler.flex"
+#line 151 "swf5compiler.flex"
 { count();	return GETURL;	}
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 146 "swf5compiler.flex"
+#line 152 "swf5compiler.flex"
 { count();	return GETURL1;	}
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 147 "swf5compiler.flex"
+#line 153 "swf5compiler.flex"
 { count();	return NEXTFRAME;	}
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 148 "swf5compiler.flex"
+#line 154 "swf5compiler.flex"
 { count();	return PREVFRAME;	}
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 149 "swf5compiler.flex"
+#line 155 "swf5compiler.flex"
 { count();	return PLAY;		}
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 150 "swf5compiler.flex"
+#line 156 "swf5compiler.flex"
 { count();	return STOP;		}
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 151 "swf5compiler.flex"
+#line 157 "swf5compiler.flex"
 { count();	return TOGGLEQUALITY;	}
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 152 "swf5compiler.flex"
+#line 158 "swf5compiler.flex"
 { count();	return STOPSOUNDS;	}
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 153 "swf5compiler.flex"
+#line 159 "swf5compiler.flex"
 { count();	return CALLFRAME;	}
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 154 "swf5compiler.flex"
+#line 160 "swf5compiler.flex"
 { count();	return GOTOFRAME;	}
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 155 "swf5compiler.flex"
+#line 161 "swf5compiler.flex"
 { count();	return SETTARGET;	}
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 156 "swf5compiler.flex"
+#line 162 "swf5compiler.flex"
 { count();	return LOADVARIABLES;	}
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 157 "swf5compiler.flex"
+#line 163 "swf5compiler.flex"
 { count();	return LOADMOVIE;	}
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 158 "swf5compiler.flex"
+#line 164 "swf5compiler.flex"
 { count();	return LOADVARIABLESNUM;	}
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 159 "swf5compiler.flex"
+#line 165 "swf5compiler.flex"
 { count();	return LOADMOVIENUM;	}
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 160 "swf5compiler.flex"
+#line 166 "swf5compiler.flex"
 { count();	return DUPLICATEMOVIECLIP; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 161 "swf5compiler.flex"
+#line 167 "swf5compiler.flex"
 { count();	return REMOVEMOVIECLIP; }
 	YY_BREAK
 /* assembler ops */
 
 case 55:
 YY_RULE_SETUP
-#line 165 "swf5compiler.flex"
+#line 171 "swf5compiler.flex"
 { count();	return DUP; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 166 "swf5compiler.flex"
+#line 172 "swf5compiler.flex"
 { count();	return SWAP; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 167 "swf5compiler.flex"
+#line 173 "swf5compiler.flex"
 { count();	return POP; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 168 "swf5compiler.flex"
+#line 174 "swf5compiler.flex"
 { count();	return PUSH; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 169 "swf5compiler.flex"
+#line 175 "swf5compiler.flex"
 { count();	return SETREGISTER; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
-#line 170 "swf5compiler.flex"
+#line 176 "swf5compiler.flex"
 { count();	return CALLFUNCTION; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 171 "swf5compiler.flex"
+#line 177 "swf5compiler.flex"
 { count();	return CALLMETHOD; }
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 172 "swf5compiler.flex"
+#line 178 "swf5compiler.flex"
 { count();	return AND; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 173 "swf5compiler.flex"
+#line 179 "swf5compiler.flex"
 { count();	return OR; }
 	YY_BREAK
 case 64:
 YY_RULE_SETUP
-#line 174 "swf5compiler.flex"
+#line 180 "swf5compiler.flex"
 { count();	return XOR; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
-#line 175 "swf5compiler.flex"
+#line 181 "swf5compiler.flex"
 { count();	return MODULO; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
-#line 176 "swf5compiler.flex"
+#line 182 "swf5compiler.flex"
 { count();	return ADD; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 177 "swf5compiler.flex"
+#line 183 "swf5compiler.flex"
 { count();	return ADD; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
-#line 178 "swf5compiler.flex"
+#line 184 "swf5compiler.flex"
 { count();	return LESSTHAN; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
-#line 179 "swf5compiler.flex"
+#line 185 "swf5compiler.flex"
 { count();	return LESSTHAN; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
-#line 180 "swf5compiler.flex"
+#line 186 "swf5compiler.flex"
 { count();	return EQUALS; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
-#line 181 "swf5compiler.flex"
+#line 187 "swf5compiler.flex"
 { count();	return EQUALS; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
-#line 182 "swf5compiler.flex"
+#line 188 "swf5compiler.flex"
 { count();	return INC; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
-#line 183 "swf5compiler.flex"
+#line 189 "swf5compiler.flex"
 { count();	return DEC; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
-#line 184 "swf5compiler.flex"
+#line 190 "swf5compiler.flex"
 { count();	return ENUMERATE; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
-#line 185 "swf5compiler.flex"
+#line 191 "swf5compiler.flex"
 { count();	return INITOBJECT; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
-#line 186 "swf5compiler.flex"
+#line 192 "swf5compiler.flex"
 { count();	return INITARRAY; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
-#line 187 "swf5compiler.flex"
+#line 193 "swf5compiler.flex"
 { count();	return GETMEMBER; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
-#line 188 "swf5compiler.flex"
+#line 194 "swf5compiler.flex"
 { count();	return SETMEMBER; }
 	YY_BREAK
 case 79:
 YY_RULE_SETUP
-#line 189 "swf5compiler.flex"
+#line 195 "swf5compiler.flex"
 { count();	return SHIFTLEFT; }
 	YY_BREAK
 case 80:
 YY_RULE_SETUP
-#line 190 "swf5compiler.flex"
+#line 196 "swf5compiler.flex"
 { count();	return SHIFTRIGHT; }
 	YY_BREAK
 case 81:
 YY_RULE_SETUP
-#line 191 "swf5compiler.flex"
+#line 197 "swf5compiler.flex"
 { count();	return SHIFTRIGHT2; }
 	YY_BREAK
 case 82:
 YY_RULE_SETUP
-#line 192 "swf5compiler.flex"
+#line 198 "swf5compiler.flex"
 { count();	return VAREQUALS; }
 	YY_BREAK
 case 83:
 YY_RULE_SETUP
-#line 193 "swf5compiler.flex"
+#line 199 "swf5compiler.flex"
 { count();	return OLDADD; }
 	YY_BREAK
 case 84:
 YY_RULE_SETUP
-#line 194 "swf5compiler.flex"
+#line 200 "swf5compiler.flex"
 { count();	return SUBTRACT; }
 	YY_BREAK
 case 85:
 YY_RULE_SETUP
-#line 195 "swf5compiler.flex"
+#line 201 "swf5compiler.flex"
 { count();	return MULTIPLY; }
 	YY_BREAK
 case 86:
 YY_RULE_SETUP
-#line 196 "swf5compiler.flex"
+#line 202 "swf5compiler.flex"
 { count();	return DIVIDE; }
 	YY_BREAK
 case 87:
 YY_RULE_SETUP
-#line 197 "swf5compiler.flex"
+#line 203 "swf5compiler.flex"
 { count();	return OLDEQUALS; }
 	YY_BREAK
 case 88:
 YY_RULE_SETUP
-#line 198 "swf5compiler.flex"
+#line 204 "swf5compiler.flex"
 { count();	return OLDLESSTHAN; }
 	YY_BREAK
 case 89:
 YY_RULE_SETUP
-#line 199 "swf5compiler.flex"
+#line 205 "swf5compiler.flex"
 { count();	return LOGICALAND; }
 	YY_BREAK
 case 90:
 YY_RULE_SETUP
-#line 200 "swf5compiler.flex"
+#line 206 "swf5compiler.flex"
 { count();	return LOGICALOR; }
 	YY_BREAK
 case 91:
 YY_RULE_SETUP
-#line 201 "swf5compiler.flex"
+#line 207 "swf5compiler.flex"
 { count();	return NOT; }
 	YY_BREAK
 case 92:
 YY_RULE_SETUP
-#line 202 "swf5compiler.flex"
+#line 208 "swf5compiler.flex"
 { count();	return STRINGEQ; }
 	YY_BREAK
 case 93:
 YY_RULE_SETUP
-#line 203 "swf5compiler.flex"
+#line 209 "swf5compiler.flex"
 { count();	return STRINGLENGTH; }
 	YY_BREAK
 case 94:
 YY_RULE_SETUP
-#line 204 "swf5compiler.flex"
+#line 210 "swf5compiler.flex"
 { count();	return SUBSTRING; }
 	YY_BREAK
 case 95:
 YY_RULE_SETUP
-#line 205 "swf5compiler.flex"
+#line 211 "swf5compiler.flex"
 { count();	return GETVARIABLE; }
 	YY_BREAK
 case 96:
 YY_RULE_SETUP
-#line 206 "swf5compiler.flex"
+#line 212 "swf5compiler.flex"
 { count();	return SETVARIABLE; }
 	YY_BREAK
 case 97:
 YY_RULE_SETUP
-#line 207 "swf5compiler.flex"
+#line 213 "swf5compiler.flex"
 { count();	return SETTARGETEXPRESSION; }
 	YY_BREAK
 case 98:
 YY_RULE_SETUP
-#line 208 "swf5compiler.flex"
+#line 214 "swf5compiler.flex"
 { count();	return STARTDRAG; }
 	YY_BREAK
 case 99:
 YY_RULE_SETUP
-#line 209 "swf5compiler.flex"
+#line 215 "swf5compiler.flex"
 { count();	return STOPDRAG; }
 	YY_BREAK
 case 100:
 YY_RULE_SETUP
-#line 210 "swf5compiler.flex"
+#line 216 "swf5compiler.flex"
 { count();	return STRINGLESSTHAN; }
 	YY_BREAK
 case 101:
 YY_RULE_SETUP
-#line 211 "swf5compiler.flex"
+#line 217 "swf5compiler.flex"
 { count();	return MBLENGTH; }
 	YY_BREAK
 case 102:
 YY_RULE_SETUP
-#line 212 "swf5compiler.flex"
+#line 218 "swf5compiler.flex"
 { count();	return MBSUBSTRING; }
 	YY_BREAK
 case 103:
 YY_RULE_SETUP
-#line 213 "swf5compiler.flex"
+#line 219 "swf5compiler.flex"
 { count();	return MBORD; }
 	YY_BREAK
 case 104:
 YY_RULE_SETUP
-#line 214 "swf5compiler.flex"
+#line 220 "swf5compiler.flex"
 { count();	return MBCHR; }
 	YY_BREAK
 case 105:
 YY_RULE_SETUP
-#line 215 "swf5compiler.flex"
+#line 221 "swf5compiler.flex"
 { count();	return BRANCHALWAYS; }
 	YY_BREAK
 case 106:
 YY_RULE_SETUP
-#line 216 "swf5compiler.flex"
+#line 222 "swf5compiler.flex"
 { count();	return BRANCHALWAYS; }
 	YY_BREAK
 case 107:
 YY_RULE_SETUP
-#line 217 "swf5compiler.flex"
+#line 223 "swf5compiler.flex"
 { count();	return BRANCHIFTRUE; }
 	YY_BREAK
 case 108:
 YY_RULE_SETUP
-#line 218 "swf5compiler.flex"
+#line 224 "swf5compiler.flex"
 { count();	return POST; }
 	YY_BREAK
 case 109:
 YY_RULE_SETUP
-#line 219 "swf5compiler.flex"
+#line 225 "swf5compiler.flex"
 { count();	return GET; }
 	YY_BREAK
 case 110:
 YY_RULE_SETUP
-#line 220 "swf5compiler.flex"
+#line 226 "swf5compiler.flex"
 { count();	return END;		}
 	YY_BREAK
 
 case 111:
 YY_RULE_SETUP
-#line 223 "swf5compiler.flex"
+#line 229 "swf5compiler.flex"
 { count();	swf5lval.str = strdup(swf5text+2);
 					return REGISTER;	}
 	YY_BREAK
 case 112:
 YY_RULE_SETUP
-#line 227 "swf5compiler.flex"
+#line 233 "swf5compiler.flex"
 { count();	swf5lval.str = strdup(swf5text);
 					return IDENTIFIER;	}
 	YY_BREAK
 case 113:
 /* rule 113 can match eol */
 YY_RULE_SETUP
-#line 230 "swf5compiler.flex"
+#line 236 "swf5compiler.flex"
 { count();	swf5lval.str = strdup(swf5text+1);
 					swf5lval.str[strlen(swf5lval.str)-1]=0;
                                         unescape(swf5lval.str);
@@ -1946,7 +1952,7 @@ YY_RULE_SETUP
 case 114:
 /* rule 114 can match eol */
 YY_RULE_SETUP
-#line 235 "swf5compiler.flex"
+#line 241 "swf5compiler.flex"
 { count();	swf5lval.str = strdup(swf5text+1);
 					swf5lval.str[strlen(swf5lval.str)-1]=0;
                                         unescape(swf5lval.str);
@@ -1958,7 +1964,7 @@ case 115:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up swf5text again */
 YY_RULE_SETUP
-#line 240 "swf5compiler.flex"
+#line 246 "swf5compiler.flex"
 { count();	swf5lval.str = strdup("");
 					warning("Unterminated string!");
 					return STRING;		}
@@ -1969,264 +1975,264 @@ case 116:
 (yy_c_buf_p) = yy_cp -= 1;
 YY_DO_BEFORE_ACTION; /* set up swf5text again */
 YY_RULE_SETUP
-#line 244 "swf5compiler.flex"
+#line 250 "swf5compiler.flex"
 { count();	swf5lval.str = strdup("");
 					warning("Unterminated string!");
 					return STRING;		}
 	YY_BREAK
 case 117:
 YY_RULE_SETUP
-#line 248 "swf5compiler.flex"
+#line 254 "swf5compiler.flex"
 { count();	comment();		}
 	YY_BREAK
 case 118:
 YY_RULE_SETUP
-#line 249 "swf5compiler.flex"
+#line 255 "swf5compiler.flex"
 { count();	comment1();		}
 	YY_BREAK
 case 119:
 YY_RULE_SETUP
-#line 250 "swf5compiler.flex"
+#line 256 "swf5compiler.flex"
 { count(); }
 	YY_BREAK
 case 120:
 YY_RULE_SETUP
-#line 252 "swf5compiler.flex"
+#line 258 "swf5compiler.flex"
 { count();	return INCR; }
 	YY_BREAK
 case 121:
 YY_RULE_SETUP
-#line 253 "swf5compiler.flex"
+#line 259 "swf5compiler.flex"
 { count();	return DECR; }
 	YY_BREAK
 case 122:
 YY_RULE_SETUP
-#line 254 "swf5compiler.flex"
+#line 260 "swf5compiler.flex"
 { count();	return LE; }
 	YY_BREAK
 case 123:
 YY_RULE_SETUP
-#line 255 "swf5compiler.flex"
+#line 261 "swf5compiler.flex"
 { count();	return GE; }
 	YY_BREAK
 case 124:
 YY_RULE_SETUP
-#line 256 "swf5compiler.flex"
+#line 262 "swf5compiler.flex"
 { count();	return EQ; }
 	YY_BREAK
 case 125:
 YY_RULE_SETUP
-#line 257 "swf5compiler.flex"
+#line 263 "swf5compiler.flex"
 { count();	return NE; }
 	YY_BREAK
 case 126:
 YY_RULE_SETUP
-#line 258 "swf5compiler.flex"
+#line 264 "swf5compiler.flex"
 { count();	return LAN; }
 	YY_BREAK
 case 127:
 YY_RULE_SETUP
-#line 259 "swf5compiler.flex"
+#line 265 "swf5compiler.flex"
 { count();	return LOR; }
 	YY_BREAK
 case 128:
 YY_RULE_SETUP
-#line 260 "swf5compiler.flex"
+#line 266 "swf5compiler.flex"
 { count();	return MEQ; }
 	YY_BREAK
 case 129:
 YY_RULE_SETUP
-#line 261 "swf5compiler.flex"
+#line 267 "swf5compiler.flex"
 { count();	return DEQ; }
 	YY_BREAK
 case 130:
 YY_RULE_SETUP
-#line 262 "swf5compiler.flex"
+#line 268 "swf5compiler.flex"
 { count();	return IEQ; }
 	YY_BREAK
 case 131:
 YY_RULE_SETUP
-#line 263 "swf5compiler.flex"
+#line 269 "swf5compiler.flex"
 { count();	return SEQ; }
 	YY_BREAK
 case 132:
 YY_RULE_SETUP
-#line 264 "swf5compiler.flex"
+#line 270 "swf5compiler.flex"
 { count();	return AEQ; }
 	YY_BREAK
 case 133:
 YY_RULE_SETUP
-#line 265 "swf5compiler.flex"
+#line 271 "swf5compiler.flex"
 { count();	return OEQ; }
 	YY_BREAK
 case 134:
 YY_RULE_SETUP
-#line 266 "swf5compiler.flex"
+#line 272 "swf5compiler.flex"
 { count();	return SHL; }
 	YY_BREAK
 case 135:
 YY_RULE_SETUP
-#line 267 "swf5compiler.flex"
+#line 273 "swf5compiler.flex"
 { count();	return SHR; }
 	YY_BREAK
 case 136:
 YY_RULE_SETUP
-#line 268 "swf5compiler.flex"
+#line 274 "swf5compiler.flex"
 { count();	return SHR2; }
 	YY_BREAK
 case 137:
 YY_RULE_SETUP
-#line 269 "swf5compiler.flex"
+#line 275 "swf5compiler.flex"
 { count();	return SHLEQ; }
 	YY_BREAK
 case 138:
 YY_RULE_SETUP
-#line 270 "swf5compiler.flex"
+#line 276 "swf5compiler.flex"
 { count();	return SHREQ; }
 	YY_BREAK
 case 139:
 YY_RULE_SETUP
-#line 271 "swf5compiler.flex"
+#line 277 "swf5compiler.flex"
 { count();	return SHR2EQ; }
 	YY_BREAK
 case 140:
 YY_RULE_SETUP
-#line 273 "swf5compiler.flex"
+#line 279 "swf5compiler.flex"
 { count();	return '<'; }
 	YY_BREAK
 case 141:
 YY_RULE_SETUP
-#line 274 "swf5compiler.flex"
+#line 280 "swf5compiler.flex"
 { count();	return '>'; }
 	YY_BREAK
 case 142:
 YY_RULE_SETUP
-#line 275 "swf5compiler.flex"
+#line 281 "swf5compiler.flex"
 { count();	return ';'; }
 	YY_BREAK
 case 143:
 YY_RULE_SETUP
-#line 276 "swf5compiler.flex"
+#line 282 "swf5compiler.flex"
 { count();	return '='; }
 	YY_BREAK
 case 144:
 YY_RULE_SETUP
-#line 277 "swf5compiler.flex"
+#line 283 "swf5compiler.flex"
 { count();	return '+'; }
 	YY_BREAK
 case 145:
 YY_RULE_SETUP
-#line 278 "swf5compiler.flex"
+#line 284 "swf5compiler.flex"
 { count();	return '-'; }
 	YY_BREAK
 case 146:
 YY_RULE_SETUP
-#line 279 "swf5compiler.flex"
+#line 285 "swf5compiler.flex"
 { count();	return '&'; }
 	YY_BREAK
 case 147:
 YY_RULE_SETUP
-#line 280 "swf5compiler.flex"
+#line 286 "swf5compiler.flex"
 { count();	return '|'; }
 	YY_BREAK
 case 148:
 YY_RULE_SETUP
-#line 281 "swf5compiler.flex"
+#line 287 "swf5compiler.flex"
 { count();	return '^'; }
 	YY_BREAK
 case 149:
 YY_RULE_SETUP
-#line 282 "swf5compiler.flex"
+#line 288 "swf5compiler.flex"
 { count();	return '*'; }
 	YY_BREAK
 case 150:
 YY_RULE_SETUP
-#line 283 "swf5compiler.flex"
+#line 289 "swf5compiler.flex"
 { count();	return '/'; }
 	YY_BREAK
 case 151:
 YY_RULE_SETUP
-#line 284 "swf5compiler.flex"
+#line 290 "swf5compiler.flex"
 { count();	return '%'; }
 	YY_BREAK
 case 152:
 YY_RULE_SETUP
-#line 285 "swf5compiler.flex"
+#line 291 "swf5compiler.flex"
 { count();	return '!'; }
 	YY_BREAK
 case 153:
 YY_RULE_SETUP
-#line 286 "swf5compiler.flex"
+#line 292 "swf5compiler.flex"
 { count();	return '('; }
 	YY_BREAK
 case 154:
 YY_RULE_SETUP
-#line 287 "swf5compiler.flex"
+#line 293 "swf5compiler.flex"
 { count();	return ')'; }
 	YY_BREAK
 case 155:
 YY_RULE_SETUP
-#line 288 "swf5compiler.flex"
+#line 294 "swf5compiler.flex"
 { count();	return '['; }
 	YY_BREAK
 case 156:
 YY_RULE_SETUP
-#line 289 "swf5compiler.flex"
+#line 295 "swf5compiler.flex"
 { count();	return ']'; }
 	YY_BREAK
 case 157:
 YY_RULE_SETUP
-#line 290 "swf5compiler.flex"
+#line 296 "swf5compiler.flex"
 { count();	return '{'; }
 	YY_BREAK
 case 158:
 YY_RULE_SETUP
-#line 291 "swf5compiler.flex"
+#line 297 "swf5compiler.flex"
 { count();	BEGIN(0); return '}'; }
 	YY_BREAK
 case 159:
 YY_RULE_SETUP
-#line 292 "swf5compiler.flex"
+#line 298 "swf5compiler.flex"
 { count();	return ','; }
 	YY_BREAK
 case 160:
 YY_RULE_SETUP
-#line 293 "swf5compiler.flex"
+#line 299 "swf5compiler.flex"
 { count();	return '.'; }
 	YY_BREAK
 case 161:
 YY_RULE_SETUP
-#line 294 "swf5compiler.flex"
+#line 300 "swf5compiler.flex"
 { count();	return '?'; }
 	YY_BREAK
 case 162:
 YY_RULE_SETUP
-#line 295 "swf5compiler.flex"
+#line 301 "swf5compiler.flex"
 { count();	return ':'; }
 	YY_BREAK
 case 163:
 YY_RULE_SETUP
-#line 296 "swf5compiler.flex"
+#line 302 "swf5compiler.flex"
 { count();	return '~'; }
 	YY_BREAK
 case 164:
 /* rule 164 can match eol */
 YY_RULE_SETUP
-#line 298 "swf5compiler.flex"
+#line 304 "swf5compiler.flex"
 { count();	strcpy(szLine, swf5text + 1);
 					countline();	yyless(1);	}
 	YY_BREAK
 case 165:
 YY_RULE_SETUP
-#line 301 "swf5compiler.flex"
+#line 307 "swf5compiler.flex"
 SWF_error("Unrecognized character: %s\n", swf5text);
 	YY_BREAK
 case 166:
 YY_RULE_SETUP
-#line 303 "swf5compiler.flex"
+#line 309 "swf5compiler.flex"
 ECHO;
 	YY_BREAK
-#line 2230 "lex.swf5.c"
+#line 2236 "lex.swf5.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(asm):
 	yyterminate();
@@ -3235,7 +3241,7 @@ void swf5free (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 303 "swf5compiler.flex"
+#line 309 "swf5compiler.flex"
 
 
 static int getinput() {
