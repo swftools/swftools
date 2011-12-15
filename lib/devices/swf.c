@@ -111,6 +111,8 @@ typedef struct _swfoutput_internal
     int config_splinemaxerror;
     int config_fontsplinemaxerror;
     int config_filloverlap;
+    int config_local_with_network;
+    int config_local_with_filesystem;
     int config_protect;
     int config_bboxvars;
     int config_disable_polygon_conversion;
@@ -282,6 +284,8 @@ static swfoutput_internal* init_internal_struct()
     i->config_splinemaxerror=1;
     i->config_fontsplinemaxerror=1;
     i->config_filloverlap=0;
+    i->config_local_with_network=0;
+    i->config_local_with_filesystem=0;
     i->config_protect=0;
     i->config_bboxvars=0;
     i->config_override_line_widths=0;
@@ -1208,8 +1212,13 @@ void gfxdevice_swf_init(gfxdevice_t* dev)
     i->swf->movieSize.ymin = 0;
     i->swf->movieSize.xmax = 0;
     i->swf->movieSize.ymax = 0;
-    i->swf->fileAttributes = 9; // as3, local-with-network
-    
+
+    if(i->config_local_with_filesystem) {
+        i->swf->fileAttributes = 8; // as3, local-with-filesystem
+    } else {
+        i->swf->fileAttributes = 9; // as3, local-with-network
+    }
+
     i->swf->firstTag = swf_InsertTag(NULL,ST_SETBACKGROUNDCOLOR);
     i->tag = i->swf->firstTag;
     RGBA rgb;
@@ -2065,6 +2074,12 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	}
     } else if(!strcmp(name, "filloverlap")) {
 	i->config_filloverlap = atoi(value);
+    } else if(!strcmp(name, "local_with_network")) {
+	i->config_local_with_network = atoi(value);
+	i->config_local_with_filesystem = !i->config_local_with_network;
+    } else if(!strcmp(name, "local_with_filesystem")) {
+	i->config_local_with_filesystem = atoi(value);
+	i->config_local_with_network = !i->config_local_with_filesystem;
     } else if(!strcmp(name, "linksopennewwindow")) {
 	i->config_opennewwindow = atoi(value);
     } else if(!strcmp(name, "opennewwindow")) {
