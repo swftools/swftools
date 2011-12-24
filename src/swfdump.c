@@ -39,6 +39,7 @@
 #include <stdarg.h>
 #include "../lib/rfxswf.h"
 #include "../lib/args.h"
+#include "../lib/utf8.h"
 
 static char * filename = 0;
 
@@ -398,7 +399,7 @@ void textcallback(void*self, int*glyphs, int*xpos, int nr, int fontid, int fonts
 
     for(t=0;t<nr;t++)
     {
-	unsigned char a; 
+	unsigned int a;
 	if(font>=0) {
 	    if(glyphs[t] >= fonts[font]->numchars  /*glyph is in range*/
 		    || !fonts[font]->glyph2ascii /* font has ascii<->glyph mapping */
@@ -412,10 +413,12 @@ void textcallback(void*self, int*glyphs, int*xpos, int nr, int fontid, int fonts
 	} else {
 	    a = glyphs[t];
 	}
-	if(a>=32)
-	    printf("%c", a);
-	else
+	if(a>=32) {
+	    char* utf8 = getUTF8(a);
+	    printf("%s", utf8);
+	} else {
 	    printf("\\x%x", (int)a);
+	}
     }
     printf("\n");
 }

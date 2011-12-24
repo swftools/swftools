@@ -149,7 +149,7 @@ void textcallback(void*self, int*glyphs, int*advance, int nr, int fontid, int fo
 	    }
 	}
 
-	unsigned char a; 
+	unsigned int a;
 	int advance = 0;
 	if(font) {
 	    if(glyphs[t]<0 || glyphs[t] >= font->numchars  /*glyph is not in range*/
