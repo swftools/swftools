@@ -594,8 +594,6 @@ int __attribute__((noinline))
 int font_classify(fontclass_t*out, gfxmatrix_t*in, const char*id, gfxcolor_t* color)
 #endif
 {
-    out->id = (char*)id;
-
     if(!config_remove_font_transforms) {
 	out->m00 = 1.0;
 	out->m11 = 1.0;
@@ -627,6 +625,7 @@ int font_classify(fontclass_t*out, gfxmatrix_t*in, const char*id, gfxcolor_t* co
 	    *(U32*)&out->m11 = (*(U32*)&out->m11)&0xffe00000;
 	}
     }
+    out->id = (char*)id;
     out->alpha = color->a?1:0;
 
     return 1;
