@@ -301,7 +301,7 @@ void move_file(const char*from, const char*to)
     while(1) {
 	int bytes = fread(buffer, 1, 16384, fi);
 	if(bytes<=0)
-	    return;
+	    break;
 	fwrite(buffer, bytes, 1, fo);
     }
 
