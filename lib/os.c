@@ -307,6 +307,7 @@ void move_file(const char*from, const char*to)
 
     fclose(fo);
     fclose(fi);
+    unlink(from);
 }
 
 char file_exists(const char*filename)
