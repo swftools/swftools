@@ -600,16 +600,16 @@ PDF2PDF
 DEVICE_PDF
 LIBPDF
 PDF2SWF
-RUBY_INSTALLDIR
-RUBY_LDFLAGS
-RUBY_CPPFLAGS
-RUBY_LIBS
-RUBY
 HAVE_PYTHON_IMAGING
 PYTHON_INSTALL_PATH
 PYTHON_INCLUDES
 PYTHON_LIB
 PYTHON_EXECUTABLE
+RUBY_INSTALLDIR
+RUBY_LDFLAGS
+RUBY_CPPFLAGS
+RUBY_LIBS
+RUBY
 USE_GZIP
 VIDEO_CFLAGS
 VIDEO_LIBS
@@ -618,9 +618,6 @@ xpdf_include
 splash_in_source
 xpdf_in_source
 CXXCPP
-POPPLER_LIBS
-POPPLER_CFLAGS
-PKG_CONFIG
 lame_in_source
 DEVICE_OPENGL
 FREETYPE_CONFIG
@@ -728,9 +725,6 @@ CXX
 CXXFLAGS
 CCC
 CPP
-PKG_CONFIG
-POPPLER_CFLAGS
-POPPLER_LIBS
 CXXCPP'
 
 
@@ -1369,11 +1363,6 @@ Some influential environment variables:
   CXX         C++ compiler command
   CXXFLAGS    C++ compiler flags
   CPP         C preprocessor
-  PKG_CONFIG  path to pkg-config utility
-  POPPLER_CFLAGS
-              C compiler flags for POPPLER, overriding pkg-config
-  POPPLER_LIBS
-              linker flags for POPPLER, overriding pkg-config
   CXXCPP      C++ preprocessor
 
 Use these variables to override the choices made by `configure' or to help
@@ -2647,7 +2636,7 @@ fi
 
 
 PACKAGE=swftools
-VERSION=2010-08-05-2217
+VERSION=2011-12-15-1229
 
 # ------------------------------------------------------------------
 
@@ -6391,189 +6380,7 @@ if test "x$USE_POPPLER" = "xtrue"; then
 
 $as_echo "#define HAVE_POPPLER 1" >>confdefs.h
 
-
-
-if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
-	if test -n "$ac_tool_prefix"; then
-  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
-set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_PKG_CONFIG+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $PKG_CONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-PKG_CONFIG=$ac_cv_path_PKG_CONFIG
-if test -n "$PKG_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
-$as_echo "$PKG_CONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-fi
-if test -z "$ac_cv_path_PKG_CONFIG"; then
-  ac_pt_PKG_CONFIG=$PKG_CONFIG
-  # Extract the first word of "pkg-config", so it can be a program name with args.
-set dummy pkg-config; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_path_ac_pt_PKG_CONFIG+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  case $ac_pt_PKG_CONFIG in
-  [\\/]* | ?:[\\/]*)
-  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
-  ;;
-  *)
-  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-  ;;
-esac
-fi
-ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
-if test -n "$ac_pt_PKG_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
-$as_echo "$ac_pt_PKG_CONFIG" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-  if test "x$ac_pt_PKG_CONFIG" = x; then
-    PKG_CONFIG=""
-  else
-    case $cross_compiling:$ac_tool_warned in
-yes:)
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
-$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
-ac_tool_warned=yes ;;
-esac
-    PKG_CONFIG=$ac_pt_PKG_CONFIG
-  fi
-else
-  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
-fi
-
-fi
-if test -n "$PKG_CONFIG"; then
-	_pkg_min_version=0.9.0
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
-$as_echo_n "checking pkg-config is at least version $_pkg_min_version... " >&6; }
-	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-		PKG_CONFIG=""
-	fi
-
-fi
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for POPPLER" >&5
-$as_echo_n "checking for POPPLER... " >&6; }
-
-if test -n "$POPPLER_CFLAGS"; then
-    pkg_cv_POPPLER_CFLAGS="$POPPLER_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"poppler poppler-splash\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "poppler poppler-splash") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_POPPLER_CFLAGS=`$PKG_CONFIG --cflags "poppler poppler-splash" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$POPPLER_LIBS"; then
-    pkg_cv_POPPLER_LIBS="$POPPLER_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"poppler poppler-splash\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "poppler poppler-splash") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_POPPLER_LIBS=`$PKG_CONFIG --libs "poppler poppler-splash" 2>/dev/null`
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        POPPLER_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "poppler poppler-splash" 2>&1`
-        else
-	        POPPLER_PKG_ERRORS=`$PKG_CONFIG --print-errors "poppler poppler-splash" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$POPPLER_PKG_ERRORS" >&5
-
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-                poppler_pkgconfig=no
-elif test $pkg_failed = untried; then
-	poppler_pkgconfig=no
-else
-	POPPLER_CFLAGS=$pkg_cv_POPPLER_CFLAGS
-	POPPLER_LIBS=$pkg_cv_POPPLER_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	:
-fi
+    #PKG_CHECK_MODULES([POPPLER],[poppler poppler-splash],,[poppler_pkgconfig=no])
     if test "x$poppler_pkgconfig" = "xno"; then
         ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -7026,185 +6833,6 @@ fi
 # ------------------------------------------------------------------
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python version" >&5
-$as_echo_n "checking for Python version... " >&6; }
-
-if test "x$PYTHON_LIB" '!=' "x" -a "x$PYTHON_INCLUDES" '!=' "x";then
-    PY_VERSION=unknown
-else
-    if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
-        echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
-    fi
-    # iterate through version 2.2 to 3.2
-    VERSIONS="2.2 2.3 2.4 2.5 2.6 3.0 3.1 3.2"
-    case "$PYTHON" in
-	2*) VERSIONS="2.2 2.3 2.4 2.5 2.6 2.7 $PYTHON"
-	    ;;
-	3*) VERSIONS="3.1 3.2 3.3 $PYTHON"
-	    ;;
-    esac
-    for v in $VERSIONS; do
-        # Linux
-        if test -f "/usr/include/python$v/Python.h";then
-            PY_VERSION=$v
-	    PYTHON_LIB="-lpython$PY_VERSION"
-            if test -f "/usr/lib/python$v/site-packages/PIL/_imaging.so";then
-                PYTHON_LIB2="$PYTHON_LIB /usr/lib/python$v/site-packages/PIL/_imaging.so"
-                HAVE_PYTHON_IMAGING_LIB=1
-            else
-                PYTHON_LIB2="$PYTHON_LIB"
-            fi
-	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
-        # Mac OS X
-        elif test -f "/Library/Frameworks/Python.framework/Versions/$v/include/python$v/Python.h";then
-            PY_VERSION=$v
-            PYTHON_LIB="-framework Python"
-            if test -f "/Library/Frameworks/Python.framework/Versions/$v/site-packages/PIL/_imaging.so";then
-                PYTHON_LIB2="$PYTHON_LIB /Library/Python/$v/PIL/_imaging.so"
-                HAVE_PYTHON_IMAGING_LIB=1
-            else
-                PYTHON_LIB2="$PYTHON_LIB"
-            fi
-            PYTHON_INCLUDES="-I/Library/Frameworks/Python.framework/Versions/$v/include/python$v/"
-	# Mac OS X [Fink]:
-        elif test "(" -f "/sw/lib/python$v/config/libpython$v.dylib" \
-	           -o -f "/sw/lib/python$v/config/libpython$v.a" \
-	           -o -f "/sw/lib/python$v/config/libpython$v.so" \
-	          ")" \
-	       -a -f "/sw/include/python$v/Python.h"; then
-            PY_VERSION=$v
-            PYTHON_LIB="-L /sw/lib/python$v/config/ -lpython$PY_VERSION /sw/lib/python$v/site-packages/PIL/_imaging.so"
-            if test -f "/sw/lib/python$v/site-packages/PIL/_imaging.so";then
-                PYTHON_LIB2="$PYTHON_LIB /sw/lib/python$v/site-packages/PIL/_imaging.so"
-                HAVE_PYTHON_IMAGING_LIB=1
-            else
-                PYTHON_LIB2="$PYTHON_LIB"
-            fi
-            PYTHON_INCLUDES="-I /sw/include/python$v/"
-        fi
-    done
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PY_VERSION" >&5
-$as_echo "$PY_VERSION" >&6; }
-
-if test "x$PY_VERSION" "!=" "x"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python executable" >&5
-$as_echo_n "checking for Python executable... " >&6; }
-    if python$PY_VERSION -V 2>&5;then
-        PYTHON_EXECUTABLE=python$PY_VERSION
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXECUTABLE" >&5
-$as_echo "$PYTHON_EXECUTABLE" >&6; }
-    else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
-$as_echo "failed" >&6; }
-    fi
-fi
-
-if test "x$PY_VERSION" "!=" "x" -a "x$PYTHON_EXECUTABLE" "!=" "x"; then
-    export PYTHON_INCLUDES PYTHON_LIB
-
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we can compile the Python test program" >&5
-$as_echo_n "checking whether we can compile the Python test program... " >&6; }
-
-    cat > conftest.c << EOF
-#   include <Python.h>
-
-    int main()
-    {
-	int ret;
-	ret = Py_Main(0, 0);
-	int x; // check also for gcc 2.95.x incompatibilities
-	return ret;
-    }
-EOF
-
-    ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
-    if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	PYTHON_OK=yes
-    else
-        echo "configure: failed program was:" >&5
-        cat conftest.c >&5
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-    fi
-    rm -f conftest*
-
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python install path" >&5
-$as_echo_n "checking for Python install path... " >&6; }
-cat > _pypath.py << EOF
-import distutils
-import distutils.sysconfig
-import sys
-sys.stdout.write(distutils.sysconfig.get_python_lib(plat_specific=0,standard_lib=0))
-EOF
-    echo $PYTHON_EXECUTABLE _pypath.py 1>&5
-    if $PYTHON_EXECUTABLE _pypath.py >_pypath.txt 2>&5;then
-    	PYTHON_INSTALL_PATH=`cat _pypath.txt`
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_INSTALL_PATH" >&5
-$as_echo "$PYTHON_INSTALL_PATH" >&6; }
-    else
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
-$as_echo "failed" >&6; }
-    fi
-    #rm -f _pypath.txt _pypath.py
-
-    if test "x$PYTHON_OK" = "xyes";then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python-Imaging" >&5
-$as_echo_n "checking for Python-Imaging... " >&6; }
-    cat > conftest.c << EOF
-#   include <Python.h>
-#   include <Imaging.h>
-
-    int main()
-    {
-	Py_Main(0, 0);
-	return 0;
-    }
-EOF
-        if test "$HAVE_PYTHON_IMAGING_LIB"; then
-            ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
-            if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
-                PYTHON_LIB="${PYTHON_LIB2}"
-
-$as_echo "#define HAVE_PYTHON_IMAGING 1" >>confdefs.h
-
-                HAVE_PYTHON_IMAGING=yes
-                export HAVE_PYTHON_IMAGING
-
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-            else
-                echo "configure: failed program was:" >&5
-                cat conftest.c >&5
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-            fi
-        else
-            echo "(didn't find the Python-Imaging libraries)" >&5
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-        fi
-    fi
-    rm -f conftest*
-fi
-
-
-if test "x$PYTHON_OK" '!=' "xyes";then
-    echo all install uninstall clean: > lib/python/Makefile
-    # fail silently- the most users won't have any need for the
-    # python interface anyway
-else
-    pythongfx="lib/python/Makefile"
-fi
-
-# ------------------------------------------------------------------
-
-
 # Extract the first word of "ruby", so it can be a program name with args.
 set dummy ruby; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -7434,6 +7062,206 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${MISSINGLIBS}" >&5
 $as_echo "${MISSINGLIBS}" >&6; }
+
+# ------------------------------------------------------------------
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python version" >&5
+$as_echo_n "checking for Python version... " >&6; }
+
+if test "x$PYTHON_LIB" '!=' "x" -a "x$PYTHON_INCLUDES" '!=' "x";then
+    # you can override the python detection by putting PYTHON_LIB
+    # and PYTHON_INCLUDES into the environment
+    case "$PYTHON_INCLUDES" in
+        *python2.4*) PY_VERSION=2.4
+	             ;;
+        *python2.5*) PY_VERSION=2.5
+	             ;;
+        *python2.6*) PY_VERSION=2.6
+	             ;;
+        *python2.7*) PY_VERSION=2.7
+	             ;;
+        *python3.0*) PY_VERSION=3.0
+	             ;;
+        *python3.1*) PY_VERSION=3.1
+	             ;;
+        *python3.2*) PY_VERSION=3.2
+	             ;;
+        *python3.3*) PY_VERSION=3.3
+	             ;;
+        *)           PY_VERSION=unknown
+	             ;;
+    esac
+else
+    if test "x$PYTHON_LIB" '!=' "x" -o "x$PYTHON_INCLUDES" '!=' "x";then
+        echo "Set both PYTHON_LIB and PYTHON_INCLUDES, or none at all"
+    fi
+    # iterate through version 2.4 to 3.3
+    VERSIONS="2.4 2.5 2.6 2.7 3.0 3.1 3.2 3.3"
+    case "$PYTHON" in
+	2*) VERSIONS="2.4 2.5 2.6 2.7 $PYTHON"
+	    ;;
+	3*) VERSIONS="3.0 3.1 3.2 3.3 $PYTHON"
+	    ;;
+    esac
+    for v in $VERSIONS; do
+        # Linux
+        if test -f "/usr/include/python$v/Python.h";then
+            PY_VERSION=$v
+	    PYTHON_LIB="-lpython$PY_VERSION"
+            if test -f "/usr/lib/python$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /usr/lib/python$v/site-packages/PIL/_imaging.so"
+                HAVE_PYTHON_IMAGING_LIB=1
+            else
+                PYTHON_LIB2="$PYTHON_LIB"
+            fi
+	    PYTHON_INCLUDES="-I/usr/include/python$PY_VERSION"
+        # Mac OS X
+        elif test -f "/Library/Frameworks/Python.framework/Versions/$v/include/python$v/Python.h";then
+            PY_VERSION=$v
+            PYTHON_LIB="-framework Python"
+            if test -f "/Library/Frameworks/Python.framework/Versions/$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /Library/Python/$v/PIL/_imaging.so"
+                HAVE_PYTHON_IMAGING_LIB=1
+            else
+                PYTHON_LIB2="$PYTHON_LIB"
+            fi
+            PYTHON_INCLUDES="-I/Library/Frameworks/Python.framework/Versions/$v/include/python$v/"
+	# Mac OS X [Fink]:
+        elif test "(" -f "/sw/lib/python$v/config/libpython$v.dylib" \
+	           -o -f "/sw/lib/python$v/config/libpython$v.a" \
+	           -o -f "/sw/lib/python$v/config/libpython$v.so" \
+	          ")" \
+	       -a -f "/sw/include/python$v/Python.h"; then
+            PY_VERSION=$v
+            PYTHON_LIB="-L /sw/lib/python$v/config/ -lpython$PY_VERSION /sw/lib/python$v/site-packages/PIL/_imaging.so"
+            if test -f "/sw/lib/python$v/site-packages/PIL/_imaging.so";then
+                PYTHON_LIB2="$PYTHON_LIB /sw/lib/python$v/site-packages/PIL/_imaging.so"
+                HAVE_PYTHON_IMAGING_LIB=1
+            else
+                PYTHON_LIB2="$PYTHON_LIB"
+            fi
+            PYTHON_INCLUDES="-I /sw/include/python$v/"
+        fi
+    done
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $PY_VERSION" >&5
+$as_echo "$PY_VERSION" >&6; }
+
+if test "x$PY_VERSION" "!=" "x"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python executable" >&5
+$as_echo_n "checking for Python executable... " >&6; }
+    if python$PY_VERSION -V 2>&5;then
+        PYTHON_EXECUTABLE=python$PY_VERSION
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_EXECUTABLE" >&5
+$as_echo "$PYTHON_EXECUTABLE" >&6; }
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
+$as_echo "failed" >&6; }
+    fi
+fi
+
+if test "x$PY_VERSION" "!=" "x" -a "x$PYTHON_EXECUTABLE" "!=" "x"; then
+    export PYTHON_INCLUDES PYTHON_LIB
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether we can compile the Python test program" >&5
+$as_echo_n "checking whether we can compile the Python test program... " >&6; }
+
+    cat > conftest.c << EOF
+#   include <Python.h>
+
+    int main()
+    {
+	int ret;
+	ret = Py_Main(0, 0);
+	int x; // check also for gcc 2.95.x incompatibilities
+	return ret;
+    }
+EOF
+
+    ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS $PYTHON_LIB $LIBS -o conftest${ac_exeext}'
+    if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	PYTHON_OK=yes
+    else
+        echo "configure: failed program was:" >&5
+        cat conftest.c >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    fi
+    rm -f conftest*
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python install path" >&5
+$as_echo_n "checking for Python install path... " >&6; }
+cat > _pypath.py << EOF
+import distutils
+import distutils.sysconfig
+import sys
+sys.stdout.write(distutils.sysconfig.get_python_lib(plat_specific=0,standard_lib=0))
+EOF
+    echo $PYTHON_EXECUTABLE _pypath.py 1>&5
+    if $PYTHON_EXECUTABLE _pypath.py >_pypath.txt 2>&5;then
+    	PYTHON_INSTALL_PATH=`cat _pypath.txt`
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PYTHON_INSTALL_PATH" >&5
+$as_echo "$PYTHON_INSTALL_PATH" >&6; }
+    else
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
+$as_echo "failed" >&6; }
+    fi
+    #rm -f _pypath.txt _pypath.py
+
+    if test "x$PYTHON_OK" = "xyes";then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Python-Imaging" >&5
+$as_echo_n "checking for Python-Imaging... " >&6; }
+    cat > conftest.c << EOF
+#   include <Python.h>
+#   include <Imaging.h>
+
+    int main()
+    {
+	Py_Main(0, 0);
+	return 0;
+    }
+EOF
+        if test "$HAVE_PYTHON_IMAGING_LIB"; then
+            ac_link='$CC $CPPFLAGS $CFLAGS $PYTHON_INCLUDES conftest.c $LDFLAGS ${PYTHON_LIB2} $LIBS -o conftest${ac_exeext}'
+            if { (eval echo python.m4: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+                PYTHON_LIB="${PYTHON_LIB2}"
+
+$as_echo "#define HAVE_PYTHON_IMAGING 1" >>confdefs.h
+
+                HAVE_PYTHON_IMAGING=yes
+                export HAVE_PYTHON_IMAGING
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+            else
+                echo "configure: failed program was:" >&5
+                cat conftest.c >&5
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+            fi
+        else
+            echo "(didn't find the Python-Imaging libraries)" >&5
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+        fi
+    fi
+    rm -f conftest*
+fi
+
+
+if test "x$PYTHON_OK" '!=' "xyes" -o "$DISABLEPDF2SWF";then
+    echo all install uninstall clean: > lib/python/Makefile
+    # fail silently- the most users won't have any need for the
+    # python interface anyway
+else
+    pythongfx="lib/python/Makefile"
+fi
 
 # ------------------------------------------------------------------
 
