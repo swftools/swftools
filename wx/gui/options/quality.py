@@ -51,6 +51,8 @@ class Quality(wx.Panel):
             ('Slider', 'fontquality', u'Font quality:', (0, 100), 20),
             ('Choose', 'storeallcharacters', u'Insert full fonts in SWF file:',
                        (u'no', 0, u'yes', 1), 0),
+            ('Choose', 'local-with-filesystem', u'Make SWF local-with-filesystem (instead of local-with-network)',
+                       (u'no', 0, u'yes', 1), 0),
             ('Slider', 'splinequality', u'Polygon quality:', (0, 100), 100),
             ('Slider', 'jpegquality', u'JPEG quality:', (0, 100), 75),
             ('Choose', 'jpegsubpixels', u'JPEG image resolution:',
