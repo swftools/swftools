@@ -1753,115 +1753,6 @@
  };
  
  //------------------------------------------------------------------------
---- xpdf/gfile.cc.orig	2010-08-16 14:02:38.000000000 -0700
-+++ xpdf/gfile.cc	2010-08-16 14:02:38.000000000 -0700
-@@ -439,6 +439,52 @@
- #endif
- }
- 
-+static char* getTempDir()
-+{
-+#ifdef WIN32
-+    char*dir = getenv("TMP");
-+    if(!dir) dir = getenv("TEMP");
-+    if(!dir) dir = getenv("tmp");
-+    if(!dir) dir = getenv("temp");
-+    if(!dir) dir = "C:\\";
-+#else
-+    char* dir = "/tmp/";
-+#endif
-+    return dir;
-+}
-+
-+char* mktmpname(char*ptr) {
-+    static char tmpbuf[128];
-+    char*dir = getTempDir();
-+    int l = strlen(dir);
-+    char*sep = "";
-+    if(!ptr)
-+	ptr = tmpbuf;
-+    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
-+#ifdef WIN32
-+	sep = "\\";
-+#else
-+	sep = "/";
-+#endif
-+    }
-+
-+ //   used to be mktemp. This does remove the warnings, but
-+ //   It's not exactly an improvement.
-+#ifdef HAVE_LRAND48
-+    sprintf(ptr, "%s%s%08x%08x",dir,sep,(unsigned int)lrand48(),(unsigned int)lrand48());
-+#else
-+#   ifdef HAVE_RAND
-+	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
-+#   else
-+	static int count = 1;
-+	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
-+	count ++;
-+#   endif
-+#endif
-+     return ptr;
-+}
-+
-+
- GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
- #if defined(WIN32)
-   //---------- Win32 ----------
-@@ -460,7 +506,7 @@
-   s->append("x");
-   t = (int)time(NULL);
-   for (i = 0; i < 1000; ++i) {
--    sprintf(buf, "%d", t + i);
-+    sprintf(buf, "%08x-%08x", t + i, GetCurrentThreadId());
-     s2 = s->copy()->append(buf);
-     if (ext) {
-       s2->append(ext);
-@@ -468,8 +514,7 @@
-     if (!(f2 = fopen(s2->getCString(), "r"))) {
-       if (!(f2 = fopen(s2->getCString(), mode))) {
- 	delete s2;
--	delete s;
--	return gFalse;
-+        continue;
-       }
-       *name = s2;
-       *f = f2;
-@@ -479,6 +524,7 @@
-     fclose(f2);
-     delete s2;
-   }
-+  fprintf(stderr, "Couldn't create temporary file\n");
-   delete s;
-   return gFalse;
- #elif defined(VMS) || defined(__EMX__) || defined(ACORN) || defined(MACOS)
-@@ -489,7 +535,7 @@
-   // with this file name after the tmpnam call and before the fopen
-   // call.  I will happily accept fixes to this function for non-Unix
-   // OSs.
--  if (!(s = tmpnam(NULL))) {
-+  if (!(s = mktmpname(NULL))) {
-     return gFalse;
-   }
-   *name = new GString(s);
-@@ -516,7 +562,7 @@
-     (*name)->append("/XXXXXX")->append(ext);
-     fd = mkstemps((*name)->getCString(), strlen(ext));
- #else
--    if (!(s = tmpnam(NULL))) {
-+    if (!(s = mktmpname(NULL))) {
-       return gFalse;
-     }
-     *name = new GString(s);
-@@ -533,7 +579,7 @@
-     (*name)->append("/XXXXXX");
-     fd = mkstemp((*name)->getCString());
- #else // HAVE_MKSTEMP
--    if (!(s = tmpnam(NULL))) {
-+    if (!(s = mktmpname(NULL))) {
-       return gFalse;
-     }
-     *name = new GString(s);
 --- xpdf/gfile.h.orig	2010-08-16 14:02:38.000000000 -0700
 +++ xpdf/gfile.h	2010-08-16 14:02:38.000000000 -0700
 @@ -58,6 +58,9 @@
@@ -2219,3 +2110,113 @@
  	parsedOk = gFalse;
        }
      }
+--- xpdf/gfile.cc.orig	2011-04-04 12:50:41.000000000 -0700
++++ xpdf/gfile.cc	2012-02-14 16:12:53.000000000 -0800
+@@ -439,6 +439,53 @@
+ #endif
+ }
+ 
++static char* getTempDir()
++{
++#ifdef WIN32
++    char*dir = getenv("TMP");
++    if(!dir) dir = getenv("TEMP");
++    if(!dir) dir = getenv("tmp");
++    if(!dir) dir = getenv("temp");
++    if(!dir) dir = "C:\\";
++#else
++    char*dir = getenv("SWFTOOLS_TMP");
++    if(!dir) dir = "/tmp/";
++#endif
++    return dir;
++}
++
++char* mktmpname(char*ptr) {
++    static char tmpbuf[128];
++    char*dir = getTempDir();
++    int l = strlen(dir);
++    char*sep = "";
++    if(!ptr)
++	ptr = tmpbuf;
++    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
++#ifdef WIN32
++	sep = "\\";
++#else
++	sep = "/";
++#endif
++    }
++
++ //   used to be mktemp. This does remove the warnings, but
++ //   It's not exactly an improvement.
++#ifdef HAVE_LRAND48
++    sprintf(ptr, "%s%s%08x%08x",dir,sep,(unsigned int)lrand48(),(unsigned int)lrand48());
++#else
++#   ifdef HAVE_RAND
++	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
++#   else
++	static int count = 1;
++	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
++	count ++;
++#   endif
++#endif
++     return ptr;
++}
++
++
+ GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
+ #if defined(WIN32)
+   //---------- Win32 ----------
+@@ -460,7 +507,7 @@
+   s->append("x");
+   t = (int)time(NULL);
+   for (i = 0; i < 1000; ++i) {
+-    sprintf(buf, "%d", t + i);
++    sprintf(buf, "%08x-%08x", t + i, GetCurrentThreadId());
+     s2 = s->copy()->append(buf);
+     if (ext) {
+       s2->append(ext);
+@@ -468,8 +515,7 @@
+     if (!(f2 = fopen(s2->getCString(), "r"))) {
+       if (!(f2 = fopen(s2->getCString(), mode))) {
+ 	delete s2;
+-	delete s;
+-	return gFalse;
++        continue;
+       }
+       *name = s2;
+       *f = f2;
+@@ -479,6 +525,7 @@
+     fclose(f2);
+     delete s2;
+   }
++  fprintf(stderr, "Couldn't create temporary file\n");
+   delete s;
+   return gFalse;
+ #elif defined(VMS) || defined(__EMX__) || defined(ACORN) || defined(MACOS)
+@@ -489,7 +536,7 @@
+   // with this file name after the tmpnam call and before the fopen
+   // call.  I will happily accept fixes to this function for non-Unix
+   // OSs.
+-  if (!(s = tmpnam(NULL))) {
++  if (!(s = mktmpname(NULL))) {
+     return gFalse;
+   }
+   *name = new GString(s);
+@@ -516,7 +563,7 @@
+     (*name)->append("/XXXXXX")->append(ext);
+     fd = mkstemps((*name)->getCString(), strlen(ext));
+ #else
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
+@@ -533,7 +580,7 @@
+     (*name)->append("/XXXXXX");
+     fd = mkstemp((*name)->getCString());
+ #else // HAVE_MKSTEMP
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
