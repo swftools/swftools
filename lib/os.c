@@ -187,7 +187,8 @@ static char* getTempDir()
     if(!dir) dir = getenv("temp");
     if(!dir) dir = "C:\\";
 #else
-    char* dir = "/tmp/";
+    char*dir = getenv("SWFTOOLS_TMP");
+    if(!dir) dir = "/tmp/";
 #endif
     return dir;
 }
