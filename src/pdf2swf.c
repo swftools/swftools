@@ -513,7 +513,7 @@ void args_callback_usage(char *name)
     printf("\n");
     printf("-h , --help                    Print short help message and exit\n");
     printf("-V , --version                 Print version info and exit\n");
-    printf("-o , --output file.swf         Direct output to file.swf. If file.swf contains '%%' (file%%.swf), then each page goes to a seperate file.\n");
+    printf("-o , --output file.swf         Direct output to file.swf. If file.swf contains '%%' (file%%.swf), then each page goes to a separate file.\n");
     printf("-p , --pages range             Convert only pages in range with range e.g. 1-20 or 1,4,6,9-11 or\n");
     printf("-P , --password password       Use password for deciphering the pdf.\n");
     printf("-v , --verbose                 Be verbose. Use more than one -v for greater effect.\n");

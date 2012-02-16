@@ -2916,7 +2916,7 @@ static int c_interpolation(map_t *args)
             break;
         }
     if(!inter->function)
-        syntaxerror("unkown interpolation function %s", functionstr);
+        syntaxerror("unknown interpolation function %s", functionstr);
     inter->speed = parseFloat(lu(args, "speed"));
     inter->amplitude = parseTwip(lu(args, "amplitude"));
     inter->growth = parseFloat(lu(args, "growth"));
@@ -3347,7 +3347,7 @@ static int c_movement(map_t*args, int type)
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if(!inter)
-                    syntaxerror("unkown interpolation %s", interstr);
+                    syntaxerror("unknown interpolation %s", interstr);
                 s_change(instance, p, inter);
             }
             break;
@@ -3356,7 +3356,7 @@ static int c_movement(map_t*args, int type)
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if(!inter)
-                    syntaxerror("unkown interpolation %s", interstr);
+                    syntaxerror("unknown interpolation %s", interstr);
             	s_schange(instance, p, inter);
             }
             break;
@@ -3373,7 +3373,7 @@ static int c_movement(map_t*args, int type)
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if(!inter)
-                    syntaxerror("unkown interpolation %s", interstr);
+                    syntaxerror("unknown interpolation %s", interstr);
             	s_sweep(instance, p, radius, clockwise, short_arc, inter);
             }
             break;
@@ -3653,7 +3653,7 @@ to be illegal; please use the .move command.");
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if(!inter)
-                    syntaxerror("unkown interpolation %s", interstr);
+                    syntaxerror("unknown interpolation %s", interstr);
                 s_change(instance, p, inter);
             }
             break;
@@ -3662,7 +3662,7 @@ to be illegal; please use the .move command.");
                 const char* interstr = lu(args, "interpolation");
                 interpolation_t* inter = (interpolation_t*)dict_lookup(&interpolations, interstr);
                 if(!inter)
-                    syntaxerror("unkown interpolation %s", interstr);
+                    syntaxerror("unknown interpolation %s", interstr);
             	s_schange(instance, p, inter);
             }
             break;
