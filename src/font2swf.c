@@ -36,7 +36,6 @@ static char config_flashtype = 0;
 static struct options_t options[] = {
 {"h", "help"},
 {"v", "verbose"},
-{"T", "flashtype"},
 {"o", "output"},
 {"V", "version"},
 {0,0}

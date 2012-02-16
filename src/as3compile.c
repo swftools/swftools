@@ -161,7 +161,7 @@ void args_callback_usage(char *name)
     printf("-X , --width                   Set target SWF width\n");
     printf("-Y , --height                  Set target SWF width\n");
     printf("-r , --rate                    Set target SWF framerate\n");
-    printf("-M , --mainclass               Set the name of the main class (extending flash.display.MovieClip or .Sprite)\n");
+    printf("-M , --mainclass               Set the name of the main class (extending flash.display.MovieClip)\n");
     printf("-l , --library <file>          Include library file <file>. <file> can be an .abc or .swf file.\n");
     printf("-I , --include <dir>           Add additional include dir <dir>.\n");
     printf("-N , --local-with-network      Make output file \"local with networking\"\n");
