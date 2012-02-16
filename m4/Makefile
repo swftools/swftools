@@ -1,7 +1,7 @@
 # simple pmake detecting Makefile
 
 all: clear  test.o
-clean: all
+clean: clear
 install:
 uninstall:
 

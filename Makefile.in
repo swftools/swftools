@@ -25,7 +25,7 @@ all install uninstall clean:
 distclean:
 	$(MAKE) clean
 	rm -f config.status config.cache config.h Makefile Makefile.common libtool
-	rm -f lib/lame/Makefile lib/python/Makefile lib/Makefile src/Makefile avi2swf/Makefile pdf2swf/fonts/Makefile
+	rm -f lib/readers/Makefile lib/lame/Makefile lib/python/Makefile lib/Makefile src/Makefile avi2swf/Makefile pdf2swf/fonts/Makefile
 
 clean-local:
 	rm -f config.cache gmon.out
