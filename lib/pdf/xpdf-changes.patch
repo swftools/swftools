@@ -2110,8 +2110,8 @@
  	parsedOk = gFalse;
        }
      }
---- xpdf/gfile.cc.orig	2011-04-04 12:50:41.000000000 -0700
-+++ xpdf/gfile.cc	2012-02-14 16:12:53.000000000 -0800
+--- xpdf/gfile.cc.orig	2012-02-14 16:17:27.000000000 -0800
++++ xpdf/gfile.cc	2012-03-07 15:55:29.000000000 -0800
 @@ -439,6 +439,53 @@
  #endif
  }
@@ -2166,6 +2166,15 @@
  GBool openTempFile(GString **name, FILE **f, char *mode, char *ext) {
  #if defined(WIN32)
    //---------- Win32 ----------
+@@ -451,7 +498,7 @@
+   // this has the standard race condition problem, but I haven't found
+   // a better way to generate temp file names with extensions on
+   // Windows
+-  if ((tempDir = getenv("TEMP"))) {
++  if ((tempDir = getenv("SWFTOOLS_TMP"))) {
+     s = new GString(tempDir);
+     s->append('\\');
+   } else {
 @@ -460,7 +507,7 @@
    s->append("x");
    t = (int)time(NULL);
@@ -2202,6 +2211,15 @@
      return gFalse;
    }
    *name = new GString(s);
+@@ -508,7 +555,7 @@
+ 
+   if (ext) {
+ #if HAVE_MKSTEMPS
+-    if ((s = getenv("TMPDIR"))) {
++    if ((s = getenv("SWFTOOLS_TMP"))) {
+       *name = new GString(s);
+     } else {
+       *name = new GString("/tmp");
 @@ -516,7 +563,7 @@
      (*name)->append("/XXXXXX")->append(ext);
      fd = mkstemps((*name)->getCString(), strlen(ext));
@@ -2211,6 +2229,15 @@
        return gFalse;
      }
      *name = new GString(s);
+@@ -525,7 +572,7 @@
+ #endif
+   } else {
+ #if HAVE_MKSTEMP
+-    if ((s = getenv("TMPDIR"))) {
++    if ((s = getenv("SWFTOOLS_TMP"))) {
+       *name = new GString(s);
+     } else {
+       *name = new GString("/tmp");
 @@ -533,7 +580,7 @@
      (*name)->append("/XXXXXX");
      fd = mkstemp((*name)->getCString());
