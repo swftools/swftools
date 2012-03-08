@@ -2247,9 +2247,9 @@
        return gFalse;
      }
      *name = new GString(s);
---- xpdf/pdftoppm.cc.orig	2012-03-07 16:03:54.000000000 -0800
-+++ xpdf/pdftoppm.cc	2012-03-07 16:09:21.000000000 -0800
-@@ -7,6 +7,9 @@
+--- xpdf/pdftoppm.cc.orig	2012-03-07 16:09:56.000000000 -0800
++++ xpdf/pdftoppm.cc	2012-03-07 16:11:57.000000000 -0800
+@@ -7,7 +7,11 @@
  //========================================================================
  
  #include <aconf.h>
@@ -2257,9 +2257,11 @@
 +#include <unistd.h>
 +#include <sys/types.h>
  #include <stdio.h>
++#include <stdlib.h>
  #include "parseargs.h"
  #include "gmem.h"
-@@ -93,6 +96,13 @@
+ #include "GString.h"
+@@ -93,6 +97,13 @@
  
    exitCode = 99;
  
