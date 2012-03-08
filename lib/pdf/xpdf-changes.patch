@@ -2248,8 +2248,18 @@
      }
      *name = new GString(s);
 --- xpdf/pdftoppm.cc.orig	2012-03-07 16:03:54.000000000 -0800
-+++ xpdf/pdftoppm.cc	2012-03-07 16:05:27.000000000 -0800
-@@ -93,6 +93,13 @@
++++ xpdf/pdftoppm.cc	2012-03-07 16:09:21.000000000 -0800
+@@ -7,6 +7,9 @@
+ //========================================================================
+ 
+ #include <aconf.h>
++#include <time.h>
++#include <unistd.h>
++#include <sys/types.h>
+ #include <stdio.h>
+ #include "parseargs.h"
+ #include "gmem.h"
+@@ -93,6 +96,13 @@
  
    exitCode = 99;
  
