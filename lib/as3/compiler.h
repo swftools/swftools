@@ -24,6 +24,8 @@
 #ifndef __as3_compiler_h__
 #define __as3_compiler_h__
 
+void registry_init();
+
 void as3_setverbosity(int level);
 void as3_add_include_dir(char*dir);
 
