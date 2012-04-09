@@ -209,7 +209,10 @@ class Document(object):
 
     def Load(self, filename):
         self.__lastsavefile = self.__SwapExtension(filename, "swf")
-        filename = filename.encode(sys.getfilesystemencoding())
+        try:
+            filename = filename.encode(sys.getfilesystemencoding())
+        except LookupError:
+            pass
         self.__pdffilename = filename
 
         #print 'Load',self.__preview_parameters
