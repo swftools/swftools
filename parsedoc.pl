@@ -42,6 +42,7 @@ sub add_option_to_help
     my $s1 = " "x(2-length($shortopt));
     my $s2 = " "x(20-length($longopt." ".$params));
     $doc =~ s/"/\\"/g;
+    $doc =~ s/%/%%/g;
     $paramhelp .= "    printf(\"-$shortopt$s1, --$longopt $params$s2$doc\\n\");\n";
 }
 
@@ -187,6 +188,7 @@ while(<$cfile>)
 	    if($u =~ /%s/) {
 		$src .= "    printf(\"$prefix $u\\n\", name);\n";
 	    } else {
+                $u =~ s/%/%%/;
 		$src .= "    printf(\"$prefix $u\\n\");\n";
 	    }
 	    $prefix = "OR:   ";
