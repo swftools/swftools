@@ -295,3 +295,12 @@
 	* librfxswf: support for fontalignzones
 	* gpdf2swf: completely reworked pdf2swf GUI (Ricardo Pedroso)
 	* as3compile: many bugfixes, support for swc libraries
+
+0.9.2:
+	* as3compile: code cleanup
+	* lib/filters/remove_invisible_characters: new filter for pdf2swf
+	* lib/filters/rescale_images: new filter
+	* lib/gfximage: new fft based image rescaling
+	* lib/gfxpoly/moments: Added functions for polygon moments.
+	* pdf2swf: refactoring, bugfixes, started Poppler integration
+	* src/ttftool: new tool, for debugging Flash 9 TTF fonts
