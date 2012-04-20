@@ -683,14 +683,14 @@ static VALUE doc_render(VALUE cls, VALUE device, VALUE _range, VALUE filters)
 	if(TYPE(filters) != T_ARRAY)
 	    rb_raise(rb_eArgError, "third argument of doc->render must be an array of symbols");
 
-	int len = RARRAY(filters)->len;
+	int len = RARRAY_LEN(filters);
 	int t=0;
 	while(t<len) {
-	    VALUE filter = RARRAY(filters)->ptr[t++];
+	    VALUE filter = RARRAY_PTR(filters)[t++];
 	    Check_Type(filter, T_SYMBOL);
 	    ID id = SYM2ID(filter);
 #           define PARAM(x) VALUE x;if(t==len) rb_raise(rb_eArgError, "End of array while parsing arguments for filter %s", rb_id2name(id)); \
-	                    else x = RARRAY(filters)->ptr[t++];
+	                    else x = RARRAY_PTR(filters)[t++];
 	    if(id == id_remove_font_transforms) {
 		wrap_filter2(dev, remove_font_transforms);
 	    } else if(id == id_vectors_to_glyphs) {
