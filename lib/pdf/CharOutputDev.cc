@@ -1200,7 +1200,7 @@ void CharOutputDev::processLink(Link *link, Catalog *catalog)
     printf("adding link %p at %f %f %f %f to tree\n", this->last_link, x1, y1, x2, y2);
 #endif
 
-    msg("<verbose> storing \"%s\" link to \"%s\"", type, FIXNULL(action));
+    msg("<verbose> storing \"%s\" link to \"%s\" (%f %f %f %f)", type, FIXNULL(action), x1, y1, x2, y2);
     free(s);s=0;
 }
 
