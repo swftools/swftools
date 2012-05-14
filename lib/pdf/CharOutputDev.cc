@@ -796,7 +796,9 @@ void CharOutputDev::drawChar(GfxState *state, double x, double y,
     }
 
     // check for invisible text -- this is used by Acrobat Capture
-    if (render == RENDER_INVISIBLE) {
+    if (render == RENDER_INVISIBLE ||
+        render == RENDER_FILL && state->getFillColorSpace()->isNonMarking() ||
+        render == RENDER_STROKE && state->getStrokeColorSpace()->isNonMarking()) {
 	col.a = 0;
 	if(!config_extrafontdata)
 	    return;
