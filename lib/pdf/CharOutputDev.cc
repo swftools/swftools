@@ -675,7 +675,13 @@ GBool CharOutputDev::needNonText()
 void CharOutputDev::endPage() 
 {
     msg("<verbose> endPage (GfxOutputDev)");
-    
+
+    if(this->previous_link) {
+        if(device->setparameter) {
+            device->setparameter(device, "link", "");
+        }
+    }
+
     if(this->links) {
 	kdtree_destroy(this->links);
 	this->links = 0;
@@ -688,6 +694,7 @@ void CharOutputDev::endPage()
 	l = last;
     }
     this->last_link = 0;
+    this->previous_link = 0;
 }
 
 static inline double sqr(double x) {return x*x;}
