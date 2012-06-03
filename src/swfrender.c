@@ -98,6 +98,8 @@ void args_callback_usage(char *name)
     printf("-h , --help                    Print short help message and exit\n");
     printf("-l , --legacy                  Use old rendering framework\n");
     printf("-o , --output		   Output file (default: output.png)\n");
+    printf("-X , --width                   Width of resulting image\n");
+    printf("-Y , --height                  Height of resulting image\n");
     printf("\n");
 }
 int args_callback_command(char*name,char*val)
