@@ -120,8 +120,24 @@
  // Append a file name to a path string.  <path> may be an empty
  // string, denoting the current directory).  Returns <path>.
  extern GString *appendToPath(GString *path, const char *fileName);
---- xpdf/GfxFont.cc.orig	2012-06-11 11:58:19.000000000 +0200
-+++ xpdf/GfxFont.cc	2012-06-11 12:14:14.000000000 +0200
+--- xpdf/Gfx.cc.orig	2012-06-11 12:50:19.000000000 +0200
++++ xpdf/Gfx.cc	2012-06-11 12:56:06.000000000 +0200
+@@ -3413,8 +3413,11 @@
+ 			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
+ 			    &dx, &dy, &originX, &originY);
+       dx = dx * state->getFontSize() + state->getCharSpace();
+-      if (n == 1 && *p == ' ') {
+-	dx += state->getWordSpace();
++      if (n == 1 && (*p == ' ' || *p == 0)) {
++        double w = state->getWordSpace();
++        if (w == 0 && dx == 0)
++          w = state->getFontSize() / 3; // workaround for zero word space
++        dx += w;
+       }
+       dx *= state->getHorizScaling();
+       dy *= state->getFontSize();
+--- xpdf/GfxFont.cc.orig	2012-06-11 12:50:19.000000000 +0200
++++ xpdf/GfxFont.cc	2012-06-11 12:50:19.000000000 +0200
 @@ -1348,6 +1348,10 @@
    return 1;
  }
