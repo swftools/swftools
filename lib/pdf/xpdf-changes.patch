@@ -197,7 +197,22 @@
        }
        dx *= state->getHorizScaling();
        dy *= state->getFontSize();
-@@ -4173,6 +4176,7 @@
+@@ -3775,11 +3778,13 @@
+       }
+     }
+     if (!obj1.isNull()) {
+-      colorSpace = GfxColorSpace::parse(&obj1);
++      colorSpace = GfxColorSpace::parse(&obj1, 0, csMode);
+     } else if (csMode == streamCSDeviceGray) {
+       colorSpace = new GfxDeviceGrayColorSpace();
+     } else if (csMode == streamCSDeviceRGB) {
+       colorSpace = new GfxDeviceRGBColorSpace();
++    } else if (csMode == streamCSDeviceRGBX) {
++      colorSpace = new GfxDeviceRGBXColorSpace();
+     } else if (csMode == streamCSDeviceCMYK) {
+       colorSpace = new GfxDeviceCMYKColorSpace();
+     } else {
+@@ -4173,6 +4178,7 @@
      out->beginTransparencyGroup(state, bbox, blendingColorSpace,
  				isolated, knockout, softMask);
    }
@@ -284,7 +299,58 @@
  
  //------------------------------------------------------------------------
  
-@@ -515,6 +516,18 @@
+@@ -101,7 +102,7 @@
+ GfxColorSpace::~GfxColorSpace() {
+ }
+ 
+-GfxColorSpace *GfxColorSpace::parse(Object *csObj, int recursion) {
++GfxColorSpace *GfxColorSpace::parse(Object *csObj, int recursion, StreamColorSpaceMode csMode) {
+   GfxColorSpace *cs;
+   Object obj1;
+ 
+@@ -114,7 +115,10 @@
+     if (csObj->isName("DeviceGray") || csObj->isName("G")) {
+       cs = new GfxDeviceGrayColorSpace();
+     } else if (csObj->isName("DeviceRGB") || csObj->isName("RGB")) {
+-      cs = new GfxDeviceRGBColorSpace();
++      if (csMode == streamCSDeviceRGBX)
++        cs = new GfxDeviceRGBXColorSpace();
++      else
++        cs = new GfxDeviceRGBColorSpace();
+     } else if (csObj->isName("DeviceCMYK") || csObj->isName("CMYK")) {
+       cs = new GfxDeviceCMYKColorSpace();
+     } else if (csObj->isName("Pattern")) {
+@@ -127,7 +131,10 @@
+     if (obj1.isName("DeviceGray") || obj1.isName("G")) {
+       cs = new GfxDeviceGrayColorSpace();
+     } else if (obj1.isName("DeviceRGB") || obj1.isName("RGB")) {
+-      cs = new GfxDeviceRGBColorSpace();
++      if (csMode == streamCSDeviceRGBX)
++        cs = new GfxDeviceRGBColorSpace();
++      else
++        cs = new GfxDeviceRGBColorSpace();
+     } else if (obj1.isName("DeviceCMYK") || obj1.isName("CMYK")) {
+       cs = new GfxDeviceCMYKColorSpace();
+     } else if (obj1.isName("CalGray")) {
+@@ -353,6 +360,17 @@
+ }
+ 
+ //------------------------------------------------------------------------
++// GfxDeviceRGBXColorSpace
++//------------------------------------------------------------------------
++
++GfxDeviceRGBXColorSpace::GfxDeviceRGBXColorSpace() {
++}
++
++GfxColorSpace *GfxDeviceRGBXColorSpace::copy() {
++  return new GfxDeviceRGBXColorSpace();
++}
++
++//------------------------------------------------------------------------
+ // GfxCalRGBColorSpace
+ //------------------------------------------------------------------------
+ 
+@@ -515,6 +533,18 @@
  				- 0.11 * color->c[2] + 0.5));
  }
  
@@ -358,8 +424,39 @@
    path = pathA;
  }
  
---- xpdf/GlobalParams.cc.orig	2012-06-11 12:23:56.000000000 +0200
-+++ xpdf/GlobalParams.cc	2012-06-11 12:23:56.000000000 +0200
+--- xpdf/GfxState.h.orig	2012-06-11 15:02:00.000000000 +0200
++++ xpdf/GfxState.h	2012-06-11 15:03:12.000000000 +0200
+@@ -140,7 +140,7 @@
+   virtual GfxColorSpaceMode getMode() = 0;
+ 
+   // Construct a color space.  Returns NULL if unsuccessful.
+-  static GfxColorSpace *parse(Object *csObj, int recursion = 0);
++  static GfxColorSpace *parse(Object *csObj, int recursion = 0, StreamColorSpaceMode csMode = streamCSNone);
+ 
+   // Convert to gray, RGB, or CMYK.
+   virtual void getGray(GfxColor *color, GfxGray *gray) = 0;
+@@ -259,6 +259,19 @@
+ };
+ 
+ //------------------------------------------------------------------------
++// GfxDeviceRGBXColorSpace
++//------------------------------------------------------------------------
++
++class GfxDeviceRGBXColorSpace: public GfxDeviceRGBColorSpace {
++public:
++
++  GfxDeviceRGBXColorSpace();
++  virtual GfxColorSpace *copy();
++  virtual int getNComps() { return 4; }
++ private:
++};
++
++//------------------------------------------------------------------------
+ // GfxCalRGBColorSpace
+ //------------------------------------------------------------------------
+ 
+--- xpdf/GlobalParams.cc.orig	2012-06-11 15:02:00.000000000 +0200
++++ xpdf/GlobalParams.cc	2012-06-11 15:02:00.000000000 +0200
 @@ -941,6 +941,29 @@
    int line;
    char buf[512];
@@ -2062,8 +2159,18 @@
  	    readUByte(&bpc1) &&
  	    readUByte(&dummy) &&
  	    readUByte(&dummy) &&
---- xpdf/Lexer.cc.orig	2012-06-11 14:47:58.000000000 +0200
-+++ xpdf/Lexer.cc	2012-06-11 14:47:58.000000000 +0200
+@@ -522,6 +529,9 @@
+       }
+     }
+   }
++  if (*csMode == streamCSDeviceRGB && num_components == 4) {
++    *csMode = streamCSDeviceRGBX;
++  }
+   bufStr->close();
+ }
+ 
+--- xpdf/Lexer.cc.orig	2012-06-11 15:02:00.000000000 +0200
++++ xpdf/Lexer.cc	2012-06-11 15:02:00.000000000 +0200
 @@ -75,6 +75,8 @@
    }
  }
@@ -2501,3 +2608,15 @@
  	  j = dctZigZag[i++];
  	}
        }
+--- xpdf/Stream.h.orig	2012-06-11 15:02:00.000000000 +0200
++++ xpdf/Stream.h	2012-06-11 15:02:00.000000000 +0200
+@@ -41,7 +41,8 @@
+   streamCSNone,
+   streamCSDeviceGray,
+   streamCSDeviceRGB,
+-  streamCSDeviceCMYK
++  streamCSDeviceCMYK,
++  streamCSDeviceRGBX
+ };
+ 
+ //------------------------------------------------------------------------
