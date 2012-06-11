@@ -251,8 +251,20 @@
  					    sizeof(GfxColorComp));
      }
      for (i = 0; i <= maxPixel; ++i) {
---- xpdf/GlobalParams.cc.orig	2012-06-11 10:35:20.000000000 +0200
-+++ xpdf/GlobalParams.cc	2012-06-11 11:36:34.000000000 +0200
+@@ -3969,7 +3984,10 @@
+ }
+ 
+ void GfxState::setPath(GfxPath *pathA) {
+-  delete path;
++  if (pathA) {
++    if (path)
++      delete path;
++  }
+   path = pathA;
+ }
+ 
+--- xpdf/GlobalParams.cc.orig	2012-06-11 12:23:56.000000000 +0200
++++ xpdf/GlobalParams.cc	2012-06-11 12:23:56.000000000 +0200
 @@ -941,6 +941,29 @@
    int line;
    char buf[512];
