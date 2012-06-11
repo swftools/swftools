@@ -2239,19 +2239,21 @@
      for (y = 0; y < tBitmap->getHeight(); ++y) {
        for (x = 0; x < tBitmap->getWidth(); ++x) {
  	if (alpha) {
---- xpdf/SplashOutputDev.h.orig	2012-06-11 13:02:10.000000000 +0200
-+++ xpdf/SplashOutputDev.h	2012-06-11 13:02:10.000000000 +0200
-@@ -223,6 +223,9 @@
+--- xpdf/SplashOutputDev.h.orig	2012-06-11 14:18:57.000000000 +0200
++++ xpdf/SplashOutputDev.h	2012-06-11 14:21:10.000000000 +0200
+@@ -223,6 +223,11 @@
    virtual void setInShading(GBool sh);
  #endif
  
 +  void doUpdateFont(GfxState *state);
++  GBool needFontUpdate;               // set when the font needs to be updated
++
 +  SplashPath *convertPath(GfxState *state, GfxPath *path,
 +                          GBool dropEmptySubpaths);
  private:
  
    void setupScreenParams(double hDPI, double vDPI);
-@@ -233,9 +236,6 @@
+@@ -233,9 +238,6 @@
  #endif
    void setOverprintMask(GfxColorSpace *colorSpace, GBool overprintFlag,
  			int overprintMode, GfxColor *singleColor);
@@ -2261,8 +2263,16 @@
    void drawType3Glyph(GfxState *state, T3FontCache *t3Font,
  		      T3FontCacheTag *tag, Guchar *data);
    static GBool imageMaskSrc(void *data, SplashColorPtr line);
---- xpdf/Stream.cc.orig	2012-06-11 12:23:56.000000000 +0200
-+++ xpdf/Stream.cc	2012-06-11 12:23:56.000000000 +0200
+@@ -271,7 +273,6 @@
+   GBool haveT3Dx;		// set after seeing a d0/d1 operator
+ 
+   SplashFont *font;		// current font
+-  GBool needFontUpdate;		// set when the font needs to be updated
+   SplashPath *textClipPath;	// clipping path built with text object
+ 
+   SplashTransparencyGroup *	// transparency group stack
+--- xpdf/Stream.cc.orig	2012-06-11 14:18:57.000000000 +0200
++++ xpdf/Stream.cc	2012-06-11 14:18:57.000000000 +0200
 @@ -18,6 +18,8 @@
  #include <limits.h>
  #ifndef WIN32
