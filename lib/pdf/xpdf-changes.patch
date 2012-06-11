@@ -2045,8 +2045,25 @@
    img.tiles = NULL;
    bitBuf = 0;
    bitBufLen = 0;
---- xpdf/Lexer.cc.orig	2012-06-11 13:38:40.000000000 +0200
-+++ xpdf/Lexer.cc	2012-06-11 13:38:40.000000000 +0200
+@@ -453,6 +459,7 @@
+   GBool haveBPC, haveCSMode;
+ 
+   csPrec = 0; // make gcc happy
++  Guint num_components = 0;
+   haveBPC = haveCSMode = gFalse;
+   bufStr->reset();
+   if (bufStr->lookChar() == 0xff) {
+@@ -466,7 +473,7 @@
+ 	cover(1);
+ 	if (readULong(&dummy) &&
+ 	    readULong(&dummy) &&
+-	    readUWord(&dummy) &&
++            readUWord(&num_components) &&
+ 	    readUByte(&bpc1) &&
+ 	    readUByte(&dummy) &&
+ 	    readUByte(&dummy) &&
+--- xpdf/Lexer.cc.orig	2012-06-11 14:47:58.000000000 +0200
++++ xpdf/Lexer.cc	2012-06-11 14:47:58.000000000 +0200
 @@ -75,6 +75,8 @@
    }
  }
