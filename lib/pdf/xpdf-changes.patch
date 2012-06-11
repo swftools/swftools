@@ -650,7 +650,19 @@
    ff = (SplashFTFontFile *)fontFile;
    ff->face->size = sizeObj;
    FT_Set_Transform(ff->face, &textMatrix, NULL);
-@@ -340,6 +352,8 @@
+@@ -334,17 +346,26 @@
+     // skip the TrueType notdef glyph
+     return NULL;
+   }
+-  if (FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP)) {
+-    return NULL;
++  int error = 0;
++  if ((error = FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP))) {
++    if ((error = FT_Load_Glyph(ff->face, gid, FT_LOAD_NO_BITMAP|FT_LOAD_NO_HINTING))) {
++      fprintf(stderr, "Truetype wasn't able to load glyph %d, error %d\n", gid, error);
++      return NULL;
++    }
+   }
    if (FT_Get_Glyph(slot, &glyph)) {
      return NULL;
    }
@@ -659,8 +671,18 @@
    path.path = new SplashPath();
    path.textScale = textScale;
    path.needClose = gFalse;
---- xpdf/SplashFTFont.h.orig	2012-06-11 12:23:56.000000000 +0200
-+++ xpdf/SplashFTFont.h	2012-06-11 12:23:56.000000000 +0200
+-  FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
+-		       &outlineFuncs, &path);
++  error = FT_Outline_Decompose(&((FT_OutlineGlyph)glyph)->outline,
++                               &outlineFuncs, &path);
++  if (error) {
++    fprintf(stderr, "Truetype wasn't able to read glyph %d, error %d\n", gid, error);
++  }
+   if (path.needClose) {
+     path.path->close();
+   }
+--- xpdf/SplashFTFont.h.orig	2012-06-11 12:57:26.000000000 +0200
++++ xpdf/SplashFTFont.h	2012-06-11 12:57:26.000000000 +0200
 @@ -42,6 +42,9 @@
    virtual GBool makeGlyph(int c, int xFrac, int yFrac,
  			  SplashGlyphBitmap *bitmap);
