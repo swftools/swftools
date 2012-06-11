@@ -2130,8 +2130,36 @@
    }
  }
  
---- xpdf/SplashFont.cc.orig	2012-06-11 12:23:56.000000000 +0200
-+++ xpdf/SplashFont.cc	2012-06-11 12:38:52.000000000 +0200
+--- xpdf/pdftoppm.cc.orig	2012-06-11 14:35:05.000000000 +0200
++++ xpdf/pdftoppm.cc	2012-06-11 14:37:32.000000000 +0200
+@@ -7,7 +7,11 @@
+ //========================================================================
+ 
+ #include <aconf.h>
++#include <time.h>
++#include <unistd.h>
++#include <sys/types.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ #include "parseargs.h"
+ #include "gmem.h"
+ #include "GString.h"
+@@ -93,6 +97,13 @@
+ 
+   exitCode = 99;
+ 
++#ifdef HAVE_LRAND48
++  srand48(time(0) * getpid());
++#endif
++#ifdef HAVE_RAND
++  srand(time(0) * getpid());
++#endif
++
+   // parse args
+   ok = parseArgs(argDesc, &argc, argv);
+   if (mono && gray) {
+--- xpdf/SplashFont.cc.orig	2012-06-11 14:35:05.000000000 +0200
++++ xpdf/SplashFont.cc	2012-06-11 14:35:05.000000000 +0200
 @@ -55,6 +55,10 @@
    cacheTags = NULL;
  
