@@ -136,8 +136,26 @@
        }
        dx *= state->getHorizScaling();
        dy *= state->getFontSize();
---- xpdf/GfxFont.cc.orig	2012-06-11 12:50:19.000000000 +0200
-+++ xpdf/GfxFont.cc	2012-06-11 12:50:19.000000000 +0200
+@@ -4173,6 +4176,7 @@
+     out->beginTransparencyGroup(state, bbox, blendingColorSpace,
+ 				isolated, knockout, softMask);
+   }
++  GfxState *old_state = state;
+ 
+   // set new base matrix
+   for (i = 0; i < 6; ++i) {
+@@ -4184,6 +4188,9 @@
+   display(str, gFalse);
+ 
+   if (softMask || transpGroup) {
++    // restore graphics state
++    while (state != old_state)
++      restoreState();
+     out->endTransparencyGroup(state);
+   }
+ 
+--- xpdf/GfxFont.cc.orig	2012-06-11 13:02:10.000000000 +0200
++++ xpdf/GfxFont.cc	2012-06-11 13:02:10.000000000 +0200
 @@ -1348,6 +1348,10 @@
    return 1;
  }
