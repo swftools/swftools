@@ -26,3 +26,470 @@
      }
  
      // do m sets of interpolations
+--- xpdf/gfile.cc.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/gfile.cc	2012-06-11 11:49:16.000000000 +0200
+@@ -440,6 +440,52 @@
+ #endif
+ }
+ 
++static char* getTempDir()
++{
++#ifdef WIN32
++  char *dir = getenv("TMP");
++  if (!dir) dir = getenv("TEMP");
++  if (!dir) dir = getenv("tmp");
++  if (!dir) dir = getenv("temp");
++  if (!dir) dir = "C:\\";
++#else
++  char *dir = "/tmp/";
++#endif
++  return dir;
++}
++
++char* mktmpname(char*ptr) {
++  static char tmpbuf[128];
++  char *dir = getTempDir();
++  int l = strlen(dir);
++  char *sep = "";
++  if (!ptr)
++    ptr = tmpbuf;
++  if (l && dir[l - 1] != '/' && dir[l - 1] != '\\') {
++#ifdef WIN32
++    sep = "\\";
++#else
++    sep = "/";
++#endif
++  }
++
++  //   used to be mktemp. This does remove the warnings, but
++  //   It's not exactly an improvement.
++#ifdef HAVE_LRAND48
++  sprintf(ptr, "%s%s%08x%08x",dir,sep,(unsigned int)lrand48(),(unsigned int)lrand48());
++#else
++#   ifdef HAVE_RAND
++  sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
++#   else
++  static int count = 1;
++  sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
++  count ++;
++#   endif
++#endif
++  return ptr;
++}
++
++
+ GBool openTempFile(GString **name, FILE **f, const char *mode, char *ext) {
+ #if defined(WIN32)
+   //---------- Win32 ----------
+@@ -489,7 +535,7 @@
+   // with this file name after the tmpnam call and before the fopen
+   // call.  I will happily accept fixes to this function for non-Unix
+   // OSs.
+-  if (!(s = tmpnam(NULL))) {
++  if (!(s = mktmpname(NULL))) {
+     return gFalse;
+   }
+   *name = new GString(s);
+@@ -517,7 +563,7 @@
+     (*name)->append("/XXXXXX")->append(ext);
+     fd = mkstemps((*name)->getCString(), strlen(ext));
+ #else
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
+@@ -534,7 +580,7 @@
+     (*name)->append("/XXXXXX");
+     fd = mkstemp((*name)->getCString());
+ #else // HAVE_MKSTEMP
+-    if (!(s = tmpnam(NULL))) {
++    if (!(s = mktmpname(NULL))) {
+       return gFalse;
+     }
+     *name = new GString(s);
+--- xpdf/gfile.h.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/gfile.h	2012-06-11 11:51:27.000000000 +0200
+@@ -58,6 +58,9 @@
+ // Get current directory.
+ extern GString *getCurrentDir();
+ 
++/* create a temporary filename */
++char* mktmpname(char*ptr);
++
+ // Append a file name to a path string.  <path> may be an empty
+ // string, denoting the current directory).  Returns <path>.
+ extern GString *appendToPath(GString *path, const char *fileName);
+--- xpdf/GfxFont.h.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/GfxFont.h	2012-06-11 11:10:37.000000000 +0200
+@@ -247,7 +247,7 @@
+   CharCodeToUnicode *getToUnicode();
+ 
+   // Return the character name associated with <code>.
+-  char *getCharName(int code) { return enc[code]; }
++  char *getCharName(int code) { return code >= 256 ? 0 : enc[code]; }
+ 
+   // Returns true if the PDF font specified an encoding.
+   GBool getHasEncoding() { return hasEncoding; }
+--- xpdf/GfxState.cc.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/GfxState.cc	2012-06-11 11:16:59.000000000 +0200
+@@ -21,6 +21,7 @@
+ #include "Array.h"
+ #include "Page.h"
+ #include "GfxState.h"
++#include "cmyk.h"
+ 
+ //------------------------------------------------------------------------
+ 
+@@ -515,6 +516,18 @@
+ 				- 0.11 * color->c[2] + 0.5));
+ }
+ 
++/*void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
++  unsigned char r,g,b;
++  float c = color->c[0];
++  float m = color->c[1];
++  float y = color->c[2];
++  float k = color->c[3];
++  convert_cmyk2rgb(c,m,y,k, &r,&g,&b);
++  rgb->r = r/255.0;
++  rgb->g = g/255.0;
++  rgb->b = b/255.0;
++}*/
++
+ void GfxDeviceCMYKColorSpace::getRGB(GfxColor *color, GfxRGB *rgb) {
+   double c, m, y, k, c1, m1, y1, k1, r, g, b, x;
+ 
+@@ -3299,6 +3312,7 @@
+   GfxIndexedColorSpace *indexedCS;
+   GfxSeparationColorSpace *sepCS;
+   int maxPixel, indexHigh;
++  int maxPixelForAlloc;
+   Guchar *indexedLookup;
+   Function *sepFunc;
+   Object obj;
+@@ -3311,6 +3325,7 @@
+   // bits per component and color space
+   bits = bitsA;
+   maxPixel = (1 << bits) - 1;
++  maxPixelForAlloc = (1 << (bits > 8 ? bits : 8));
+   colorSpace = colorSpaceA;
+ 
+   // initialize
+@@ -3354,7 +3369,7 @@
+   // values for each component, i.e., the result of applying the
+   // decode mapping to each possible image pixel component value.
+   for (k = 0; k < nComps; ++k) {
+-    lookup[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
++    lookup[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
+ 					 sizeof(GfxColorComp));
+     for (i = 0; i <= maxPixel; ++i) {
+       lookup[k][i] = dblToCol(decodeLow[k] +
+@@ -3378,7 +3393,7 @@
+     indexedLookup = indexedCS->getLookup();
+     colorSpace2->getDefaultRanges(x, y, indexHigh);
+     for (k = 0; k < nComps2; ++k) {
+-      lookup2[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
++      lookup2[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
+ 					    sizeof(GfxColorComp));
+     }
+     for (i = 0; i <= maxPixel; ++i) {
+@@ -3399,7 +3414,7 @@
+     nComps2 = colorSpace2->getNComps();
+     sepFunc = sepCS->getFunc();
+     for (k = 0; k < nComps2; ++k) {
+-      lookup2[k] = (GfxColorComp *)gmallocn(maxPixel + 1,
++      lookup2[k] = (GfxColorComp *)gmallocn(maxPixelForAlloc + 1,
+ 					    sizeof(GfxColorComp));
+     }
+     for (i = 0; i <= maxPixel; ++i) {
+--- xpdf/GlobalParams.cc.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/GlobalParams.cc	2012-06-11 11:36:34.000000000 +0200
+@@ -941,6 +941,29 @@
+   int line;
+   char buf[512];
+ 
++  /* extract path */
++  if(fileName) {
++    char* cfgFileName = fileName->getCString();
++    char* pos1 = strrchr(cfgFileName, '/');
++    char* pos2 = strrchr(cfgFileName, '\\');
++    char* p = pos1>pos2?pos1:pos2;
++    int pos = p ? p-cfgFileName : -1;
++    GString* path = new GString(new GString(cfgFileName), 0, (pos < 0 ? strlen(cfgFileName) : pos));
++    if(pos1 >= 0)
++      path->append('/');
++    else if(pos2 >= 0)
++      path->append('\\');
++    else
++#ifdef WIN32
++      path->append('\\');
++#else
++    path->append('/');
++#endif
++    this->path = path;
++  } else {
++    this->path = new GString();
++  }
++
+   line = 1;
+   while (getLine(buf, sizeof(buf) - 1, f)) {
+     parseLine(buf, fileName, line);
+@@ -1161,6 +1184,42 @@
+   deleteGList(tokens, GString);
+ }
+ 
++static char is_absolute(char* filename)
++{
++  int l = strlen(filename);
++  if (filename[0] == '/' || filename[0] == '\\')
++    return 1;
++  if (l > 2 && filename[1] == ':' && (filename[2] == '\\' || filename[2] == '/'))
++    return 1;
++  return 0;
++}
++
++static GString* qualify_filename(GString* path, GString* filename)
++{
++  GString *fullpath = 0;
++  char *prefix = "/usr/local/share/xpdf/";
++
++  if (!is_absolute(filename->getCString())) {
++    /* relative path */
++    fullpath = path->copy();
++    fullpath->append(filename);
++  } else if (!strncmp(filename->getCString(), prefix, strlen(prefix))) {
++    /* xpdf default path */
++    char* s = strchr(filename->getCString() + strlen(prefix), '/');
++    if (s) {
++      fullpath = path->copy();
++      fullpath->append(s+1);
++    } else {
++      fullpath = filename->copy();
++    }
++  } else {
++    /* absolute path */
++    fullpath = filename->copy();
++  }
++  //printf("%s -%s-> %s\n", filename->getCString(), path->getCString(), fullpath->getCString());
++  return fullpath;
++}
++
+ void GlobalParams::parseNameToUnicode(GList *tokens, GString *fileName,
+ 				      int line) {
+   GString *name;
+@@ -1176,9 +1235,9 @@
+ 	  fileName, line);
+     return;
+   }
+-  name = (GString *)tokens->get(1);
++  name = qualify_filename(this->path, (GString *)tokens->get(1));
+   if (!(f = openFile(name->getCString(), "r"))) {
+-    error(errConfig, -1, "Couldn't open 'nameToUnicode' file '{0:t}'", name);
++    error(errConfig, -1, "Couldn't open 'nameToUnicode' file '{0:t}' using path '{1:t}'", name, this->path);
+     return;
+   }
+   line2 = 1;
+@@ -1212,7 +1271,7 @@
+   if ((old = (GString *)cidToUnicodes->remove(collection))) {
+     delete old;
+   }
+-  cidToUnicodes->add(collection->copy(), name->copy());
++  cidToUnicodes->add(collection->copy(), qualify_filename(this->path, name));
+ }
+ 
+ void GlobalParams::parseUnicodeToUnicode(GList *tokens, GString *fileName,
+@@ -1230,7 +1289,7 @@
+   if ((old = (GString *)unicodeToUnicodes->remove(font))) {
+     delete old;
+   }
+-  unicodeToUnicodes->add(font->copy(), file->copy());
++  unicodeToUnicodes->add(font->copy(), qualify_filename(this->path, file));
+ }
+ 
+ void GlobalParams::parseUnicodeMap(GList *tokens, GString *fileName,
+@@ -1247,7 +1306,7 @@
+   if ((old = (GString *)unicodeMaps->remove(encodingName))) {
+     delete old;
+   }
+-  unicodeMaps->add(encodingName->copy(), name->copy());
++  unicodeMaps->add(encodingName->copy(), qualify_filename(this->path, name));
+ }
+ 
+ void GlobalParams::parseCMapDir(GList *tokens, GString *fileName, int line) {
+@@ -1265,28 +1324,37 @@
+     list = new GList();
+     cMapDirs->add(collection->copy(), list);
+   }
+-  list->append(dir->copy());
++  list->append(qualify_filename(this->path, dir));
+ }
+ 
+ void GlobalParams::parseToUnicodeDir(GList *tokens, GString *fileName,
+ 				     int line) {
++  GString *dir;
++
+   if (tokens->getLength() != 2) {
+     error(errConfig, -1,
+ 	  "Bad 'toUnicodeDir' config file command ({0:t}:{1:d})",
+ 	  fileName, line);
+     return;
+   }
+-  toUnicodeDirs->append(((GString *)tokens->get(1))->copy());
++
++  dir = (GString *)tokens->get(1);
++
++  toUnicodeDirs->append(qualify_filename(this->path, dir));
+ }
+ 
+ void GlobalParams::parseFontFile(GList *tokens, GString *fileName, int line) {
++  GString *file;
++
+   if (tokens->getLength() != 3) {
+     error(errConfig, -1, "Bad 'fontFile' config file command ({0:t}:{1:d})",
+ 	  fileName, line);
+     return;
+   }
++
++  file = (GString *)tokens->get(2);
+   fontFiles->add(((GString *)tokens->get(1))->copy(),
+-		 ((GString *)tokens->get(2))->copy());
++                 qualify_filename(this->path, file));
+ }
+ 
+ void GlobalParams::parseFontDir(GList *tokens, GString *fileName, int line) {
+@@ -1300,13 +1368,17 @@
+ 
+ void GlobalParams::parseFontFileCC(GList *tokens, GString *fileName,
+ 				   int line) {
++  GString *file;
++
+   if (tokens->getLength() != 3) {
+     error(errConfig, -1, "Bad 'fontFileCC' config file command ({0:t}:{1:d})",
+ 	  fileName, line);
+     return;
+   }
++
++  file = (GString *)tokens->get(2);
+   ccFontFiles->add(((GString *)tokens->get(1))->copy(),
+-		   ((GString *)tokens->get(2))->copy());
++                   qualify_filename(this->path, file));
+ }
+ 
+ void GlobalParams::parsePSFile(GList *tokens, GString *fileName, int line) {
+--- xpdf/GlobalParams.h.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/GlobalParams.h	2012-06-11 11:53:33.000000000 +0200
+@@ -310,6 +310,7 @@
+ private:
+ 
+   void createDefaultKeyBindings();
++public:
+   void parseFile(GString *fileName, FILE *f);
+   void parseNameToUnicode(GList *tokens, GString *fileName, int line);
+   void parseCIDToUnicode(GList *tokens, GString *fileName, int line);
+@@ -352,6 +353,9 @@
+   GBool loadPlugin(char *type, char *name);
+ #endif
+ 
++  //----- config file base path
++  GString *path;
++
+   //----- static tables
+ 
+   NameToCharCode *		// mapping from char name to
+--- xpdf/Lexer.cc.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/Lexer.cc	2012-06-11 10:56:59.000000000 +0200
+@@ -75,6 +75,8 @@
+   }
+ }
+ 
++static int illegalChars = 0;
++
+ Lexer::~Lexer() {
+   if (!curStr.isNone()) {
+     curStr.streamClose();
+@@ -83,6 +85,9 @@
+   if (freeArray) {
+     delete streams;
+   }
++  if (illegalChars)
++    error(errSyntaxWarning, 0, "Illegal characters in hex string ({0:d})", illegalChars);
++  illegalChars = 0;
+ }
+ 
+ int Lexer::getChar() {
+@@ -333,7 +338,8 @@
+ 	} else if (c2 >= 'a' && c2 <= 'f') {
+ 	  c += c2 - 'a' + 10;
+ 	} else {
+-	  error(errSyntaxError, getPos(), "Illegal digit in hex char in name");
++          illegalChars++;
++	  //error(errSyntaxError, getPos(), "Illegal digit in hex char in name");
+ 	}
+       }
+      notEscChar:
+@@ -399,9 +405,10 @@
+ 	    c2 += c - 'A' + 10;
+ 	  else if (c >= 'a' && c <= 'f')
+ 	    c2 += c - 'a' + 10;
+-	  else
+-	    error(errSyntaxError, getPos(),
+-		  "Illegal character <{0:02x}> in hex string", c);
++	  else {
++            illegalChars++;
++	    //error(errSyntaxError, getPos(), "Illegal character <{0:02x}> in hex string", c);
++          }
+ 	  if (++m == 2) {
+ 	    if (n == tokBufSize) {
+ 	      if (!s)
+@@ -437,7 +444,8 @@
+       tokBuf[2] = '\0';
+       obj->initCmd(tokBuf);
+     } else {
+-      error(errSyntaxError, getPos(), "Illegal character '>'");
++      illegalChars++;
++      //error(errSyntaxError, getPos(), "Illegal character '>'");
+       obj->initError();
+     }
+     break;
+@@ -446,7 +454,8 @@
+   case ')':
+   case '{':
+   case '}':
+-    error(errSyntaxError, getPos(), "Illegal character '{0:c}'", c);
++    //error(errSyntaxError, getPos(), "Illegal character '{0:c}'", c);
++    illegalChars++;
+     obj->initError();
+     break;
+ 
+--- xpdf/Link.cc.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/Link.cc	2012-06-11 11:01:23.000000000 +0200
+@@ -450,7 +450,7 @@
+ 
+   // error
+   } else {
+-    error(errSyntaxWarning, -1, "Illegal annotation destination");
++    error(errSyntaxWarning, -1, "Illegal annotation destination {0:d}", destObj->getType());
+   }
+ }
+ 
+@@ -488,7 +488,7 @@
+ 
+   // error
+   } else {
+-    error(errSyntaxWarning, -1, "Illegal annotation destination");
++    error(errSyntaxWarning, -1, "Illegal annotation destination {0:d}", destObj->getType());
+   }
+ }
+ 
+--- xpdf/Stream.cc.orig	2012-06-11 10:35:20.000000000 +0200
++++ xpdf/Stream.cc	2012-06-11 11:41:52.000000000 +0200
+@@ -18,6 +18,8 @@
+ #include <limits.h>
+ #ifndef WIN32
+ #include <unistd.h>
++#else
++extern "C" int unlink(char *filename);
+ #endif
+ #include <string.h>
+ #include <ctype.h>
