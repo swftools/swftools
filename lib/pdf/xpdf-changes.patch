@@ -14,8 +14,23 @@
      for (i = oldLen; i < mapLen; ++i) {
        map[i] = 0;
      }
---- xpdf/Function.cc.orig	2012-06-11 09:11:40.000000000 +0200
-+++ xpdf/Function.cc	2012-06-11 10:12:41.000000000 +0200
+--- xpdf/FoFiTrueType.cc.orig	2012-06-11 14:22:22.000000000 +0200
++++ xpdf/FoFiTrueType.cc	2012-06-11 14:24:48.000000000 +0200
+@@ -2074,7 +2074,11 @@
+       } else {
+ 	pos = getU16BE(tables[i].offset + j*2, &parsedOk);
+       }
+-      if (pos < 0 || pos > len) {
++      if (pos > len) {
++        nGlyphs = j;
++        break;
++      }
++      if (pos < 0) {
+ 	parsedOk = gFalse;
+       }
+     }
+--- xpdf/Function.cc.orig	2012-06-11 14:22:22.000000000 +0200
++++ xpdf/Function.cc	2012-06-11 14:22:22.000000000 +0200
 @@ -463,7 +463,8 @@
  
      // pull 2^m values out of the sample array
