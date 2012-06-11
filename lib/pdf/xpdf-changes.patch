@@ -425,8 +425,17 @@
  }
  
  void GlobalParams::parsePSFile(GList *tokens, GString *fileName, int line) {
---- xpdf/GlobalParams.h.orig	2012-06-11 10:35:20.000000000 +0200
-+++ xpdf/GlobalParams.h	2012-06-11 11:53:33.000000000 +0200
+--- xpdf/GlobalParams.h.orig	2012-06-11 12:17:07.000000000 +0200
++++ xpdf/GlobalParams.h	2012-06-11 12:22:20.000000000 +0200
+@@ -175,7 +175,7 @@
+   // file.
+   GlobalParams(char *cfgFileName);
+ 
+-  ~GlobalParams();
++  virtual ~GlobalParams();
+ 
+   void setBaseDir(char *dir);
+   void setupBaseFonts(char *dir);
 @@ -310,6 +310,7 @@
  private:
  
@@ -592,8 +601,26 @@
  #include <math.h>
  #include <limits.h>
  #include "gfile.h"
---- xpdf/Stream.cc.orig	2012-06-11 11:58:19.000000000 +0200
-+++ xpdf/Stream.cc	2012-06-11 11:58:19.000000000 +0200
+--- xpdf/SplashOutputDev.h.orig	2012-06-11 12:17:07.000000000 +0200
++++ xpdf/SplashOutputDev.h	2012-06-11 12:21:16.000000000 +0200
+@@ -223,6 +223,7 @@
+   virtual void setInShading(GBool sh);
+ #endif
+ 
++  void doUpdateFont(GfxState *state);
+ private:
+ 
+   void setupScreenParams(double hDPI, double vDPI);
+@@ -235,7 +236,6 @@
+ 			int overprintMode, GfxColor *singleColor);
+   SplashPath *convertPath(GfxState *state, GfxPath *path,
+ 			  GBool dropEmptySubpaths);
+-  void doUpdateFont(GfxState *state);
+   void drawType3Glyph(GfxState *state, T3FontCache *t3Font,
+ 		      T3FontCacheTag *tag, Guchar *data);
+   static GBool imageMaskSrc(void *data, SplashColorPtr line);
+--- xpdf/Stream.cc.orig	2012-06-11 12:17:07.000000000 +0200
++++ xpdf/Stream.cc	2012-06-11 12:17:07.000000000 +0200
 @@ -18,6 +18,8 @@
  #include <limits.h>
  #ifndef WIN32
