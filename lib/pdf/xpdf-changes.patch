@@ -41,9 +41,9 @@
      }
  
      // do m sets of interpolations
---- xpdf/gfile.cc.orig	2012-06-11 10:35:20.000000000 +0200
-+++ xpdf/gfile.cc	2012-06-11 11:49:16.000000000 +0200
-@@ -440,6 +440,52 @@
+--- xpdf/gfile.cc.orig	2012-06-11 14:25:35.000000000 +0200
++++ xpdf/gfile.cc	2012-06-11 14:33:29.000000000 +0200
+@@ -440,6 +440,53 @@
  #endif
  }
  
@@ -56,7 +56,8 @@
 +  if (!dir) dir = getenv("temp");
 +  if (!dir) dir = "C:\\";
 +#else
-+  char *dir = "/tmp/";
++  char *dir = getenv("SWFTOOLS_TMP");
++  if (!dir) dir = "/tmp/";
 +#endif
 +  return dir;
 +}
@@ -96,7 +97,34 @@
  GBool openTempFile(GString **name, FILE **f, const char *mode, char *ext) {
  #if defined(WIN32)
    //---------- Win32 ----------
-@@ -489,7 +535,7 @@
+@@ -451,7 +498,7 @@
+   // this has the standard race condition problem, but I haven't found
+   // a better way to generate temp file names with extensions on
+   // Windows
+-  if ((tempDir = getenv("TEMP"))) {
++  if ((tempDir = getenv("SWFTOOLS_TMP"))) {
+     s = new GString(tempDir);
+     s->append('\\');
+   } else {
+@@ -468,8 +515,7 @@
+     if (!(f2 = fopen(s2->getCString(), "r"))) {
+       if (!(f2 = fopen(s2->getCString(), mode))) {
+ 	delete s2;
+-	delete s;
+-	return gFalse;
++        continue;
+       }
+       *name = s2;
+       *f = f2;
+@@ -479,6 +525,7 @@
+     fclose(f2);
+     delete s2;
+   }
++  fprintf(stderr, "Couldn't create temporary file\n");
+   delete s;
+   return gFalse;
+ #elif defined(VMS) || defined(__EMX__) || defined(ACORN) || defined(MACOS)
+@@ -489,7 +536,7 @@
    // with this file name after the tmpnam call and before the fopen
    // call.  I will happily accept fixes to this function for non-Unix
    // OSs.
@@ -105,7 +133,16 @@
      return gFalse;
    }
    *name = new GString(s);
-@@ -517,7 +563,7 @@
+@@ -509,7 +556,7 @@
+ 
+   if (ext) {
+ #if HAVE_MKSTEMPS
+-    if ((s = getenv("TMPDIR"))) {
++    if ((s = getenv("SWFTOOLS_TMP"))) {
+       *name = new GString(s);
+     } else {
+       *name = new GString("/tmp");
+@@ -517,7 +564,7 @@
      (*name)->append("/XXXXXX")->append(ext);
      fd = mkstemps((*name)->getCString(), strlen(ext));
  #else
@@ -114,7 +151,16 @@
        return gFalse;
      }
      *name = new GString(s);
-@@ -534,7 +580,7 @@
+@@ -526,7 +573,7 @@
+ #endif
+   } else {
+ #if HAVE_MKSTEMP
+-    if ((s = getenv("TMPDIR"))) {
++    if ((s = getenv("SWFTOOLS_TMP"))) {
+       *name = new GString(s);
+     } else {
+       *name = new GString("/tmp");
+@@ -534,7 +581,7 @@
      (*name)->append("/XXXXXX");
      fd = mkstemp((*name)->getCString());
  #else // HAVE_MKSTEMP
