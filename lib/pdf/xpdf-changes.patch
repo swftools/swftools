@@ -1760,8 +1760,23 @@
    *x = ((c0 << 24) | (c1 << 16) | (c2 << 8) | c3);
    if (c0 & 0x80) {
      *x |= -1 - (int)0xffffffff;
---- xpdf/Lexer.cc.orig	2012-06-11 13:25:24.000000000 +0200
-+++ xpdf/Lexer.cc	2012-06-11 13:25:24.000000000 +0200
+--- xpdf/JPXStream.cc.orig	2012-06-11 13:38:40.000000000 +0200
++++ xpdf/JPXStream.cc	2012-06-11 13:40:14.000000000 +0200
+@@ -238,6 +238,12 @@
+   haveCompMap = gFalse;
+   haveChannelDefn = gFalse;
+ 
++  img.xSize = 0;
++  img.ySize = 0;
++  img.xOffset = 0;
++  img.yOffset = 0;
++  curX = 0;
++  curY = 0;
+   img.tiles = NULL;
+   bitBuf = 0;
+   bitBufLen = 0;
+--- xpdf/Lexer.cc.orig	2012-06-11 13:38:40.000000000 +0200
++++ xpdf/Lexer.cc	2012-06-11 13:38:40.000000000 +0200
 @@ -75,6 +75,8 @@
    }
  }
