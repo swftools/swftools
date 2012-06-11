@@ -721,8 +721,21 @@
  #include <math.h>
  #include <limits.h>
  #include "gfile.h"
---- xpdf/SplashOutputDev.h.orig	2012-06-11 12:47:05.000000000 +0200
-+++ xpdf/SplashOutputDev.h	2012-06-11 12:47:59.000000000 +0200
+@@ -3070,10 +3071,11 @@
+ 
+   softMask = new SplashBitmap(bitmap->getWidth(), bitmap->getHeight(),
+ 			      1, splashModeMono8, gFalse);
+-  memset(softMask->getDataPtr(), 0,
++  memset(softMask->getDataPtr(), 0x00,
+ 	 softMask->getRowSize() * softMask->getHeight());
+   if (tx < softMask->getWidth() && ty < softMask->getHeight()) {
+     p = softMask->getDataPtr() + ty * softMask->getRowSize() + tx;
++    if (tx < softMask->getWidth() && ty < softMask->getHeight())
+     for (y = 0; y < tBitmap->getHeight(); ++y) {
+       for (x = 0; x < tBitmap->getWidth(); ++x) {
+ 	if (alpha) {
+--- xpdf/SplashOutputDev.h.orig	2012-06-11 13:02:10.000000000 +0200
++++ xpdf/SplashOutputDev.h	2012-06-11 13:02:10.000000000 +0200
 @@ -223,6 +223,9 @@
    virtual void setInShading(GBool sh);
  #endif
