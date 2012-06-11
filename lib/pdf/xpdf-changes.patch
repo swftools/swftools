@@ -181,9 +181,25 @@
  // Append a file name to a path string.  <path> may be an empty
  // string, denoting the current directory).  Returns <path>.
  extern GString *appendToPath(GString *path, const char *fileName);
---- xpdf/Gfx.cc.orig	2012-06-11 12:50:19.000000000 +0200
-+++ xpdf/Gfx.cc	2012-06-11 12:56:06.000000000 +0200
-@@ -3413,8 +3413,11 @@
+--- xpdf/Gfx.cc.orig	2012-06-11 15:08:44.000000000 +0200
++++ xpdf/Gfx.cc	2012-06-11 15:09:57.000000000 +0200
+@@ -495,6 +495,7 @@
+   abortCheckCbkData = abortCheckCbkDataA;
+ 
+   // set crop box
++#ifdef XPDFEXE
+   if (cropBox) {
+     state->moveTo(cropBox->x1, cropBox->y1);
+     state->lineTo(cropBox->x2, cropBox->y1);
+@@ -505,6 +506,7 @@
+     out->clip(state);
+     state->clearPath();
+   }
++#endif
+ }
+ 
+ Gfx::Gfx(PDFDoc *docA, OutputDev *outA, Dict *resDict,
+@@ -3413,8 +3415,11 @@
  			    u, (int)(sizeof(u) / sizeof(Unicode)), &uLen,
  			    &dx, &dy, &originX, &originY);
        dx = dx * state->getFontSize() + state->getCharSpace();
