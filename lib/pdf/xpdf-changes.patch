@@ -14,3 +14,15 @@
      for (i = oldLen; i < mapLen; ++i) {
        map[i] = 0;
      }
+--- xpdf/Function.cc.orig	2012-06-11 09:11:40.000000000 +0200
++++ xpdf/Function.cc	2012-06-11 10:12:41.000000000 +0200
+@@ -463,7 +463,8 @@
+ 
+     // pull 2^m values out of the sample array
+     for (j = 0; j < (1<<m); ++j) {
+-      sBuf[j] = samples[idx0 + idxOffset[j] + i];
++      int idx = idx0 + idxOffset[j] + i;
++      sBuf[j] = (idx >= 0 && idx < nSamples) ? samples[idx] : 0;
+     }
+ 
+     // do m sets of interpolations
