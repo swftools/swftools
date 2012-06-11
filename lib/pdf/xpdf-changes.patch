@@ -2344,8 +2344,20 @@
    if (path.needClose) {
      path.path->close();
    }
---- xpdf/SplashFTFont.h.orig	2012-06-11 12:57:26.000000000 +0200
-+++ xpdf/SplashFTFont.h	2012-06-11 12:57:26.000000000 +0200
+--- xpdf/SplashFTFontEngine.cc.orig	2012-06-11 14:43:26.000000000 +0200
++++ xpdf/SplashFTFontEngine.cc	2012-06-11 14:46:51.000000000 +0200
+@@ -13,9 +13,7 @@
+ #endif
+ 
+ #include <stdio.h>
+-#ifndef WIN32
+ #  include <unistd.h>
+-#endif
+ #include "gmem.h"
+ #include "GString.h"
+ #include "gfile.h"
+--- xpdf/SplashFTFont.h.orig	2012-06-11 14:43:26.000000000 +0200
++++ xpdf/SplashFTFont.h	2012-06-11 14:43:26.000000000 +0200
 @@ -42,6 +42,9 @@
    virtual GBool makeGlyph(int c, int xFrac, int yFrac,
  			  SplashGlyphBitmap *bitmap);
