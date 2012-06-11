@@ -601,26 +601,30 @@
  #include <math.h>
  #include <limits.h>
  #include "gfile.h"
---- xpdf/SplashOutputDev.h.orig	2012-06-11 12:17:07.000000000 +0200
-+++ xpdf/SplashOutputDev.h	2012-06-11 12:21:16.000000000 +0200
-@@ -223,6 +223,7 @@
+--- xpdf/SplashOutputDev.h.orig	2012-06-11 12:47:05.000000000 +0200
++++ xpdf/SplashOutputDev.h	2012-06-11 12:47:59.000000000 +0200
+@@ -223,6 +223,9 @@
    virtual void setInShading(GBool sh);
  #endif
  
 +  void doUpdateFont(GfxState *state);
++  SplashPath *convertPath(GfxState *state, GfxPath *path,
++                          GBool dropEmptySubpaths);
  private:
  
    void setupScreenParams(double hDPI, double vDPI);
-@@ -235,7 +236,6 @@
+@@ -233,9 +236,6 @@
+ #endif
+   void setOverprintMask(GfxColorSpace *colorSpace, GBool overprintFlag,
  			int overprintMode, GfxColor *singleColor);
-   SplashPath *convertPath(GfxState *state, GfxPath *path,
- 			  GBool dropEmptySubpaths);
+-  SplashPath *convertPath(GfxState *state, GfxPath *path,
+-			  GBool dropEmptySubpaths);
 -  void doUpdateFont(GfxState *state);
    void drawType3Glyph(GfxState *state, T3FontCache *t3Font,
  		      T3FontCacheTag *tag, Guchar *data);
    static GBool imageMaskSrc(void *data, SplashColorPtr line);
---- xpdf/Stream.cc.orig	2012-06-11 12:17:07.000000000 +0200
-+++ xpdf/Stream.cc	2012-06-11 12:17:07.000000000 +0200
+--- xpdf/Stream.cc.orig	2012-06-11 12:23:56.000000000 +0200
++++ xpdf/Stream.cc	2012-06-11 12:23:56.000000000 +0200
 @@ -18,6 +18,8 @@
  #include <limits.h>
  #ifndef WIN32
