@@ -15,7 +15,7 @@ libgfxpdf_objects = VectorGraphicOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapO
 xpdf_in_source = @xpdf_in_source@
 
 xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O) xpdf/gfile.$(O) \
-		  xpdf/FoFiTrueType.$(O) xpdf/FoFiType1.$(O) xpdf/FoFiType1C.$(O) xpdf/FoFiBase.$(O) xpdf/FoFiEncodings.$(O) \
+		  xpdf/FoFiTrueType.$(O) xpdf/FoFiType1.$(O) xpdf/FoFiType1C.$(O) xpdf/FoFiBase.$(O) xpdf/FoFiEncodings.$(O) xpdf/FoFiIdentifier.$(O) \
 		  xpdf/OutputDev.$(O) xpdf/PDFDoc.$(O) xpdf/Error.$(O) xpdf/Stream.$(O) xpdf/Object.$(O) \
 		  xpdf/Decrypt.$(O) xpdf/Array.$(O) xpdf/XRef.$(O) xpdf/Dict.$(O) xpdf/Parser.$(O) \
 		  xpdf/Lexer.$(O) xpdf/Outline.$(O) xpdf/PDFDocEncoding.$(O) xpdf/Catalog.$(O) \
@@ -23,7 +23,7 @@ xpdf_objects =  xpdf/GHash.$(O) xpdf/GList.$(O) xpdf/GString.$(O) xpdf/gmem.$(O)
 		  xpdf/JArithmeticDecoder.$(O) xpdf/Gfx.$(O) xpdf/GfxFont.$(O) xpdf/CMap.$(O) xpdf/CharCodeToUnicode.$(O) \
 		  xpdf/PSTokenizer.$(O) xpdf/FontEncodingTables.$(O) xpdf/BuiltinFont.$(O) xpdf/BuiltinFontTables.$(O) \
 		  xpdf/GfxState.$(O) xpdf/Function.$(O) xpdf/Annot.$(O) xpdf/NameToCharCode.$(O) xpdf/UnicodeMap.$(O) \
-		  xpdf/SecurityHandler.$(O) xpdf/TextOutputDev.$(O) xpdf/UnicodeTypeTable.$(O)
+		  xpdf/SecurityHandler.$(O) xpdf/TextOutputDev.$(O) xpdf/UnicodeTypeTable.$(O) xpdf/OptionalContent.$(O)
 		  #xpdf/OptionalContent.$(O)
 
 splash_in_source = @splash_in_source@
@@ -65,8 +65,8 @@ pdf.$(O): pdf.cc VectorGraphicOutputDev.h CharOutputDev.h InfoOutputDev.h Common
 XPDFOK = xpdf/Gfx.cc
 ifeq ($(shell echo inject*xpdf.pl),inject-xpdf.pl)
 $(XPDFOK): Makefile.in inject-xpdf.pl xpdf-*tar.gz xpdf*patch
-	@if test xpdf-changes.patch -nt $(XPDFOK);then perl inject-xpdf.pl xpdf-3.02.tar.gz;fi
-	@if test '!' -d xpdf;then perl inject-xpdf.pl xpdf-3.02.tar.gz;fi
+	@if test xpdf-changes.patch -nt $(XPDFOK);then perl inject-xpdf.pl xpdf-3.03.tar.gz;fi
+	@if test '!' -d xpdf;then perl inject-xpdf.pl xpdf-3.03.tar.gz;fi
 endif
 
 xpdf/UnicodeMap.$(O): xpdf/UnicodeMap.cc
@@ -131,6 +131,8 @@ xpdf/Error.$(O): xpdf/Error.cc aconf.h
 	$(CC) -I ./ -I xpdf xpdf/Error.cc -o $@
 xpdf/Stream.$(O): xpdf/Stream.cc
 	$(CC) -I ./ -I xpdf xpdf/Stream.cc -o $@
+xpdf/OptionalContent.$(O): xpdf/OptionalContent.cc
+	$(CC) -I ./ -I xpdf xpdf/OptionalContent.cc -o $@
 xpdf/PDFDoc.$(O): xpdf/PDFDoc.cc
 	$(CC) -I ./ -I xpdf xpdf/PDFDoc.cc -o $@
 xpdf/SecurityHandler.$(O): xpdf/SecurityHandler.cc xpdf/SecurityHandler.h
@@ -147,6 +149,8 @@ xpdf/FoFiType1C.$(O): xpdf/FoFiType1C.cc xpdf/FoFiBase.h
 	$(CC) -I ./ -I xpdf xpdf/FoFiType1C.cc -o $@
 xpdf/FoFiType1.$(O): xpdf/FoFiType1.cc xpdf/FoFiBase.h
 	$(CC) -I ./ -I xpdf xpdf/FoFiType1.cc -o $@
+xpdf/FoFiIdentifier.$(O): xpdf/FoFiIdentifier.cc
+	$(CC) -I ./ -I xpdf xpdf/FoFiIdentifier.cc -o $@
 xpdf/GList.$(O): xpdf/GList.cc
 	$(CC) -I ./ -I xpdf xpdf/GList.cc -o $@
 xpdf/GString.$(O): xpdf/GString.cc

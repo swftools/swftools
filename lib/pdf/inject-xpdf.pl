@@ -59,7 +59,7 @@ fi
 if test "x\$VERSION" = "xstable";then
     echo "Switching to stable version"
     rm -f xpdf
-    ln -s xpdf-3.02 xpdf
+    ln -s xpdf-3.03 xpdf
 elif test "x\$VERSION" = "xlatest";then
     echo "Switching to latest version"
     rm -f xpdf
