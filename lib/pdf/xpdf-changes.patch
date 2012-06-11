@@ -2130,8 +2130,33 @@
    }
  }
  
---- xpdf/pdftoppm.cc.orig	2012-06-11 14:35:05.000000000 +0200
-+++ xpdf/pdftoppm.cc	2012-06-11 14:37:32.000000000 +0200
+--- xpdf/pdfinfo.cc.orig	2012-06-11 14:38:22.000000000 +0200
++++ xpdf/pdfinfo.cc	2012-06-11 14:42:09.000000000 +0200
+@@ -12,6 +12,8 @@
+ #include <stddef.h>
+ #include <string.h>
+ #include <time.h>
++#include <unistd.h>
++#include <sys/types.h>
+ #include <math.h>
+ #include "parseargs.h"
+ #include "GString.h"
+@@ -99,6 +101,13 @@
+ 
+   exitCode = 99;
+ 
++#ifdef HAVE_LRAND48
++  srand48(time(0) * getpid());
++#endif
++#ifdef HAVE_RAND
++  srand(time(0) * getpid());
++#endif
++
+   // parse args
+   ok = parseArgs(argDesc, &argc, argv);
+   if (!ok || argc != 2 || printVersion || printHelp) {
+--- xpdf/pdftoppm.cc.orig	2012-06-11 14:38:22.000000000 +0200
++++ xpdf/pdftoppm.cc	2012-06-11 14:38:22.000000000 +0200
 @@ -7,7 +7,11 @@
  //========================================================================
  
@@ -2158,8 +2183,34 @@
    // parse args
    ok = parseArgs(argDesc, &argc, argv);
    if (mono && gray) {
---- xpdf/SplashFont.cc.orig	2012-06-11 14:35:05.000000000 +0200
-+++ xpdf/SplashFont.cc	2012-06-11 14:35:05.000000000 +0200
+--- xpdf/pdftotext.cc.orig	2012-06-11 14:38:22.000000000 +0200
++++ xpdf/pdftotext.cc	2012-06-11 14:40:56.000000000 +0200
+@@ -11,6 +11,9 @@
+ #include <stdlib.h>
+ #include <stddef.h>
+ #include <string.h>
++#include <time.h>
++#include <unistd.h>
++#include <sys/types.h>
+ #include "parseargs.h"
+ #include "GString.h"
+ #include "gmem.h"
+@@ -106,6 +109,13 @@
+ 
+   exitCode = 99;
+ 
++#ifdef HAVE_LRAND48
++  srand48(time(0) * getpid());
++#endif
++#ifdef HAVE_RAND
++  srand(time(0) * getpid());
++#endif
++
+   // parse args
+   ok = parseArgs(argDesc, &argc, argv);
+   if (!ok || argc < 2 || argc > 3 || printVersion || printHelp) {
+--- xpdf/SplashFont.cc.orig	2012-06-11 14:38:22.000000000 +0200
++++ xpdf/SplashFont.cc	2012-06-11 14:38:22.000000000 +0200
 @@ -55,6 +55,10 @@
    cacheTags = NULL;
  
