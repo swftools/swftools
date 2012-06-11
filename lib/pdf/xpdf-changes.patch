@@ -120,9 +120,49 @@
  // Append a file name to a path string.  <path> may be an empty
  // string, denoting the current directory).  Returns <path>.
  extern GString *appendToPath(GString *path, const char *fileName);
---- xpdf/GfxFont.h.orig	2012-06-11 10:35:20.000000000 +0200
-+++ xpdf/GfxFont.h	2012-06-11 11:10:37.000000000 +0200
-@@ -247,7 +247,7 @@
+--- xpdf/GfxFont.cc.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/GfxFont.cc	2012-06-11 12:14:14.000000000 +0200
+@@ -1348,6 +1348,10 @@
+   return 1;
+ }
+ 
++CharCodeToUnicode* Gfx8BitFont::getCTU() {
++  return ctu;
++}
++
+ CharCodeToUnicode *Gfx8BitFont::getToUnicode() {
+   ctu->incRefCnt();
+   return ctu;
+@@ -1856,6 +1860,10 @@
+   }
+ }
+ 
++CharCodeToUnicode* GfxCIDFont::getCTU() {
++  return ctu;
++}
++
+ int GfxCIDFont::getNextChar(char *s, int len, CharCode *code,
+ 			    Unicode *u, int uSize, int *uLen,
+ 			    double *dx, double *dy, double *ox, double *oy) {
+--- xpdf/GfxFont.h.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/GfxFont.h	2012-06-11 12:12:16.000000000 +0200
+@@ -200,6 +200,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy) = 0;
++  virtual CharCodeToUnicode* getCTU() = 0;
+ 
+ protected:
+ 
+@@ -239,6 +240,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy);
++  virtual CharCodeToUnicode* getCTU();
+ 
+   // Return the encoding.
+   char **getEncoding() { return enc; }
+@@ -247,7 +249,7 @@
    CharCodeToUnicode *getToUnicode();
  
    // Return the character name associated with <code>.
@@ -131,8 +171,16 @@
  
    // Returns true if the PDF font specified an encoding.
    GBool getHasEncoding() { return hasEncoding; }
---- xpdf/GfxState.cc.orig	2012-06-11 10:35:20.000000000 +0200
-+++ xpdf/GfxState.cc	2012-06-11 11:16:59.000000000 +0200
+@@ -304,6 +306,7 @@
+   virtual int getNextChar(char *s, int len, CharCode *code,
+ 			  Unicode *u, int uSize, int *uLen,
+ 			  double *dx, double *dy, double *ox, double *oy);
++  virtual CharCodeToUnicode* getCTU();
+ 
+   // Return the writing mode (0=horizontal, 1=vertical).
+   virtual int getWMode();
+--- xpdf/GfxState.cc.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/GfxState.cc	2012-06-11 11:58:19.000000000 +0200
 @@ -21,6 +21,7 @@
  #include "Array.h"
  #include "Page.h"
@@ -482,8 +530,70 @@
    }
  }
  
---- xpdf/Stream.cc.orig	2012-06-11 10:35:20.000000000 +0200
-+++ xpdf/Stream.cc	2012-06-11 11:41:52.000000000 +0200
+--- xpdf/SplashFontFile.cc.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/SplashFontFile.cc	2012-06-11 12:06:46.000000000 +0200
+@@ -11,9 +11,7 @@
+ #endif
+ 
+ #include <stdio.h>
+-#ifndef WIN32
+-#  include <unistd.h>
+-#endif
++#include <unistd.h>
+ #include "GString.h"
+ #include "SplashFontFile.h"
+ #include "SplashFontFileID.h"
+--- xpdf/SplashFont.h.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/SplashFont.h	2012-06-11 12:08:06.000000000 +0200
+@@ -73,6 +73,9 @@
+   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
+ 			  SplashGlyphBitmap *bitmap) = 0;
+ 
++  // return the number of characters in this font
++  virtual int getNumChars() = 0;
++
+   // Return the path for a glyph.
+   virtual SplashPath *getGlyphPath(int c) = 0;
+ 
+--- xpdf/SplashFTFont.cc.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/SplashFTFont.cc	2012-06-11 12:10:25.000000000 +0200
+@@ -300,6 +300,12 @@
+   GBool needClose;
+ };
+ 
++int SplashFTFont::getNumChars()
++{
++  SplashFTFontFile* ff = (SplashFTFontFile *)fontFile;
++  return ff->face->num_glyphs;
++}
++
+ SplashPath *SplashFTFont::getGlyphPath(int c) {
+   static FT_Outline_Funcs outlineFuncs = {
+ #if FREETYPE_MINOR <= 1
+--- xpdf/SplashFTFont.h.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/SplashFTFont.h	2012-06-11 12:09:03.000000000 +0200
+@@ -42,6 +42,9 @@
+   virtual GBool makeGlyph(int c, int xFrac, int yFrac,
+ 			  SplashGlyphBitmap *bitmap);
+ 
++  // return the number of characters in this font
++  virtual int getNumChars();
++
+   // Return the path for a glyph.
+   virtual SplashPath *getGlyphPath(int c);
+ 
+--- xpdf/SplashOutputDev.cc.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/SplashOutputDev.cc	2012-06-11 12:05:38.000000000 +0200
+@@ -13,6 +13,7 @@
+ #endif
+ 
+ #include <string.h>
++#include <unistd.h>
+ #include <math.h>
+ #include <limits.h>
+ #include "gfile.h"
+--- xpdf/Stream.cc.orig	2012-06-11 11:58:19.000000000 +0200
++++ xpdf/Stream.cc	2012-06-11 11:58:19.000000000 +0200
 @@ -18,6 +18,8 @@
  #include <limits.h>
  #ifndef WIN32
