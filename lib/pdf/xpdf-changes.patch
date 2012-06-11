@@ -2636,3 +2636,13 @@
  };
  
  //------------------------------------------------------------------------
+--- xpdf/TextOutputDev.h.orig	2012-06-11 15:10:27.000000000 +0200
++++ xpdf/TextOutputDev.h	2012-06-11 16:52:17.000000000 +0200
+@@ -171,6 +171,7 @@
+   friend class TextFlow;
+   friend class TextWordList;
+   friend class TextPage;
++  friend class XMLOutputDev;
+ };
+ 
+ //------------------------------------------------------------------------
