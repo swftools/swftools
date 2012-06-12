@@ -1076,13 +1076,13 @@ GBool BitmapOutputDev::useTilingPatternFill()
     return rgbdev->useTilingPatternFill();
 }
 
-GBool BitmapOutputDev::useShadedFills()
+GBool BitmapOutputDev::useShadedFills(POPPLER_SHADED_FILL_TYPE)
 {
-    boolpolydev->useShadedFills();
-    booltextdev->useShadedFills();
-    clip0dev->useShadedFills();
-    clip1dev->useShadedFills();
-    return rgbdev->useShadedFills();
+    boolpolydev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
+    booltextdev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
+    clip0dev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
+    clip1dev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
+    return rgbdev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
 }
 
 GBool BitmapOutputDev::useDrawForm()

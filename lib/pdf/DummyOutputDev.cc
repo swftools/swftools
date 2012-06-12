@@ -64,9 +64,9 @@ GBool DummyOutputDev::useTilingPatternFill()
     return rgbdev->useTilingPatternFill();
 }
 
-GBool DummyOutputDev::useShadedFills()
+GBool DummyOutputDev::useShadedFills(POPPLER_SHADED_FILL_TYPE)
 {
-    return rgbdev->useShadedFills();
+    return rgbdev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
 }
 
 GBool DummyOutputDev::useDrawForm()

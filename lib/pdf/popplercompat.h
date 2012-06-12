@@ -46,6 +46,14 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
+  #define POPPLER_SHADED_FILL_TYPE int type
+  #define POPPLER_SHADED_FILL_TYPE_ARG type
+#else
+  #define POPPLER_SHADED_FILL_TYPE
+  #define POPPLER_SHADED_FILL_TYPE_ARG
+#endif
+
+#ifdef HAVE_POPPLER
   #include <goo/GooString.h>
   #include <goo/gfile.h>
 #else

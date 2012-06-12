@@ -214,9 +214,9 @@ GBool FullBitmapOutputDev::useTilingPatternFill()
 {
     return rgbdev->useTilingPatternFill();
 }
-GBool FullBitmapOutputDev::useShadedFills()
+GBool FullBitmapOutputDev::useShadedFills(POPPLER_SHADED_FILL_TYPE)
 {
-    return rgbdev->useShadedFills();
+    return rgbdev->useShadedFills(POPPLER_SHADED_FILL_TYPE_ARG);
 }
 GBool FullBitmapOutputDev::useDrawForm()
 {
