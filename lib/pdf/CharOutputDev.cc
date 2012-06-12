@@ -652,7 +652,7 @@ static void dumpFontInfo(const char*loglevel, GfxFont*font)
   if(embedded)
    msg("%s| Embedded id: %s id: %d",loglevel, FIXNULL(embeddedName), embRef.num);
 
-  gstr = font->getExtFontFile();
+  gstr = globalParams->findFontFile(font->getName());
   if(gstr)
    msg("%s| External Font file: %s", loglevel, FIXNULL(gstr->getCString()));
 
