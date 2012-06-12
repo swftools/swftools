@@ -166,7 +166,7 @@ public:
     virtual void setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor);
     virtual void clearSoftMask(GfxState *state);
 
-    virtual void processLink(Link *link, Catalog *catalog);
+    virtual void processLink(Link *link);
   
 
 private:

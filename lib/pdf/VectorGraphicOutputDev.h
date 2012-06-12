@@ -79,7 +79,7 @@ public:
   //virtual GBool useShadedFills() { return gTrue; }
 
   //----- link borders
-  virtual void processLink(Link *link, Catalog *catalog);
+  virtual void processLink(Link *link);
   virtual void setDefaultCTM(double *ctm);
 
   //----- save/restore graphics state

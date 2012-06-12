@@ -33,7 +33,7 @@ public:
   virtual GBool upsideDown();
   virtual GBool useDrawChar();
 
-  virtual void processLink(Link *link, Catalog *catalog);
+  virtual void processLink(Link *link);
   virtual void saveState(GfxState *state) ;
   virtual void restoreState(GfxState *state) ;
 

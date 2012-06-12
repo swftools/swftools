@@ -348,7 +348,7 @@ void DummyOutputDev::drawForm(Ref id)
     rgbdev->drawForm(id);
 }
 
-void DummyOutputDev::processLink(Link *link, Catalog *catalog)
+void DummyOutputDev::processLink(Link *link)
 {
 }
 

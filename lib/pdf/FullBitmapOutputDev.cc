@@ -528,10 +528,10 @@ void FullBitmapOutputDev::drawForm(Ref id)
     rgbdev->drawForm(id);
 }
 
-void FullBitmapOutputDev::processLink(Link *link, Catalog *catalog)
+void FullBitmapOutputDev::processLink(Link *link)
 {
     msg("<debug> processLink");
-    gfxdev->processLink(link, catalog);
+    gfxdev->processLink(link);
 }
 
 void FullBitmapOutputDev::beginTransparencyGroup(GfxState *state, double *bbox,

@@ -680,9 +680,9 @@ void VectorGraphicOutputDev::updateFont(GfxState*state)
     charDev->updateFont(state);
 }
 
-void VectorGraphicOutputDev::processLink(Link *link, Catalog *catalog)
+void VectorGraphicOutputDev::processLink(Link *link)
 {
-    charDev->processLink(link, catalog);
+    charDev->processLink(link);
 }
 
 void VectorGraphicOutputDev::beginString(GfxState *state, GString *s) 

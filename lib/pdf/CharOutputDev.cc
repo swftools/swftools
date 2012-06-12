@@ -1018,7 +1018,7 @@ GFXLink::~GFXLink()
 }
 
 
-void CharOutputDev::processLink(Link *link, Catalog *catalog)
+void CharOutputDev::processLink(Link *link)
 {
     double x1, y1, x2, y2;
     
@@ -1040,13 +1040,13 @@ void CharOutputDev::processLink(Link *link, Catalog *catalog)
             LinkGoTo *ha=(LinkGoTo *)link->getAction();
             LinkDest *dest=NULL;
             if (ha->getDest()==NULL) 
-                dest=catalog->findDest(ha->getNamedDest());
+                dest=this->doc->findDest(ha->getNamedDest());
             else 
                 dest=ha->getDest()->copy();
             if (dest){ 
               if (dest->isPageRef()){
                 Ref pageref=dest->getPageRef();
-                page=catalog->findPage(pageref.num,pageref.gen);
+                page=this->doc->findPage(pageref.num,pageref.gen);
               }
               else  page=dest->getPageNum();
               sprintf(buf, "%d", page);

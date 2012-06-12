@@ -1972,10 +1972,10 @@ void BitmapOutputDev::drawForm(Ref id)
     rgbdev->drawForm(id);
 }
 
-void BitmapOutputDev::processLink(Link *link, Catalog *catalog)
+void BitmapOutputDev::processLink(Link *link)
 {
     msg("<debug> processLink");
-    gfxdev->processLink(link, catalog);
+    gfxdev->processLink(link);
 }
 void BitmapOutputDev::flushEverything()
 {
