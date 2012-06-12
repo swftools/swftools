@@ -266,6 +266,7 @@
 #ifdef HAVE_POPPLER
 #define GString GooString
 #define GHash GooHash
+#define GHashIter GooHashIter
 #endif
 
 #ifdef HAVE_ZZIP_LIB_H
