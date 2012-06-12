@@ -2270,8 +2270,18 @@
    }
  }
  
---- xpdf/pdfinfo.cc.orig	2012-06-11 14:38:22.000000000 +0200
-+++ xpdf/pdfinfo.cc	2012-06-11 14:42:09.000000000 +0200
+--- xpdf/OutputDev.h.orig	2012-06-12 08:49:50.000000000 +0200
++++ xpdf/OutputDev.h	2012-06-12 10:29:30.000000000 +0200
+@@ -17,6 +17,7 @@
+ 
+ #include "gtypes.h"
+ #include "CharTypes.h"
++#include "Object.h"
+ 
+ class GString;
+ class Gfx;
+--- xpdf/pdfinfo.cc.orig	2012-06-12 08:49:50.000000000 +0200
++++ xpdf/pdfinfo.cc	2012-06-12 08:49:50.000000000 +0200
 @@ -12,6 +12,8 @@
  #include <stddef.h>
  #include <string.h>
