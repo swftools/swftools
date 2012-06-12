@@ -272,8 +272,10 @@ GBool VectorGraphicOutputDev::useShadedFills(POPPLER_SHADED_FILL_TYPE)
 
 POPPLER_TILING_PATERN_RETURN VectorGraphicOutputDev::tilingPatternFill(GfxState *state,
                                Gfx *gfx,
+                               POPPLER_TILING_PATTERN_CATALOG
 			       Object *str,
-			       int paintType, Dict *resDict,
+                               POPPLER_TILING_PATTERN_PMAT
+			       int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep) 

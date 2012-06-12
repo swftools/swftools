@@ -1499,17 +1499,19 @@ void BitmapOutputDev::eoFill(GfxState *state)
     dbg_newdata("eofill");
 }
 
-POPPLER_TILING_PATERN_RETURN BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
-			       int paintType, Dict *resDict,
+POPPLER_TILING_PATERN_RETURN BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, POPPLER_TILING_PATTERN_CATALOG Object *str,
+			       POPPLER_TILING_PATTERN_PMAT int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep) 
 {
     msg("<debug> tilingPatternFill");
-    boolpolydev->tilingPatternFill(state, gfx, str, paintType, resDict, mat,
+    boolpolydev->tilingPatternFill(state, gfx, POPPLER_TILING_PATTERN_CATALOG_ARG str, POPPLER_TILING_PATTERN_PMAT_ARG paintType,
+                                   POPPLER_TILING_PATTERN_TILING_TYPE_ARG resDict, mat,
                                    bbox, x0, y0, x1, y1, xStep, yStep);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat,
+    rgbdev->tilingPatternFill(state, gfx, POPPLER_TILING_PATTERN_CATALOG_ARG str, POPPLER_TILING_PATTERN_PMAT_ARG paintType,
+                              POPPLER_TILING_PATTERN_TILING_TYPE_ARG resDict, mat,
                               bbox, x0, y0, x1, y1, xStep, yStep);
     dbg_newdata("tilingpatternfill");
 #ifdef HAVE_POPPLER

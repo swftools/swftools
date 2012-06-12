@@ -373,17 +373,19 @@ void FullBitmapOutputDev::eoFill(GfxState *state)
     rgbdev->eoFill(state);
 }
 POPPLER_TILING_PATERN_RETURN FullBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx,
-             Object *str,
-			       int paintType, Dict *resDict,
+                               POPPLER_TILING_PATTERN_CATALOG Object *str,
+                               POPPLER_TILING_PATTERN_PMAT
+			       int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep)
 {
     msg("<debug> tilingPatternFill");
+    rgbdev->tilingPatternFill(state, gfx, POPPLER_TILING_PATTERN_CATALOG_ARG str, POPPLER_TILING_PATTERN_PMAT_ARG paintType,
+                              POPPLER_TILING_PATTERN_TILING_TYPE_ARG resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
 #ifdef HAVE_POPPLER
-    return
+    return gTrue;
 #endif
-    rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
 }
 
 GBool FullBitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
