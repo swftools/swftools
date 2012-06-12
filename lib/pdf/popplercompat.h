@@ -34,6 +34,10 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
+#define AnnotLink Link
+#endif
+
+#ifdef HAVE_POPPLER
   #include <goo/GooString.h>
   #include <goo/gfile.h>
 #else
