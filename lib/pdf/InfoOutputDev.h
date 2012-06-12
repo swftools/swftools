@@ -155,7 +155,7 @@ class InfoOutputDev: public OutputDev
 			       void *abortCheckCbkData = NULL);
     virtual void startPage(int pageNum, GfxState *state);
     virtual void endPage();
-    virtual void drawLink(Link *link, Catalog *catalog);
+    virtual void processLink(Link *link);
     virtual void updateFont(GfxState *state);
   
     virtual void saveState(GfxState *state);

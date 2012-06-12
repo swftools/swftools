@@ -487,7 +487,7 @@ void InfoOutputDev::endPage()
     if(num_chars) 
 	average_char_size /= num_chars;
 }
-void InfoOutputDev::drawLink(Link *link, Catalog *catalog) 
+void InfoOutputDev::processLink(Link *link)
 {
     num_links++;
 }
