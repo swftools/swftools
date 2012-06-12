@@ -110,7 +110,7 @@ public:
     virtual void fill(GfxState *state);
     virtual void eoFill(GfxState *state);
     virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(
-             GfxState *state, POPPLER_TILING_PATERN_GFX Object *str,
+            GfxState *state, Gfx *gfx, Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,

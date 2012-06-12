@@ -1499,17 +1499,17 @@ void BitmapOutputDev::eoFill(GfxState *state)
     dbg_newdata("eofill");
 }
 
-POPPLER_TILING_PATERN_RETURN BitmapOutputDev::tilingPatternFill(GfxState *state, POPPLER_TILING_PATERN_GFX Object *str,
+POPPLER_TILING_PATERN_RETURN BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Object *str,
 			       int paintType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep) 
 {
     msg("<debug> tilingPatternFill");
-    boolpolydev->tilingPatternFill(state, POPPLER_TILING_PATERN_GFX_ARG str, paintType, resDict, mat,
+    boolpolydev->tilingPatternFill(state, gfx, str, paintType, resDict, mat,
                                    bbox, x0, y0, x1, y1, xStep, yStep);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    rgbdev->tilingPatternFill(state, POPPLER_TILING_PATERN_GFX_ARG str, paintType, resDict, mat,
+    rgbdev->tilingPatternFill(state, gfx, str, paintType, resDict, mat,
                               bbox, x0, y0, x1, y1, xStep, yStep);
     dbg_newdata("tilingpatternfill");
 #ifdef HAVE_POPPLER
