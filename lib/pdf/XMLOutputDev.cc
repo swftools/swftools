@@ -27,7 +27,7 @@
 #endif
 
 XMLOutputDev::XMLOutputDev(char*filename)
-:TextOutputDev(mktmpname(0), false, false, false)
+:TextOutputDev(mktmpname(0), false, 0, false, false)
 {
   out = fopen(filename, "wb");
   if(!out) {
