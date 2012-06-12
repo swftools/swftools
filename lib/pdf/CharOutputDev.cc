@@ -83,7 +83,6 @@ struct fontentry {
     char*pfb;
     int pfblen;
     char*fullfilename;
-    DisplayFontParam *dfp;
 } pdf2t1map[] ={
 {"Times-Roman",           "n021003l", n021003l_afm, n021003l_afm_len, n021003l_pfb, n021003l_pfb_len},
 {"Times-Italic",          "n021023l", n021023l_afm, n021023l_afm_len, n021023l_pfb, n021023l_pfb_len},
@@ -424,16 +423,7 @@ char* fontconfig_searchForFont(char*name)
 #endif
 }
 
-static DisplayFontParamKind detectFontType(const char*filename)
-{
-    if(strstr(filename, ".ttf") || strstr(filename, ".TTF"))
-	return displayFontTT;
-    if(strstr(filename, ".pfa") || strstr(filename, ".PFA") || strstr(filename, ".pfb"))
-	return displayFontT1;
-    return displayFontTT;
-}
-
-DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
+GString *GFXGlobalParams::findFontFile(GString *fontName)
 {
     msg("<verbose> looking for font %s", fontName->getCString());
 
@@ -450,11 +440,8 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
 		} else {
 		    msg("<verbose> Storing standard PDF font %s at %s", name, pdf2t1map[t].fullfilename);
 		}
-		DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), displayFontT1);
-		dfp->t1.fileName = new GString(pdf2t1map[t].fullfilename);
-		pdf2t1map[t].dfp = dfp;
 	    }
-	    return pdf2t1map[t].dfp;
+            return pdf2t1map[t].fullfilename ? new GString(pdf2t1map[t].fullfilename) : NULL;
 	}
     }
     
@@ -485,29 +472,14 @@ DisplayFontParam *GFXGlobalParams::getDisplayFont(GString *fontName)
     }
 
     if(filename) {
+        GString*retval = new GString(filename);
         msg("<verbose> Font %s maps to %s\n", name, filename);
-	DisplayFontParamKind kind = detectFontType(filename);
-        DisplayFontParam *dfp = new DisplayFontParam(new GString(fontName), kind);
-	if(kind == displayFontTT) {
-	    dfp->tt.fileName = new GString(filename);
-	} else {
-	    dfp->t1.fileName = new GString(filename);
-	}
-	free(filename);
-        return dfp;
+        free(filename);
+        return retval;
     } else {
 	msg("<verbose> Font %s not found\n", name);
-	return GlobalParams::getDisplayFont(fontName);
+        return GlobalParams::findFontFile(fontName);
     }
-}
-
-DisplayFontParam *GFXGlobalParams::getDisplayCIDFont(GString *fontName, GString *collection)
-{
-    DisplayFontParam*dfp = GlobalParams::getDisplayCIDFont(fontName, collection);
-    if(!dfp) {
-        dfp = this->getDisplayFont(fontName);
-    }
-    return dfp;
 }
 
 CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
