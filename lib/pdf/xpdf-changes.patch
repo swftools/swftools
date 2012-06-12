@@ -656,6 +656,15 @@
  
    void setBaseDir(char *dir);
    void setupBaseFonts(char *dir);
+@@ -192,7 +192,7 @@
+   FILE *getUnicodeMapFile(GString *encodingName);
+   FILE *findCMapFile(GString *collection, GString *cMapName);
+   FILE *findToUnicodeFile(GString *name);
+-  GString *findFontFile(GString *fontName);
++  virtual GString *findFontFile(GString *fontName);
+   GString *findSystemFontFile(GString *fontName, SysFontType *type,
+ 			      int *fontNum);
+   GString *findCCFontFile(GString *collection);
 @@ -310,6 +310,7 @@
  private:
  
