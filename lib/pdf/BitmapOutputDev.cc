@@ -1629,7 +1629,14 @@ static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, doubl
 
     SplashCoord*matrix = font->getMatrix();
 
-    if(font && font->getGlyph(code, xFrac, yFrac, &glyph)) {
+#ifdef HAVE_POPPLER
+    double clipx1, clipy1, clipx2, clipy2;
+    state->getClipBBox(&clipx1, &clipy1, &clipx2, &clipy2);
+    SplashClip clip(clipx1, clipy1, clipx2, clipy2, gFalse);
+    SplashClipResult clipRes;
+#endif
+
+    if(font && font->getGlyph(code, xFrac, yFrac, &glyph POPPLER_GET_GLYPH_ARGS)) {
         x1 = floor(x0-glyph.x);
         y1 = floor(y0-glyph.y);
         x2 = ceil(x0-glyph.x+glyph.w);
@@ -1643,7 +1650,7 @@ static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, doubl
     double x0,y0;
     state->transform(x-originX,y-originY,&x0,&y0);
     int x1 = (int)x0, x2 = (int)x0+1, y1 = (int)y0, y2 = (int)y0+1;
-    SplashFont*font = clip0dev->getCurrentFont();
+    SplashFont*font = splash->getCurrentFont();
     SplashPath*path = font?font->getGlyphPath(code):NULL;
     if(path) {
         path->offset((SplashCoord)x, (SplashCoord)y);
