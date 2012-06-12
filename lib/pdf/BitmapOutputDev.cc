@@ -27,6 +27,7 @@
 #ifdef HAVE_POPPLER
   #include "splash/SplashBitmap.h"
   #include "splash/SplashPattern.h"
+  #include "splash/SplashGlyphBitmap.h"
   #include "splash/Splash.h"
 #else
   #include "xpdf/config.h"
