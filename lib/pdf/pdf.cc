@@ -533,7 +533,7 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	msg("<notice> Rendering at %f DPI. (Page width at 72 DPI: %f, target width: %d)", zoom, width_before, zoomtowidth);
     }
 
-    i->info = new InfoOutputDev(i->doc->getXRef());
+    i->info = new InfoOutputDev(i->doc);
     int t;
     i->pages = (pdf_page_info_t*)malloc(sizeof(pdf_page_info_t)*pdf_doc->num_pages);
     memset(i->pages,0,sizeof(pdf_page_info_t)*pdf_doc->num_pages);

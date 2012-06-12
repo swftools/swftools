@@ -38,6 +38,14 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
+  #define POPPLER_STARTDOC_ARG this->doc
+  #define INFO_OUTPUT_DEV_STARTDOC_ARG doc
+#else
+  #define POPPLER_STARTDOC_ARG this->xref
+  #define INFO_OUTPUT_DEV_STARTDOC_ARG doc->getXRef()
+#endif
+
+#ifdef HAVE_POPPLER
   #include <goo/GooString.h>
   #include <goo/gfile.h>
 #else

@@ -90,7 +90,7 @@ static type_t fontclass_type = {
     fontclass_destroy
 };
 
-InfoOutputDev::InfoOutputDev(XRef*xref) 
+InfoOutputDev::InfoOutputDev(PDFDoc*doc)
 {
     num_links = 0;
     num_jpeg_images = 0;
@@ -104,7 +104,7 @@ InfoOutputDev::InfoOutputDev(XRef*xref)
     previous_was_char = 0;
     SplashColor white = {255,255,255};
     splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
-    splash->startDoc(xref);
+    splash->startDoc(INFO_OUTPUT_DEV_STARTDOC_ARG);
     last_font = 0;
     current_type3_font = 0;
     fontcache = dict_new2(&fontclass_type);

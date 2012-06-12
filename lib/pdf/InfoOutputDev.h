@@ -140,7 +140,7 @@ class InfoOutputDev: public OutputDev
     void dumpfonts(gfxdevice_t*dev);
     FontInfo* getFontInfo(GfxState*state);
 
-    InfoOutputDev(XRef*xref);
+    InfoOutputDev(PDFDoc*doc);
     virtual ~InfoOutputDev(); 
     virtual GBool useTilingPatternFill();
     virtual GBool upsideDown();

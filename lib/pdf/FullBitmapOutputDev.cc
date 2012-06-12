@@ -54,7 +54,7 @@ FullBitmapOutputDev::FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*pag
     /* device for handling links */
     this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
 
-    this->rgbdev->startDoc(this->xref);
+    this->rgbdev->startDoc(POPPLER_STARTDOC_ARG);
 }
 FullBitmapOutputDev::~FullBitmapOutputDev()
 {
