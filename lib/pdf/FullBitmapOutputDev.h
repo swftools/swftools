@@ -168,10 +168,7 @@ public:
 
     virtual void processLink(Link *link, Catalog *catalog);
   
-    virtual void setVectorAntialias(GBool vaa);
-    virtual GBool getVectorAntialias();
 
-    
 private:
     void flushBitmap();
     char config_extrafontdata;

@@ -153,14 +153,6 @@ BitmapOutputDev::~BitmapOutputDev()
 
 }
 
-GBool BitmapOutputDev::getVectorAntialias()
-{
-    return this->rgbdev->getVectorAntialias();
-}
-void BitmapOutputDev::setVectorAntialias(GBool vaa)
-{
-    this->rgbdev->setVectorAntialias(vaa);
-}
 void BitmapOutputDev::setDevice(gfxdevice_t*dev)
 {
     this->dev = dev;

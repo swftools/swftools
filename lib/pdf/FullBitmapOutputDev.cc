@@ -66,14 +66,6 @@ FullBitmapOutputDev::~FullBitmapOutputDev()
     }
 }
 
-GBool FullBitmapOutputDev::getVectorAntialias()
-{
-    return this->rgbdev->getVectorAntialias();
-}
-void FullBitmapOutputDev::setVectorAntialias(GBool vaa)
-{
-    this->rgbdev->setVectorAntialias(vaa);
-}
 void FullBitmapOutputDev::setDevice(gfxdevice_t*dev)
 {
     this->dev = dev;

@@ -180,10 +180,7 @@ public:
 
     virtual void processLink(Link *link, Catalog *catalog);
   
-    virtual void setVectorAntialias(GBool vaa);
-    virtual GBool getVectorAntialias();
 
-    
 private:
     void flushEverything();
     void clearClips(int x1, int y1, int x2, int y2);
