@@ -128,22 +128,22 @@ virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
-			     int width, int height, GBool invert,
+			     int width, int height, GBool invert, POPPLER_INTERPOLATE
 			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
-			 int width, int height, GfxImageColorMap *colorMap,
+			 int width, int height, GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
 			 int *maskColors, GBool inlineImg);
   virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap,
+			       GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
 			       Stream *maskStr, int maskWidth, int maskHeight,
-			       GBool maskInvert);
+			       GBool maskInvert POPPLER_MASK_INTERPOLATE);
   virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height,
-				   GfxImageColorMap *colorMap,
+				   GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
-				   GfxImageColorMap *maskColorMap);
+				   GfxImageColorMap *maskColorMap POPPLER_MASK_INTERPOLATE);
 
   //----- transparency groups and soft masks (xpdf >= ~ 3.01.16)
   virtual void beginTransparencyGroup(GfxState *state, double *bbox,
