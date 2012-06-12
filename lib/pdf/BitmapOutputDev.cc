@@ -984,7 +984,7 @@ GBool BitmapOutputDev::intersection(SplashBitmap*boolpoly, SplashBitmap*booltext
 GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
              int rotate, GBool useMediaBox, GBool crop,
              int sliceX, int sliceY, int sliceW, int sliceH,
-             GBool printing, Catalog *catalog,
+             GBool printing,
              GBool (*abortCheckCbk)(void *data),
              void *abortCheckCbkData)
 {
