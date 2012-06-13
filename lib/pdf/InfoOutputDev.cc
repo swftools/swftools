@@ -1,7 +1,7 @@
 #include "../../config.h"
 #include "Object.h"
 #include "InfoOutputDev.h"
-#include "SplashOutputDev.h"
+#include "GFXSplashOutputDev.h"
 #include "GfxState.h"
 #include "CommonOutputDev.h"
 #include "../log.h"
@@ -103,7 +103,7 @@ InfoOutputDev::InfoOutputDev(PDFDoc*doc)
     currentglyph = 0;
     previous_was_char = 0;
     SplashColor white = {255,255,255};
-    splash = new SplashOutputDev(splashModeRGB8,320,0,white,0,0);
+    splash = new GFXSplashOutputDev(splashModeRGB8,320,0,white,0,0);
     splash->startDoc(INFO_OUTPUT_DEV_STARTDOC_ARG);
     last_font = 0;
     current_type3_font = 0;

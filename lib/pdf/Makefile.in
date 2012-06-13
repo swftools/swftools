@@ -49,9 +49,9 @@ VectorGraphicOutputDev.$(O): VectorGraphicOutputDev.cc VectorGraphicOutputDev.h 
 	$(CC) -I ./ $(xpdf_include) VectorGraphicOutputDev.cc -o $@
 CharOutputDev.$(O): CharOutputDev.cc CharOutputDev.h CommonOutputDev.h InfoOutputDev.h ../gfxpoly.h
 	$(CC) -I ./ $(xpdf_include) CharOutputDev.cc -o $@
-InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h
+InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h GFXSplashOutputDev.h
 	$(CC) -I ./ $(xpdf_include) InfoOutputDev.cc -o $@
-BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
+BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h GFXSplashOutputDev.h
 	$(CC) -I ./ $(xpdf_include) BitmapOutputDev.cc -o $@
 XMLOutputDev.$(O): XMLOutputDev.cc XMLOutputDev.h xpdf/TextOutputDev.h
 	$(CC) -I ./ $(xpdf_include) XMLOutputDev.cc -o $@

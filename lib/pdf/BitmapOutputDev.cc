@@ -23,6 +23,7 @@
 #include <assert.h>
 #include "BitmapOutputDev.h"
 #include "CharOutputDev.h"
+#include "GFXSplashOutputDev.h"
 
 #ifdef HAVE_POPPLER
   #include "splash/SplashBitmap.h"
@@ -71,19 +72,19 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     this->xref = doc->getXRef();
     
     /* color graphic output device, for creating bitmaps */
-    this->rgbdev = new SplashOutputDev(splashModeRGB8, 1, gFalse, splash_white, gTrue, gTrue);
+    this->rgbdev = new GFXSplashOutputDev(splashModeRGB8, 1, gFalse, splash_white, gTrue, gTrue);
   
     /* color mode for binary bitmaps */
     SplashColorMode colorMode = splashModeMono1;
 
     /* two devices for testing things against clipping: one clips, the other doesn't */
-    this->clip0dev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
-    this->clip1dev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
+    this->clip0dev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
+    this->clip1dev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
     
     /* device indicating where polygonal pixels were drawn */
-    this->boolpolydev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
+    this->boolpolydev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
     /* device indicating where text pixels were drawn */
-    this->booltextdev = new SplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
+    this->booltextdev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
 
     /* device for handling texts and links */
     this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
@@ -1610,7 +1611,7 @@ void BitmapOutputDev::clearBoolTextDev()
 
 #define USE_GETGLYPH_BBOX
 
-static void getGlyphBbox(GfxState*state, SplashOutputDev*splash, double x, double y, double originX, double originY, CharCode code, int*_x1, int*_y1, int*_x2, int*_y2)
+static void getGlyphBbox(GfxState*state, GFXSplashOutputDev*splash, double x, double y, double originX, double originY, CharCode code, int*_x1, int*_y1, int*_x2, int*_y2)
 {
 #ifdef USE_GETGLYPH_BBOX
     /* use getglyph to derive bounding box */

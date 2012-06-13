@@ -24,7 +24,7 @@
 #include "popplercompat.h"
 #include "GfxFont.h"
 #include "OutputDev.h"
-#include "SplashOutputDev.h"
+#include "GFXSplashOutputDev.h"
 #include "Page.h"
 
 #ifdef HAVE_POPPLER
@@ -116,7 +116,7 @@ extern gfxmatrix_t gfxmatrix_from_state(GfxState*state);
 class InfoOutputDev: public OutputDev 
 {
     GlyphInfo* currentglyph;
-    SplashOutputDev*splash;
+    GFXSplashOutputDev*splash;
     char previous_was_char;
     Page *page;
 

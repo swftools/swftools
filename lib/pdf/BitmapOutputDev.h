@@ -27,6 +27,7 @@
 #include "../../config.h"
 #include "CharOutputDev.h"
 #include "InfoOutputDev.h"
+#include "GFXSplashOutputDev.h"
 #include "PDFDoc.h"
 #include "CommonOutputDev.h"
 #include "popplercompat.h"
@@ -209,11 +210,11 @@ private:
 
     SplashPath*bboxpath;
 
-    SplashOutputDev*rgbdev;
-    SplashOutputDev*clip0dev;
-    SplashOutputDev*clip1dev;
-    SplashOutputDev*boolpolydev;
-    SplashOutputDev*booltextdev;
+    GFXSplashOutputDev*rgbdev;
+    GFXSplashOutputDev*clip0dev;
+    GFXSplashOutputDev*clip1dev;
+    GFXSplashOutputDev*boolpolydev;
+    GFXSplashOutputDev*booltextdev;
 
     SplashBitmap*rgbbitmap;
     SplashBitmap*clip0bitmap;

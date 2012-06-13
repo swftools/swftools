@@ -75,6 +75,10 @@ char* mktmpname(char*ptr);
   #define POPPLER_GET_GLYPH_ARGS
 #endif
 
+#ifndef HAVE_POPPLER
+  #define GFXSplashOutputDev SplashOutputDev
+#endif
+
 #ifdef HAVE_POPPLER
   #include <goo/GooString.h>
   #include <goo/gfile.h>
