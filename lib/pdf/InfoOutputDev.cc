@@ -697,8 +697,12 @@ FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
 	fontinfo->font = font;
 	fontinfo->max_size = 0;
 	if(current_splash_font) {
+#ifdef HAVE_POPPLER
+            fontinfo->ascender = fontinfo->descender = 0;
+#else
 	    fontinfo->ascender = current_splash_font->ascender;
 	    fontinfo->descender = current_splash_font->descender;
+#endif
 	} else {
 	    fontinfo->ascender = fontinfo->descender = 0;
 	}
@@ -782,9 +786,15 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     if(!g) {
 	g = fontinfo->glyphs[code] = new GlyphInfo();
 	g->advance_max = 0;
+#ifndef HAVE_POPPLER
 	current_splash_font->last_advance = -1;
+#endif
 	g->path = current_splash_font->getGlyphPath(code);
+#ifdef HAVE_POPPLER
+        g->advance = -1;
+#else
 	g->advance = current_splash_font->last_advance;
+#endif
 	g->unicode = 0;
     }
     if(uLen && ((u[0]>=32 && u[0]<g->unicode) || !g->unicode)) {
