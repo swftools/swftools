@@ -331,7 +331,7 @@ xpdf_include=
 
 if test "x$USE_POPPLER" = "xtrue"; then
     AC_DEFINE([HAVE_POPPLER],[1],[use poppler])
-    #PKG_CHECK_MODULES([POPPLER],[poppler poppler-splash],,[poppler_pkgconfig=no])
+    PKG_CHECK_MODULES([POPPLER],[poppler >= 0.20.0 poppler-splash >= 0.20.0],,[poppler_pkgconfig=no])
     if test "x$poppler_pkgconfig" = "xno"; then
         AC_LANG_PUSH([C++])
         AC_CHECK_HEADERS([OutputDev.h],[
