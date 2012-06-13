@@ -66,7 +66,9 @@ public:
 			       int sliceX, int sliceY, int sliceW, int sliceH,
 			       GBool printing,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
-			       void *abortCheckCbkData = NULL);
+			       void *abortCheckCbkData = NULL
+                               POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_H
+                               POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA_H);
   //----- get info about output device
 
   // Does this device use upside-down coordinates?

@@ -80,7 +80,9 @@ class CommonOutputDev: public OutputDev
 			       int sliceX, int sliceY, int sliceW, int sliceH,
 			       GBool printing, Catalog *catalog,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
-			       void *abortCheckCbkData = NULL)
+			       void *abortCheckCbkData = NULL
+                               POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_H
+                               POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA_H)
     {
         this->setPage(page);
         return gTrue;
