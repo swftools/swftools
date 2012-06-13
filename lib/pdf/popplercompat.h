@@ -92,6 +92,12 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
+  #define POPPLER_COPY_STATE_PATH gTrue
+#else
+  #define POPPLER_COPY_STATE_PATH gFalse
+#endif
+
+#ifdef HAVE_POPPLER
   #define GFXGlobalParams GlobalParams
 #endif
 

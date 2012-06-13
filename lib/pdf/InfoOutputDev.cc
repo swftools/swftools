@@ -569,7 +569,7 @@ void InfoOutputDev::updateFont(GfxState *state)
 	current_splash_font = 0;
 	return;
     }
-    GfxState* state2 = state->copy();
+    GfxState* state2 = state->copy(POPPLER_COPY_STATE_PATH);
     state2->setPath(0);
     state2->setCTM(1.0,0,0,1.0,0,0);
     splash->updateCTM(state2, 0,0,0,0,0,0);
