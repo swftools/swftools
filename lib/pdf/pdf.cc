@@ -16,6 +16,7 @@
 #include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
 #include "VectorGraphicOutputDev.h"
+#include "popplercompat.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER

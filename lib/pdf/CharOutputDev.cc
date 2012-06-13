@@ -197,6 +197,7 @@ void unlinkfont(char* filename)
     }
 }
 
+#ifndef HAVE_POPPLER
 static int config_use_fontconfig = 1;
 static int fcinitcalled = 0; 
 
@@ -481,6 +482,7 @@ GString *GFXGlobalParams::findFontFile(GString *fontName)
         return GlobalParams::findFontFile(fontName);
     }
 }
+#endif // HAVE_POPPLER
 
 CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
 :CommonOutputDev(info, doc, page2page, num_pages, x, y, x1, y1, x2, y2)

@@ -92,6 +92,10 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
+  #define GFXGlobalParams GlobalParams
+#endif
+
+#ifdef HAVE_POPPLER
   #include <goo/GooString.h>
   #include <goo/gfile.h>
 #else

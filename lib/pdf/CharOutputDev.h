@@ -108,11 +108,13 @@ class GFXLink {
     ~GFXLink();
 };
 
+#ifndef HAVE_POPPLER
 class GFXGlobalParams:  public GlobalParams {
     public:
     GFXGlobalParams();
     ~GFXGlobalParams();
     virtual GString *findFontFile(GString *fontName);
 };
+#endif
 
 #endif //__charoutputdev_h__
