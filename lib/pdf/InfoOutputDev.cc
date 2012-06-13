@@ -574,6 +574,9 @@ void InfoOutputDev::updateFont(GfxState *state)
     state2->setCTM(1.0,0,0,1.0,0,0);
     splash->updateCTM(state2, 0,0,0,0,0,0);
     state2->setTextMat(1.0,0,0,1.0,0,0);
+#ifdef HAVE_POPPLER
+    font->incRefCnt();
+#endif
     state2->setFont(font, 1024.0);
     splash->doUpdateFont(state2);
 
