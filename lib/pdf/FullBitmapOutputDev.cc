@@ -130,8 +130,8 @@ void FullBitmapOutputDev::flushBitmap()
     if((xmax-xmin)<=0 || (ymax-ymin)<=0) // no bitmap, nothing to do
 	return;
 
-    if(sizeof(SplashColor)!=3) {
-	msg("<error> sizeof(SplashColor)!=3");
+    if(sizeof(SplashColor)<3) {
+	msg("<error> sizeof(SplashColor)<3");
 	return;
     }
     //xmin = ymin = 0;

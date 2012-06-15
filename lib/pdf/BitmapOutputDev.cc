@@ -182,8 +182,8 @@ void BitmapOutputDev::flushBitmap()
     int bitmap_width = rgbdev->getBitmapWidth();
     int bitmap_height = rgbdev->getBitmapHeight();
 
-    if(sizeof(SplashColor)!=3) {
-	msg("<error> sizeof(SplashColor)!=3");
+    if(sizeof(SplashColor)<3) {
+	msg("<error> sizeof(SplashColor)<3");
 	return;
     }
 
