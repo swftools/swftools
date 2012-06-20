@@ -2672,10 +2672,10 @@
  // user config file name, relative to the user's home directory
  #if defined(VMS) || defined(WIN32)
 -#define xpdfUserConfigFile "xpdfrc"
-+#define xpdfUserConfigFile "swftoolsrc"
++#define xpdfUserConfigFile "swftools.cfg"
  #else
 -#define xpdfUserConfigFile ".xpdfrc"
-+#define xpdfUserConfigFile ".swftoolsrc"
++#define xpdfUserConfigFile ".swftools.cfg"
  #endif
  
  // system config file name (set via the configure script)
@@ -2684,7 +2684,7 @@
  // under Windows, we get the directory with the executable and then
  // append this file name
 -#define xpdfSysConfigFile "xpdfrc"
-+#define xpdfSysConfigFile "swftoolsrc"
++#define xpdfSysConfigFile "swftools.cfg"
  #endif
  
  //------------------------------------------------------------------------
