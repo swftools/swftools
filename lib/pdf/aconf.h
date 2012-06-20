@@ -9,7 +9,7 @@
 #define ACONF_H
 #include "../../config.h"
 
-#define SYSTEM_XPDFRC "/etc/xpdf/xpdfrc"
+#define SYSTEM_XPDFRC "/etc/swftoolsrc"
 
 #define HAVE_STRINGS_H 1
 
