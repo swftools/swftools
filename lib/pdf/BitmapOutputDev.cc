@@ -199,6 +199,7 @@ void BitmapOutputDev::flushBitmap()
     
     SplashColorPtr rgb = rgbbitmap->getDataPtr();
     Guchar*alpha = rgbbitmap->getAlphaPtr();
+    int color_comps = splashColorModeNComps[rgbbitmap->getMode()];
     
     Guchar*alpha2 = stalepolybitmap->getDataPtr();
     int bitmap_width8 = (stalepolybitmap->getWidth()+7)/8;
@@ -256,7 +257,7 @@ void BitmapOutputDev::flushBitmap()
 	img->height = rangey;
 	int x,y;
 	for(y=0;y<rangey;y++) {
-	    SplashColorPtr in=&rgb[((y+ymin)*bitmap_width+xmin)*sizeof(SplashColor)];
+	    SplashColorPtr in=&rgb[((y+ymin)*bitmap_width+xmin)*color_comps];
 	    gfxcolor_t*out = &img->data[y*rangex];
 	    Guchar*ain = &alpha[(y+ymin)*bitmap_width+xmin];
 	    Guchar*ain2 = &alpha2[(y+ymin)*bitmap_width8];
@@ -1458,8 +1459,9 @@ char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*r
 	return 0;
     }
     gfxcolor_t color = gfxstate_getfillcolor(state);
+    int color_comps = splashColorModeNComps[rgbbitmap->getMode()];
     SplashColorPtr rgb = rgbbitmap->getDataPtr() 
-	               + (y1*width+x1)*sizeof(SplashColor);
+	               + (y1*width+x1)*color_comps;
     int width8 = (width+7)/8;
     unsigned char*bits = (unsigned char*)boolpoly->getDataPtr() 
 	                 + (y1*width8+x1);
@@ -1473,7 +1475,7 @@ char area_is_plain_colored(GfxState*state, SplashBitmap*boolpoly, SplashBitmap*r
 	       rgb[x*3+2] != color.b)
 		return 0;
 	}
-	rgb += width*sizeof(SplashColor);
+	rgb += width*color_comps;
     }
     return 1;
 }

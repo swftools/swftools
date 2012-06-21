@@ -115,6 +115,7 @@ void FullBitmapOutputDev::flushBitmap()
     
     SplashColorPtr rgb = rgbdev->getBitmap()->getDataPtr();
     Guchar*alpha = rgbdev->getBitmap()->getAlphaPtr();
+    int color_comps = splashColorModeNComps[rgbdev->getBitmap()->getMode()];
 
     int xmin,ymin,xmax,ymax;
     getBitmapBBox(alpha, width, height, &xmin,&ymin,&xmax,&ymax);
@@ -146,7 +147,7 @@ void FullBitmapOutputDev::flushBitmap()
     img->height = rangey;
     int x,y;
     for(y=0;y<rangey;y++) {
-	SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*sizeof(SplashColor)];
+	SplashColorPtr in=&rgb[((y+ymin)*width+xmin)*color_comps];
 	gfxcolor_t*out = &img->data[y*rangex];
 	Guchar*ain = &alpha[(y+ymin)*width+xmin];
 	for(x=0;x<rangex;x++) {
