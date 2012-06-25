@@ -203,6 +203,7 @@ private:
     char config_optimizeplaincolorfills;
     char config_skewedtobitmap;
     char config_alphatobitmap;
+    char config_transparent;
 
     int text_x1,text_y1,text_x2,text_y2;
 

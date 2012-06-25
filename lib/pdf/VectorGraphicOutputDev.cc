@@ -870,6 +870,7 @@ void VectorGraphicOutputDev::beginPage(GfxState *state, int pageNum)
     if(!config_transparent) {
         device->fill(device, clippath, &white);
     }
+
     states[statepos].clipbbox.xmin = 0;
     states[statepos].clipbbox.ymin = 0;
     states[statepos].clipbbox.xmax = this->width;
