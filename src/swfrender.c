@@ -202,7 +202,7 @@ int main(int argn, char*argv[])
                 gfxresult_t* result = dev->finish(dev);
                 if(result) {
                     char* effective_outputname = outputname;
-                    char suffixed_outputname[1000];
+                    char* suffixed_outputname = malloc(strlen(outputname) + 128);
                     if (count > 1) {
                         effective_outputname = suffixed_outputname;
                         char* ext = strrchr(outputname, '.');
@@ -217,6 +217,7 @@ int main(int argn, char*argv[])
                         fprintf(stderr,"Error writing page %d to %s\n", t, outputname);
                         exit(1);
                     }
+                    free(suffixed_outputname);
                     result->destroy(result);
                 }
             }
