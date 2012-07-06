@@ -41,7 +41,7 @@ public:
     virtual GBool upsideDown();
     virtual GBool useDrawChar();
     virtual GBool useTilingPatternFill();
-    virtual GBool useShadedFills(POPPLER_SHADED_FILL_TYPE);
+    virtual GBool useShadedFills(int type);
     virtual GBool useDrawForm();
     virtual GBool interpretType3Chars();
     virtual GBool needNonText();

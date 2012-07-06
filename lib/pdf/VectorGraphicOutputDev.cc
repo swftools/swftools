@@ -262,7 +262,7 @@ GBool VectorGraphicOutputDev::useTilingPatternFill()
         return gTrue;
     return gFalse;
 }
-GBool VectorGraphicOutputDev::useShadedFills(POPPLER_SHADED_FILL_TYPE)
+GBool VectorGraphicOutputDev::useShadedFills(int type)
 {
     infofeature("shaded fills");
     if(config_convertgradients)

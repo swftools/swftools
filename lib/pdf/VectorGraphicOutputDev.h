@@ -105,7 +105,7 @@ public:
   
   //----- shaded fills
   virtual GBool useTilingPatternFill();
-  virtual GBool useShadedFills(POPPLER_SHADED_FILL_TYPE);
+  virtual GBool useShadedFills(int type);
 
   virtual GBool tilingPatternFill(GfxState *state,
                              Gfx *gfx,

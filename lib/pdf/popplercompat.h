@@ -6,11 +6,11 @@
 char* mktmpname(char*ptr);
 
 #ifdef HAVE_POPPLER
-  #define POPPLER_SHADED_FILL_TYPE int type
-  #define POPPLER_SHADED_FILL_TYPE_ARG type
+  #define int type int type
+  #define type type
 #else
-  #define POPPLER_SHADED_FILL_TYPE
-  #define POPPLER_SHADED_FILL_TYPE_ARG
+  #define int type
+  #define type
 #endif
 
 #ifdef HAVE_POPPLER
