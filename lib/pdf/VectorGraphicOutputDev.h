@@ -132,22 +132,22 @@ public:
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
-			     int width, int height, GBool invert, POPPLER_INTERPOLATE
+			     int width, int height, GBool invert, GBool interpolate
 			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
-			 int width, int height, GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+			 int width, int height, GfxImageColorMap *colorMap, GBool interpolate
 			 int *maskColors, GBool inlineImg);
   virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+			       GfxImageColorMap *colorMap, GBool interpolate
 			       Stream *maskStr, int maskWidth, int maskHeight,
-			       GBool maskInvert POPPLER_MASK_INTERPOLATE);
+			       GBool maskInvert GBool maskInterpolate);
   virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height,
-				   GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+				   GfxImageColorMap *colorMap, GBool interpolate
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
-				   GfxImageColorMap *maskColorMap POPPLER_MASK_INTERPOLATE);
+				   GfxImageColorMap *maskColorMap GBool maskInterpolate);
 
   //----- transparency groups and soft masks (xpdf >= ~ 3.01.16)
   virtual void beginTransparencyGroup(GfxState *state, double *bbox,

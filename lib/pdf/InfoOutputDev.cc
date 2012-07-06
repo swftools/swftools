@@ -934,52 +934,52 @@ void InfoOutputDev::restoreState(GfxState *state)
 
 void InfoOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
-			   POPPLER_INTERPOLATE
+			   GBool interpolate
 			   GBool inlineImg) 
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawImageMask(state,ref,str,width,height,invert, POPPLER_INTERPOLATE_ARG inlineImg);
+    OutputDev::drawImageMask(state,ref,str,width,height,invert, interpolate inlineImg);
 }
 void InfoOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
-		       POPPLER_INTERPOLATE
+		       GBool interpolate
 		       int *maskColors, GBool inlineImg)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawImage(state,ref,str,width,height,colorMap, POPPLER_INTERPOLATE_ARG maskColors,inlineImg);
+    OutputDev::drawImage(state,ref,str,width,height,colorMap, interpolate maskColors,inlineImg);
 }
 void InfoOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				int width, int height,
 				GfxImageColorMap *colorMap,
-				POPPLER_INTERPOLATE
+				GBool interpolate
 				Stream *maskStr,
 				int maskWidth, int maskHeight,
 				GBool maskInvert
-				POPPLER_MASK_INTERPOLATE)
+				GBool maskInterpolate)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap, POPPLER_INTERPOLATE_ARG maskStr,maskWidth,maskHeight,maskInvert POPPLER_MASK_INTERPOLATE_ARG);
+    OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap, interpolate maskStr,maskWidth,maskHeight,maskInvert maskInterpolate);
 }
 
 void InfoOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				    int width, int height,
 				    GfxImageColorMap *colorMap,
-				    POPPLER_INTERPOLATE
+				    GBool interpolate
 				    Stream *maskStr,
 				    int maskWidth, int maskHeight,
 				    GfxImageColorMap *maskColorMap
-				    POPPLER_MASK_INTERPOLATE)
+				    GBool maskInterpolate)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap, POPPLER_INTERPOLATE_ARG maskStr,maskWidth,maskHeight,maskColorMap POPPLER_MASK_INTERPOLATE_ARG);
+    OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap, interpolate maskStr,maskWidth,maskHeight,maskColorMap maskInterpolate);
 }
     
 void InfoOutputDev::dumpfonts(gfxdevice_t*dev)

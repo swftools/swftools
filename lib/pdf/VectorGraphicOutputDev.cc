@@ -1366,11 +1366,11 @@ void VectorGraphicOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stre
 }
 
 void VectorGraphicOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-				   int width, int height, GBool invert, POPPLER_INTERPOLATE
+				   int width, int height, GBool invert, GBool interpolate
 				   GBool inlineImg) 
 {
     if(config_textonly) {
-        OutputDev::drawImageMask(state,ref,str,width,height,invert,POPPLER_INTERPOLATE_ARG inlineImg);
+        OutputDev::drawImageMask(state,ref,str,width,height,invert,interpolate inlineImg);
 	return;
     }
     dbg("drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
@@ -1379,11 +1379,11 @@ void VectorGraphicOutputDev::drawImageMask(GfxState *state, Object *ref, Stream 
 }
 
 void VectorGraphicOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
-			 int width, int height, GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+			 int width, int height, GfxImageColorMap *colorMap, GBool interpolate
 			 int *maskColors, GBool inlineImg)
 {
     if(config_textonly) {
-	OutputDev::drawImage(state,ref,str,width,height,colorMap,POPPLER_INTERPOLATE_ARG maskColors,inlineImg);
+	OutputDev::drawImage(state,ref,str,width,height,colorMap,interpolate maskColors,inlineImg);
 	return;
     }
     dbg("drawImage %dx%d, %s, %s, inline=%d", width, height, 
@@ -1402,12 +1402,12 @@ void VectorGraphicOutputDev::drawImage(GfxState *state, Object *ref, Stream *str
   
 void VectorGraphicOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+			       GfxImageColorMap *colorMap, GBool interpolate
 			       Stream *maskStr, int maskWidth, int maskHeight,
-			       GBool maskInvert POPPLER_MASK_INTERPOLATE)
+			       GBool maskInvert GBool maskInterpolate)
 {
     if(config_textonly) {
-	OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,POPPLER_INTERPOLATE_ARG maskStr,maskWidth,maskHeight,maskInvert POPPLER_MASK_INTERPOLATE_ARG);
+	OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,interpolate maskStr,maskWidth,maskHeight,maskInvert maskInterpolate);
 	return;
     }
     dbg("drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
@@ -1424,13 +1424,13 @@ void VectorGraphicOutputDev::drawMaskedImage(GfxState *state, Object *ref, Strea
 
 void VectorGraphicOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height,
-				   GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+				   GfxImageColorMap *colorMap, GBool interpolate
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
-				   GfxImageColorMap *maskColorMap POPPLER_MASK_INTERPOLATE)
+				   GfxImageColorMap *maskColorMap GBool maskInterpolate)
 {
     if(config_textonly) {
-	OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,POPPLER_INTERPOLATE_ARG maskStr,maskWidth,maskHeight,maskColorMap POPPLER_MASK_INTERPOLATE_ARG);
+	OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,interpolate maskStr,maskWidth,maskHeight,maskColorMap maskInterpolate);
 	return;
     }
     dbg("drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 

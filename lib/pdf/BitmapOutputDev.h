@@ -146,27 +146,27 @@ public:
 
     virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,
-			       POPPLER_INTERPOLATE
+			       GBool interpolate
 			       GBool inlineImg);
     virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GfxImageColorMap *colorMap,
-			   POPPLER_INTERPOLATE
+			   GBool interpolate
 			   int *maskColors, GBool inlineImg);
     virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				 int width, int height,
 				 GfxImageColorMap *colorMap,
-				 POPPLER_INTERPOLATE
+				 GBool interpolate
 				 Stream *maskStr, int maskWidth, int maskHeight,
 				 GBool maskInvert
-				 POPPLER_MASK_INTERPOLATE);
+				 GBool maskInterpolate);
     virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				     int width, int height,
 				     GfxImageColorMap *colorMap,
-				     POPPLER_INTERPOLATE
+				     GBool interpolate
 				     Stream *maskStr,
 				     int maskWidth, int maskHeight,
 				     GfxImageColorMap *maskColorMap
-				     POPPLER_MASK_INTERPOLATE);
+				     GBool maskInterpolate);
 
     virtual void type3D0(GfxState *state, double wx, double wy);
     virtual void type3D1(GfxState *state, double wx, double wy, double llx, double lly, double urx, double ury);

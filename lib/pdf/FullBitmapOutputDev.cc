@@ -490,41 +490,41 @@ void FullBitmapOutputDev::endType3Char(GfxState *state)
     rgbdev->endType3Char(state);
 }
 void FullBitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-			   int width, int height, GBool invert, POPPLER_INTERPOLATE
+			   int width, int height, GBool invert, GBool interpolate
 			   GBool inlineImg)
 {
     msg("<debug> drawImageMask");
-    rgbdev->drawImageMask(state, ref, str, width, height, invert, POPPLER_INTERPOLATE_ARG inlineImg);
+    rgbdev->drawImageMask(state, ref, str, width, height, invert, interpolate inlineImg);
 }
 void FullBitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
-		       int width, int height, GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+		       int width, int height, GfxImageColorMap *colorMap, GBool interpolate
 		       int *maskColors, GBool inlineImg)
 {
     msg("<debug> drawImage");
     rgbdev->drawImage(state, ref, str, width, height, colorMap,
-      POPPLER_INTERPOLATE_ARG maskColors, inlineImg);
+      interpolate maskColors, inlineImg);
 }
 void FullBitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     int width, int height,
-			     GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+			     GfxImageColorMap *colorMap, GBool interpolate
 			     Stream *maskStr, int maskWidth, int maskHeight,
-			     GBool maskInvert POPPLER_MASK_INTERPOLATE)
+			     GBool maskInvert GBool maskInterpolate)
 {
     msg("<debug> drawMaskedImage");
     rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap,
-      POPPLER_INTERPOLATE_ARG maskStr, maskWidth, maskHeight,
-      maskInvert POPPLER_MASK_INTERPOLATE_ARG);
+      interpolate maskStr, maskWidth, maskHeight,
+      maskInvert maskInterpolate);
 }
 void FullBitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				 int width, int height,
-				 GfxImageColorMap *colorMap, POPPLER_INTERPOLATE
+				 GfxImageColorMap *colorMap, GBool interpolate
 				 Stream *maskStr, int maskWidth, int maskHeight,
-				 GfxImageColorMap *maskColorMap POPPLER_MASK_INTERPOLATE)
+				 GfxImageColorMap *maskColorMap GBool maskInterpolate)
 {
     msg("<debug> drawSoftMaskedImage");
     rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap,
-      POPPLER_INTERPOLATE_ARG maskStr, maskWidth, maskHeight,
-      maskColorMap POPPLER_MASK_INTERPOLATE_ARG);
+      interpolate maskStr, maskWidth, maskHeight,
+      maskColorMap maskInterpolate);
 }
 void FullBitmapOutputDev::drawForm(Ref id)
 {
