@@ -39,7 +39,7 @@
 #endif
 
 // xpdf header files
-#include "popplercompat.h"
+#include "popplerincludes.h"
 #include "CharOutputDev.h"
 
 // swftools header files
@@ -197,293 +197,6 @@ void unlinkfont(char* filename)
     }
 }
 
-#ifndef HAVE_POPPLER
-static int config_use_fontconfig = 1;
-static int fcinitcalled = 0; 
-
-GFXGlobalParams::GFXGlobalParams()
-: GlobalParams((char*)"")
-{
-    //setupBaseFonts(char *dir); //not tested yet
-}
-GFXGlobalParams::~GFXGlobalParams()
-{
-    msg("<verbose> Performing cleanups");
-    int t;
-    for(t=0;t<sizeof(pdf2t1map)/sizeof(fontentry);t++) {
-	if(pdf2t1map[t].fullfilename) {
-	    unlinkfont(pdf2t1map[t].fullfilename);
-	}
-    }
-#ifdef HAVE_FONTCONFIG
-    if(config_use_fontconfig && fcinitcalled)
-	FcFini();
-#endif
-}
-#ifdef HAVE_FONTCONFIG
-static char stralphacmp(const char*s1, const char*s2)
-{
-    while(*s1 && *s2) {
-	/* skip over space, minus, comma etc. */
-	while(*s1>=32 && *s1<=63) s1++;
-	while(*s2>=32 && *s2<=63) s2++;
-	if(*s1!=*s2)
-	    break;
-	s1++;s2++;
-    }
-    return *s1 - *s2;
-}
-
-static char fc_ismatch(FcPattern*match, char*family, char*style)
-{
-    char*fcfamily=0,*fcstyle=0,*fcfullname=0,*filename=0;
-    FcBool scalable=FcFalse, outline=FcFalse;
-    FcPatternGetString(match, "family", 0, (FcChar8**)&fcfamily);
-    FcPatternGetString(match, "style", 0, (FcChar8**)&fcstyle);
-    FcPatternGetString(match, "file", 0, (FcChar8**)&filename);
-    FcPatternGetBool(match, "outline", 0, &outline);
-    FcPatternGetBool(match, "scalable", 0, &scalable);
-
-    if(scalable!=FcTrue || outline!=FcTrue)
-	return 0;
-
-    if (!stralphacmp(fcfamily, family)) {
-	msg("<debug> Font %s-%s (%s) is a match for %s%s%s", fcfamily, fcstyle, filename, family, style?"-":"", style?style:"");
-	return 1;
-    } else {
-	//msg("<debug> Font %s-%s (%s) is NOT a match for %s%s%s", fcfamily, fcstyle, filename, family, style?"-":"", style?style:"");
-	return 0;
-    }
-}
-#endif
-
-static inline char islowercase(char c) 
-{
-    return (c>='a' && c<='z');
-}
-
-char* fontconfig_searchForFont(char*name)
-{
-#ifdef HAVE_FONTCONFIG
-    if(!config_use_fontconfig)
-	return 0;
-    
-    // call init ony once
-    if (!fcinitcalled) {
-        fcinitcalled = 1;
-
-	// check whether we have a config file
-	char* configfile = (char*)FcConfigFilename(0);
-	int configexists = 0;
-	FILE*fi = fopen(configfile, "rb");
-	if(fi) {
-	    configexists = 1;fclose(fi);
-	    msg("<debug> Initializing FontConfig (configfile=%s)", configfile);
-	} else {
-	    msg("<debug> Initializing FontConfig (no configfile)");
-	}
-
-	if(!configexists) {
-	    /* A fontconfig instance which didn't find a configfile is unbelievably
-	       cranky, so let's just write out a small xml file and make fontconfig
-	       happy */
-	    FcConfig*c = FcConfigCreate();
-	    char namebuf[512];
-	    char* tmpFileName = mktmpname(namebuf);
-	    FILE*fi = fopen(tmpFileName, "wb");
-	    fprintf(fi, "<?xml version=\"1.0\"?>\n<fontconfig>\n");//<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
-#ifdef WIN32
-	    fprintf(fi, "<dir>WINDOWSFONTDIR</dir>\n");
-#endif
-	    fprintf(fi, "<dir>~/.fonts</dir>\n");
-#ifdef WIN32
-	    fprintf(fi, "<cachedir>WINDOWSTEMPDIR_FONTCONFIG_CACHE</cachedir>\n");
-#endif
-	    fprintf(fi, "<cachedir>~/.fontconfig</cachedir>\n");
-	    fprintf(fi, "</fontconfig>\n");
-	    fclose(fi);
-	    FcConfigParseAndLoad(c, (FcChar8*)tmpFileName, 1);
-	    FcConfigBuildFonts(c);
-	    FcConfigSetCurrent(c);
-	}
-
-	if(!FcInit()) {
-            msg("<debug> FontConfig Initialization failed. Disabling.");
-            config_use_fontconfig = 0;
-            return 0;
-        }
-	FcConfig * config = FcConfigGetCurrent();
-	if(!config) {
-            msg("<debug> FontConfig Config Initialization failed. Disabling.");
-            config_use_fontconfig = 0;
-            return 0;
-        }
-
-        /* add external fonts to fontconfig's config, too. */
-        fontfile_t*fd = global_fonts;
-        while(fd) {
-            FcConfigAppFontAddFile(config, (FcChar8*)fd->filename);
-            msg("<debug> Adding font %s to fontconfig", fd->filename);
-            fd = fd->next;
-        }
-
-	FcFontSet * set =  FcConfigGetFonts(config, FcSetSystem);
-        msg("<verbose> FontConfig initialized. Found %d fonts", set?set->nfont:0);
-	if(!set || !set->nfont) {
-            msg("<debug> FontConfig has zero fonts. Disabling.");
-            config_use_fontconfig = 0;
-            return 0;
-        }
-
-	if(getLogLevel() >= LOGLEVEL_TRACE) {
-	    int t;
-	    int p;
-	    for(p=0;p<2;p++) {
-		if(set) {
-		    for(t=0;t<set->nfont;t++) {
-			char*fcfamily=0,*fcstyle=0,*filename=0;
-			FcBool scalable=FcFalse, outline=FcFalse;
-			FcPatternGetString(set->fonts[t], "family", 0, (FcChar8**)&fcfamily);
-			FcPatternGetString(set->fonts[t], "style", 0, (FcChar8**)&fcstyle);
-			FcPatternGetString(set->fonts[t], "file", 0, (FcChar8**)&filename);
-			FcPatternGetBool(set->fonts[t], "outline", 0, &outline);
-			FcPatternGetBool(set->fonts[t], "scalable", 0, &scalable);
-			if(scalable && outline) {
-			    msg("<trace> %s (%s) -> %s", fcfamily, fcstyle, filename);
-			}
-		    }
-		}
-		set =  FcConfigGetFonts(config, FcSetApplication);
-	    }
-	}
-    }
-
-    char*family = strdup(name);
-    int len = strlen(family);
-
-    const char*styles[] = {"Medium", "Regular", "Bold", "Italic", "Black", "Narrow"};
-    const char*style = 0;
-    int t;
-    for(t=0;t<sizeof(styles)/sizeof(styles[0]);t++) {
-	int l = strlen(styles[t]);
-	if(len>l+1 && !strcmp(family+len-l, styles[t]) && islowercase(family[len-l-1])) {
-	    style = styles[t];
-	    family[len-l]=0;
-	    break;
-	}
-    }
-    if(!style) {
-	char*dash = strchr(family, '-');
-	if(!dash) dash = strchr(family, ',');
-	if(dash) {
-	    *dash = 0;
-	    style = dash+1;
-	}
-    }
-    FcPattern*pattern = 0;
-    if(style) {
-	msg("<debug> FontConfig: Looking for font %s (family=%s style=%s)", name, family, style);
-	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, FC_STYLE, FcTypeString, style, NULL);
-    } else {
-	msg("<debug> FontConfig: Looking for font %s (family=%s)", name, family);
-	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
-    }
-    pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
-
-    FcResult result;
-    FcConfigSubstitute(0, pattern, FcMatchPattern); 
-    FcDefaultSubstitute(pattern);
-
-    FcFontSet*set = FcFontSort(0, pattern, 1, 0, &result);
-    if(set) {
-	int t;
-	for(t=0;t<set->nfont;t++) {
-	    FcPattern*match = set->fonts[t];
-	    //FcPattern*match = FcFontMatch(0, pattern, &result);
-	    if(fc_ismatch(match, family, (char*)style)) {
-		char*filename=0;
-		if(FcPatternGetString(match, "file", 0, (FcChar8**)&filename) != FcResultMatch) {
-		    msg("<debug> FontConfig: Couldn't get fontconfig's filename for font %s", name);
-		    filename=0;
-		}
-		//FcPatternDestroy(match);
-		msg("<debug> fontconfig: returning filename %s", filename);
-		free(family);
-		FcPatternDestroy(pattern);
-		FcFontSetDestroy(set);
-		return filename?strdup(filename):0;
-	    }
-	}
-    }
-    free(family);
-    FcPatternDestroy(pattern);
-    FcFontSetDestroy(set);
-    return 0;
-#else
-    return 0;
-#endif
-}
-
-GString *GFXGlobalParams::findFontFile(GString *fontName)
-{
-    msg("<verbose> looking for font %s", fontName->getCString());
-
-    char*name = fontName->getCString();
-    
-    /* see if it is a pdf standard font */
-    int t;
-    for(t=0;t<sizeof(pdf2t1map)/sizeof(fontentry);t++) {
-	if(!strcmp(name, pdf2t1map[t].pdffont)) {
-	    if(!pdf2t1map[t].fullfilename) {
-		pdf2t1map[t].fullfilename = writeOutStdFont(&pdf2t1map[t]);
-		if(!pdf2t1map[t].fullfilename) {
-		    msg("<error> Couldn't save default font- is the Temp Directory writable?");
-		} else {
-		    msg("<verbose> Storing standard PDF font %s at %s", name, pdf2t1map[t].fullfilename);
-		}
-	    }
-            return pdf2t1map[t].fullfilename ? new GString(pdf2t1map[t].fullfilename) : NULL;
-	}
-    }
-    
-    int bestlen = 0x7fffffff;
-    const char*bestfilename = 0;
-   
-#ifndef HAVE_FONTCONFIG
-    /* if we don't have fontconfig, try a simple filename-comparison approach */
-    fontfile_t*f = global_fonts;
-    while(f) {
-	if(strstr(f->filename, name)) {
-            if(f->len < bestlen) {
-                bestlen = f->len;
-                bestfilename = f->filename;
-            }
-        }
-        f = f->next;
-    }
-#endif
-
-    /* if we didn't find anything up to now, try looking for the
-       font via fontconfig */
-    char*filename = 0;
-    if(!bestfilename) {
-	filename = fontconfig_searchForFont(name);
-    } else {
-	filename = strdup(bestfilename);
-    }
-
-    if(filename) {
-        GString*retval = new GString(filename);
-        msg("<verbose> Font %s maps to %s\n", name, filename);
-        free(filename);
-        return retval;
-    } else {
-	msg("<verbose> Font %s not found\n", name);
-        return GlobalParams::findFontFile(fontName);
-    }
-}
-#endif // HAVE_POPPLER
-
 CharOutputDev::CharOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, int num_pages, int x, int y, int x1, int y1, int x2, int y2)
 :CommonOutputDev(info, doc, page2page, num_pages, x, y, x1, y1, x2, y2)
 {
@@ -527,7 +240,7 @@ void CharOutputDev::setDevice(gfxdevice_t*dev)
 static char*getFontName(GfxFont*font)
 {
     char*fontid;
-    GString*gstr = font->getName();
+    GooString*gstr = font->getName();
     char* fname = gstr==0?0:gstr->getCString();
     if(fname==0) {
 	char buf[32];
@@ -583,7 +296,7 @@ static void dumpFontInfo(const char*loglevel, GfxFont*font)
   Ref* r=font->getID();
   msg("%s=========== %s (ID:%d,%d) ==========", loglevel, name, r->num,r->gen);
 
-  GString*gstr  = font->getTag();
+  GooString*gstr  = font->getTag();
    
   msg("%s| Tag: %s", loglevel, id);
   
@@ -715,7 +428,7 @@ void CharOutputDev::updateTextMat(GfxState*state)
 {
 }
 
-void CharOutputDev::beginString(GfxState *state, GString *s) 
+void CharOutputDev::beginString(GfxState *state, GooString *s) 
 { 
     int render = state->getRender();
     if(current_text_stroke) {
@@ -1020,7 +733,7 @@ GFXLink::~GFXLink()
 }
 
 
-void CharOutputDev::processLink(Link *link)
+void CharOutputDev::processLink(AnnotLink *link)
 {
     double x1, y1, x2, y2;
     
@@ -1060,14 +773,14 @@ void CharOutputDev::processLink(Link *link)
         case actionGoToR: {
             type = "GoToR";
             LinkGoToR*l = (LinkGoToR*)actionobj;
-	    GString*g = l->getFileName();
+	    GooString*g = l->getFileName();
 	    if(g)
              s = strdup(g->getCString());
 	    if(!s) {
 		/* if the GoToR link has no filename, then
 		   try to find a refernce in the *local*
 		   file */
-		GString*g = l->getNamedDest();
+		GooString*g = l->getNamedDest();
 		if(g)
 		 s = strdup(g->getCString());
 	    }
@@ -1076,7 +789,7 @@ void CharOutputDev::processLink(Link *link)
         case actionNamed: {
             type = "Named";
             LinkNamed*l = (LinkNamed*)actionobj;
-            GString*name = l->getName();
+            GooString*name = l->getName();
             if(name) {
                 s = strdup(name->lowerCase()->getCString());
                 named = name->getCString();
@@ -1107,8 +820,8 @@ void CharOutputDev::processLink(Link *link)
         case actionLaunch: {
             type = "Launch";
             LinkLaunch*l = (LinkLaunch*)actionobj;
-            GString * str = new GString(l->getFileName());
-	    GString * params = l->getParams();
+            GooString * str = new GooString(l->getFileName());
+	    GooString * params = l->getParams();
 	    if(params)
 		str->append(params);
             s = strdup(str->getCString());
@@ -1119,7 +832,7 @@ void CharOutputDev::processLink(Link *link)
 	    char*url = 0;
             type = "URI";
             LinkURI*l = (LinkURI*)actionobj;
-            GString*g = l->getURI();
+            GooString*g = l->getURI();
             if(g) {
              url = g->getCString();
              s = strdup(url);
@@ -1249,25 +962,7 @@ void addGlobalFont(const char*filename)
 
 void addGlobalLanguageDir(const char*dir)
 {
-#ifdef HAVE_POPPLER
     msg("<notice> NOT adding %s to language pack directories (not implemented with poppler)", dir);
-#else
-    msg("<notice> Adding %s to language pack directories", dir);
-
-    FILE*fi = 0;
-    char* config_file = (char*)malloc(strlen(dir) + 1 + sizeof("add-to-xpdfrc") + 1);
-    strcpy(config_file, dir);
-    strcat(config_file, dirseparator());
-    strcat(config_file, "add-to-xpdfrc");
-
-    fi = fopen(config_file, "rb");
-    if(!fi) {
-        msg("<error> Could not open %s", config_file);
-        return;
-    }
-    globalParams->parseFile(new GString(config_file), fi);
-    fclose(fi);
-#endif
 }
 
 void addGlobalFontDir(const char*dirname)

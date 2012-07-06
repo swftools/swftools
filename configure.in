@@ -27,8 +27,6 @@ AC_ARG_ENABLE(warnings,
 [  --enable-warnings	   turn on compiler warnings], ENABLE_WARNINGS=true)
 AC_ARG_ENABLE(optimizations,
 [  --enable-optimizations  turn on compiler optimizations (recommended for avi2swf)], OPTIMIZE=true)
-AC_ARG_ENABLE(poppler,
-[  --enable-poppler       link againist libpoppler], USE_POPPLER=true)
 AC_ARG_ENABLE(lame,
 [  --disable-lame          "don't compile any L.A.M.E. mp3 encoding code in"],
 
@@ -329,29 +327,18 @@ xpdf_in_source=
 splash_in_source=
 xpdf_include=
 
-if test "x$USE_POPPLER" = "xtrue"; then
-    AC_DEFINE([HAVE_POPPLER],[1],[use poppler])
-    PKG_CHECK_MODULES([POPPLER],[poppler >= 0.20.0 poppler-splash >= 0.20.0],,[poppler_pkgconfig=no])
-    if test "x$poppler_pkgconfig" = "xno"; then
-        AC_LANG_PUSH([C++])
-        AC_CHECK_HEADERS([OutputDev.h],[
-           AC_CHECK_LIB([poppler],[main],,[])
-        ],[AC_MSG_ERROR([No poppler library found. This library is required.])])
-        AC_LANG_POP
-    else
-        CPPFLAGS="$CPPFLAGS $POPPLER_CFLAGS"
-        LIBS="$LIBS $POPPLER_LIBS"
-        AC_DEFINE([HAVE_POPPLER], [1])
-    fi
-else
-    splash_in_source='$(splash_objects)'
-    xpdf_in_source='$(xpdf_objects)'
-    xpdf_include=' -I xpdf '
-fi
+PKG_CHECK_MODULES([POPPLER],[poppler >= 0.20.0 poppler-splash >= 0.20.0],,[poppler_pkgconfig=no])
 
-AC_SUBST([xpdf_in_source])
-AC_SUBST([splash_in_source])
-AC_SUBST([xpdf_include])
+if test "x$poppler_pkgconfig" = "xno"; then
+    AC_LANG_PUSH([C++])
+    AC_CHECK_HEADERS([OutputDev.h],[
+       AC_CHECK_LIB([poppler],[main],,[])
+    ],[AC_MSG_ERROR([No poppler library found. This library is required.]);POPPLERMISSING=1])
+    AC_LANG_POP
+else
+    CPPFLAGS="$CPPFLAGS $POPPLER_CFLAGS"
+    LIBS="$LIBS $POPPLER_LIBS"
+fi
 
 # ------------------------------------------------------------------
 
@@ -415,9 +402,6 @@ fi
 if test "x$PDFLIBMISSING" = "xtrue";then
     DISABLEPDF2PDF=true;
 fi
-#if test "x$T1LIBMISSING" = "xtrue";then
-#    MISSINGLIBS="${MISSINGLIBS} t1lib"
-#fi
 if test "x$UNGIFMISSING" = "xtrue";then
     DISABLEGIF2SWF=true
     MISSINGLIBS="${MISSINGLIBS} ungif"
@@ -438,9 +422,11 @@ if test "x$HAVE_FREETYPE" '!=' "x1"; then
     MISSINGLIBS="${MISSINGLIBS} freetype"
     PARTIAL=true
 fi
-#if test "x${ac_cv_header_t1lib_h}" '!=' "xyes"; then
-#    MISSINGLIBS="${MISSINGLIBS} t1lib.h"
-#fi
+if test "x$POPPLERMISSING" '=' "x1"; then
+    DISABLEPDF2SWF=true;
+    MISSINGLIBS="${MISSINGLIBS} poppler"
+    PARTIAL=true
+fi
 if test "x${ac_cv_header_gif_lib_h}" '!=' "xyes"; then
     DISABLEGIF2SWF=true
     MISSINGLIBS="${MISSINGLIBS} gif_lib.h"
@@ -451,9 +437,6 @@ if test "x${ac_cv_header_zlib_h}" '!=' "xyes"; then
     MISSINGLIBS="${MISSINGLIBS} zlib.h"
     PARTIAL=true
 fi
-#if test "x${AVIFILE}" '!=' "xtrue" -a "x${AVIFIL32}" '!=' "xtrue"; then
-#    MISSINGLIBS="${MISSINGLIBS} avifile"
-#fi
 
 AC_MSG_RESULT(${MISSINGLIBS})
 
@@ -576,12 +559,6 @@ AH_BOTTOM([
 #define USE_OPENGL
 #endif
 #endif
-#endif
-
-#ifdef HAVE_POPPLER
-#define GString GooString
-#define GHash GooHash
-#define GHashIter GooHashIter
 #endif
 
 #ifdef HAVE_ZZIP_LIB_H

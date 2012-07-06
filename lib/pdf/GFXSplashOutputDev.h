@@ -22,8 +22,6 @@
 
 #include "SplashOutputDev.h"
 
-#ifdef HAVE_POPPLER
-
 #include "../../config.h"
 #include <splash/SplashTypes.h>
 #include <splash/SplashPath.h>
@@ -52,7 +50,5 @@ public:
 
     GBool needFontUpdate;         // set when the font needs to be updated
 };
-
-#endif // HAVE_POPPLER
 
 #endif

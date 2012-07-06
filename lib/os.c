@@ -178,7 +178,7 @@ char* stripFilename(const char*filename, const char*newext)
     return name;
 }
 
-static char* getTempDir()
+char* getTempDir()
 {
 #ifdef WIN32
     char*dir = getenv("TMP");
@@ -342,4 +342,33 @@ int file_size(const char*filename)
         return size;
     }
     return 0;
+}
+
+char* mktmpname(char*ptr) {
+    static char tmpbuf[128];
+    char*dir = getTempDir();
+    int l = strlen(dir);
+    char*sep = "";
+    if(!ptr)
+	ptr = tmpbuf;
+    if(l && dir[l-1]!='/' && dir[l-1]!='\\') {
+#ifdef WIN32
+	sep = "\\";
+#else
+	sep = "/";
+#endif
+    }
+
+#ifdef HAVE_LRAND48
+    sprintf(ptr, "%s%s%08x%08x",dir,sep,(unsigned int)lrand48(),(unsigned int)lrand48());
+#else
+#   ifdef HAVE_RAND
+	sprintf(ptr, "%s%s%08x%08x",dir,sep,rand(),rand());
+#   else
+	static int count = 1;
+	sprintf(ptr, "%s%s%08x%04x%04x",dir,sep,time(0),(unsigned int)tmpbuf^((unsigned int)tmpbuf)>>16,count);
+	count ++;
+#   endif
+#endif
+     return ptr;
 }

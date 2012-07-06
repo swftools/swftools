@@ -20,6 +20,7 @@
 
 #include <aconf.h>
 #include <stdio.h>
+#include "popplerincludes.h"
 #include "parseargs.h"
 #include "gmem.h"
 #include "GString.h"

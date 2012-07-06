@@ -48,10 +48,13 @@ char* concatPaths(const char*base, const char*add);
 char* stripFilename(const char*filename, const char*newext);
 
 char* mktempname(char*buffer, const char*ext);
+char* mktmpname(char*ptr);
 
 void move_file(const char*from, const char*to);
 char file_exists(const char*filename);
 int file_size(const char*filename);
+
+char* getTempDir();
 
 #ifdef __cplusplus
 }

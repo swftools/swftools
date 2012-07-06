@@ -33,7 +33,7 @@ public:
   virtual GBool upsideDown();
   virtual GBool useDrawChar();
 
-  virtual void processLink(Link *link);
+  virtual void processLink(AnnotLink *link);
   virtual void saveState(GfxState *state) ;
   virtual void restoreState(GfxState *state) ;
 
@@ -42,7 +42,7 @@ public:
   virtual void updateTextMat(GfxState *state);
   
   //----- text drawing
-  virtual void beginString(GfxState *state, GString *s) ;
+  virtual void beginString(GfxState *state, GooString *s) ;
   virtual void endString(GfxState *state) ;
   virtual void endTextObject(GfxState *state);
   virtual void drawChar(GfxState *state, double x, double y,
@@ -107,14 +107,5 @@ class GFXLink {
     GFXLink(GFXLink*last, const char*action, double x1, double y1, double x2, double y2);
     ~GFXLink();
 };
-
-#ifndef HAVE_POPPLER
-class GFXGlobalParams:  public GlobalParams {
-    public:
-    GFXGlobalParams();
-    ~GFXGlobalParams();
-    virtual GString *findFontFile(GString *fontName);
-};
-#endif
 
 #endif //__charoutputdev_h__

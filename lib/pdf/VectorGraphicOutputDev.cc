@@ -30,7 +30,7 @@
 #include "../../config.h"
 
 //xpdf header files
-#include "popplercompat.h"
+#include "popplerincludes.h"
 #include "VectorGraphicOutputDev.h"
 
 //  swftools header files
@@ -282,11 +282,9 @@ GBool VectorGraphicOutputDev::tilingPatternFill(GfxState *state,
 {
     msg("<debug> tilingPatternFill");
     infofeature("tiling pattern fills");
-#ifdef HAVE_POPPLER
     // since we don't implement this method yet,
     // reduce it to a series of other drawing operations.
     return gFalse;
-#endif
 }
 
 GBool VectorGraphicOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
@@ -682,13 +680,13 @@ void VectorGraphicOutputDev::updateFont(GfxState*state)
     charDev->updateFont(state);
 }
 
-void VectorGraphicOutputDev::processLink(Link *link)
+void VectorGraphicOutputDev::processLink(AnnotLink *link)
 {
     charDev->processLink(link);
 }
 
-void VectorGraphicOutputDev::beginString(GfxState *state, GString *s) 
-{ 
+void VectorGraphicOutputDev::beginString(GfxState *state, GooString *s)
+{
     int render = state->getRender();
     if(current_text_stroke) {
 	msg("<error> Error: Incompatible change of text rendering to %d while inside cliptext", render);
@@ -835,20 +833,6 @@ void VectorGraphicOutputDev::endType3Char(GfxState *state)
 {
     charDev->endType3Char(state);
 }
-
-GBool VectorGraphicOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
-			   int rotate, GBool useMediaBox, GBool crop,
-			   int sliceX, int sliceY, int sliceW, int sliceH,
-			   GBool printing,
-			   GBool (*abortCheckCbk)(void *data),
-			   void *abortCheckCbkData
-                           , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA)
-{
-    this->setPage(page);
-    charDev->setPage(page);
-    return gTrue;
-}
-
 
 void VectorGraphicOutputDev::beginPage(GfxState *state, int pageNum)
 {
@@ -1366,11 +1350,11 @@ void VectorGraphicOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stre
 }
 
 void VectorGraphicOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-				   int width, int height, GBool invert, GBool interpolate
+				   int width, int height, GBool invert, GBool interpolate,
 				   GBool inlineImg) 
 {
     if(config_textonly) {
-        OutputDev::drawImageMask(state,ref,str,width,height,invert,interpolate inlineImg);
+        OutputDev::drawImageMask(state,ref,str,width,height,invert,interpolate,inlineImg);
 	return;
     }
     dbg("drawImageMask %dx%d, invert=%d inline=%d", width, height, invert, inlineImg);
@@ -1379,11 +1363,11 @@ void VectorGraphicOutputDev::drawImageMask(GfxState *state, Object *ref, Stream 
 }
 
 void VectorGraphicOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
-			 int width, int height, GfxImageColorMap *colorMap, GBool interpolate
+			 int width, int height, GfxImageColorMap *colorMap, GBool interpolate,
 			 int *maskColors, GBool inlineImg)
 {
     if(config_textonly) {
-	OutputDev::drawImage(state,ref,str,width,height,colorMap,interpolate maskColors,inlineImg);
+	OutputDev::drawImage(state,ref,str,width,height,colorMap,interpolate,maskColors,inlineImg);
 	return;
     }
     dbg("drawImage %dx%d, %s, %s, inline=%d", width, height, 
@@ -1402,12 +1386,12 @@ void VectorGraphicOutputDev::drawImage(GfxState *state, Object *ref, Stream *str
   
 void VectorGraphicOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap, GBool interpolate
+			       GfxImageColorMap *colorMap, GBool interpolate,
 			       Stream *maskStr, int maskWidth, int maskHeight,
-			       GBool maskInvert GBool maskInterpolate)
+			       GBool maskInvert, GBool maskInterpolate)
 {
     if(config_textonly) {
-	OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,interpolate maskStr,maskWidth,maskHeight,maskInvert maskInterpolate);
+	OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,interpolate,maskStr,maskWidth,maskHeight,maskInvert,maskInterpolate);
 	return;
     }
     dbg("drawMaskedImage %dx%d, %s, %dx%d mask", width, height, 
@@ -1424,13 +1408,13 @@ void VectorGraphicOutputDev::drawMaskedImage(GfxState *state, Object *ref, Strea
 
 void VectorGraphicOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height,
-				   GfxImageColorMap *colorMap, GBool interpolate
+				   GfxImageColorMap *colorMap, GBool interpolate,
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
-				   GfxImageColorMap *maskColorMap GBool maskInterpolate)
+				   GfxImageColorMap *maskColorMap, GBool maskInterpolate)
 {
     if(config_textonly) {
-	OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,interpolate maskStr,maskWidth,maskHeight,maskColorMap maskInterpolate);
+	OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,interpolate,maskStr,maskWidth,maskHeight,maskColorMap,maskInterpolate);
 	return;
     }
     dbg("drawSoftMaskedImage %dx%d, %s, %dx%d mask", width, height, 

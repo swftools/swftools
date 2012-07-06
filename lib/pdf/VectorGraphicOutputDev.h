@@ -66,9 +66,13 @@ public:
 			       int sliceX, int sliceY, int sliceW, int sliceH,
 			       GBool printing,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
-			       void *abortCheckCbkData = NULL
-                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
-                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA_H);
+			       void *abortCheckCbkData = NULL,
+                               GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL,
+                               void *annotDisplayDecideCbkData = NULL) {
+      this->setPage(page);
+      charDev->setPage(page);
+      return gTrue;
+  }
   //----- get info about output device
 
   // Does this device use upside-down coordinates?
@@ -81,7 +85,7 @@ public:
   //virtual GBool useShadedFills() { return gTrue; }
 
   //----- link borders
-  virtual void processLink(Link *link);
+  virtual void processLink(AnnotLink *link);
   virtual void setDefaultCTM(double *ctm);
 
   //----- save/restore graphics state
@@ -122,7 +126,7 @@ public:
   virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading);
 
   //----- text drawing
-  virtual void beginString(GfxState *state, GString *s) ;
+  virtual void beginString(GfxState *state, GooString *s) ;
   virtual void endString(GfxState *state) ;
   virtual void endTextObject(GfxState *state);
   virtual void drawChar(GfxState *state, double x, double y,
@@ -132,22 +136,22 @@ public:
 
   //----- image drawing
   virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
-			     int width, int height, GBool invert, GBool interpolate
+			     int width, int height, GBool invert, GBool interpolate,
 			     GBool inlineImg);
   virtual void drawImage(GfxState *state, Object *ref, Stream *str,
-			 int width, int height, GfxImageColorMap *colorMap, GBool interpolate
+			 int width, int height, GfxImageColorMap *colorMap, GBool interpolate,
 			 int *maskColors, GBool inlineImg);
   virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			       int width, int height,
-			       GfxImageColorMap *colorMap, GBool interpolate
+			       GfxImageColorMap *colorMap, GBool interpolate,
 			       Stream *maskStr, int maskWidth, int maskHeight,
-			       GBool maskInvert GBool maskInterpolate);
+			       GBool maskInvert, GBool maskInterpolate);
   virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				   int width, int height,
-				   GfxImageColorMap *colorMap, GBool interpolate
+				   GfxImageColorMap *colorMap, GBool interpolate,
 				   Stream *maskStr,
 				   int maskWidth, int maskHeight,
-				   GfxImageColorMap *maskColorMap GBool maskInterpolate);
+				   GfxImageColorMap *maskColorMap, GBool maskInterpolate);
 
   //----- transparency groups and soft masks (xpdf >= ~ 3.01.16)
   virtual void beginTransparencyGroup(GfxState *state, double *bbox,

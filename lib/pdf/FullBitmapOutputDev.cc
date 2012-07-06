@@ -22,16 +22,9 @@
 #include "FullBitmapOutputDev.h"
 #include "CharOutputDev.h"
 
-#ifdef HAVE_POPPLER
-  #include "splash/SplashBitmap.h"
-  #include "splash/SplashPattern.h"
-  #include "splash/Splash.h"
-#else
-  #include "xpdf/config.h"
-  #include "SplashBitmap.h"
-  #include "SplashPattern.h"
-  #include "Splash.h"
-#endif
+#include "splash/SplashBitmap.h"
+#include "splash/SplashPattern.h"
+#include "splash/Splash.h"
 
 #include "../log.h"
 #include "../png.h"
@@ -175,19 +168,6 @@ void FullBitmapOutputDev::flushBitmap()
     gfxline_free(line);
 
     free(img->data);img->data=0;free(img);img=0;
-}
-
-GBool FullBitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
-             int rotate, GBool useMediaBox, GBool crop,
-             int sliceX, int sliceY, int sliceW, int sliceH,
-             GBool printing,
-             GBool (*abortCheckCbk)(void *data),
-             void *abortCheckCbkData
-             , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA)
-{
-    this->setPage(page);
-    gfxdev->setPage(page);
-    return gTrue;
 }
 
 void FullBitmapOutputDev::beginPage(GfxState *state, int pageNum)
@@ -385,25 +365,23 @@ GBool FullBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx,
     msg("<debug> tilingPatternFill");
     rgbdev->tilingPatternFill(state, gfx, cat, str, pmat, paintType,
                               tilingType, resDict, mat, bbox, x0, y0, x1, y1, xStep, yStep);
-#ifdef HAVE_POPPLER
     return gTrue;
-#endif
 }
 
-GBool FullBitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
+GBool FullBitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading)
 {
     msg("<debug> functionShadedFill");
     return rgbdev->functionShadedFill(state, shading);
 }
-GBool FullBitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading double min, double max)
+GBool FullBitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading, double min, double max)
 {
     msg("<debug> axialShadedFill");
-    return rgbdev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
+    return rgbdev->axialShadedFill(state, shading, min, max);
 }
-GBool FullBitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading double min, double max)
+GBool FullBitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, double min, double max)
 {
     msg("<debug> radialShadedFill");
-    return rgbdev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
+    return rgbdev->radialShadedFill(state, shading, min, max);
 }
 
 void FullBitmapOutputDev::clip(GfxState *state)
@@ -432,7 +410,7 @@ void FullBitmapOutputDev::endStringOp(GfxState *state)
     msg("<debug> endStringOp");
     rgbdev->endStringOp(state);
 }
-void FullBitmapOutputDev::beginString(GfxState *state, GString *s)
+void FullBitmapOutputDev::beginString(GfxState *state, GooString *s)
 {
     msg("<debug> beginString");
     rgbdev->beginString(state, s);
@@ -450,7 +428,7 @@ void FullBitmapOutputDev::drawChar(GfxState *state, double x, double y,
     msg("<debug> drawChar");
     rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
 }
-void FullBitmapOutputDev::drawString(GfxState *state, GString *s)
+void FullBitmapOutputDev::drawString(GfxState *state, GooString *s)
 {
     msg("<error> internal error: drawString not implemented");
     rgbdev->drawString(state, s);
@@ -490,41 +468,40 @@ void FullBitmapOutputDev::endType3Char(GfxState *state)
     rgbdev->endType3Char(state);
 }
 void FullBitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-			   int width, int height, GBool invert, GBool interpolate
+			   int width, int height, GBool invert, GBool interpolate,
 			   GBool inlineImg)
 {
     msg("<debug> drawImageMask");
-    rgbdev->drawImageMask(state, ref, str, width, height, invert, interpolate inlineImg);
+    rgbdev->drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
 }
 void FullBitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
-		       int width, int height, GfxImageColorMap *colorMap, GBool interpolate
+		       int width, int height, GfxImageColorMap *colorMap, GBool interpolate,
 		       int *maskColors, GBool inlineImg)
 {
     msg("<debug> drawImage");
-    rgbdev->drawImage(state, ref, str, width, height, colorMap,
-      interpolate maskColors, inlineImg);
+    rgbdev->drawImage(state, ref, str, width, height, colorMap, interpolate, maskColors, inlineImg);
 }
 void FullBitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     int width, int height,
-			     GfxImageColorMap *colorMap, GBool interpolate
+			     GfxImageColorMap *colorMap, GBool interpolate,
 			     Stream *maskStr, int maskWidth, int maskHeight,
-			     GBool maskInvert GBool maskInterpolate)
+			     GBool maskInvert, GBool maskInterpolate)
 {
     msg("<debug> drawMaskedImage");
     rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap,
-      interpolate maskStr, maskWidth, maskHeight,
-      maskInvert maskInterpolate);
+      interpolate, maskStr, maskWidth, maskHeight,
+      maskInvert, maskInterpolate);
 }
 void FullBitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				 int width, int height,
-				 GfxImageColorMap *colorMap, GBool interpolate
+				 GfxImageColorMap *colorMap, GBool interpolate,
 				 Stream *maskStr, int maskWidth, int maskHeight,
-				 GfxImageColorMap *maskColorMap GBool maskInterpolate)
+				 GfxImageColorMap *maskColorMap, GBool maskInterpolate)
 {
     msg("<debug> drawSoftMaskedImage");
     rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap,
-      interpolate maskStr, maskWidth, maskHeight,
-      maskColorMap maskInterpolate);
+      interpolate, maskStr, maskWidth, maskHeight,
+      maskColorMap, maskInterpolate);
 }
 void FullBitmapOutputDev::drawForm(Ref id)
 {
@@ -532,7 +509,7 @@ void FullBitmapOutputDev::drawForm(Ref id)
     rgbdev->drawForm(id);
 }
 
-void FullBitmapOutputDev::processLink(Link *link)
+void FullBitmapOutputDev::processLink(AnnotLink *link)
 {
     msg("<debug> processLink");
     gfxdev->processLink(link);

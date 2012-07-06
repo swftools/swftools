@@ -5,18 +5,12 @@
 #include "../devices/rescale.h"
 #include "../log.h"
 #include "../../config.h"
-#ifdef HAVE_POPPLER
-  #include <poppler-config.h>
-#else
-  #include "xpdf/config.h"
-#endif
-#include "GlobalParams.h"
+#include "popplerincludes.h"
 #include "InfoOutputDev.h"
 #include "CharOutputDev.h"
 #include "FullBitmapOutputDev.h"
 #include "BitmapOutputDev.h"
 #include "VectorGraphicOutputDev.h"
-#include "popplercompat.h"
 #include "../mem.h"
 #include "pdf.h"
 #define NO_ARGPARSER
@@ -53,8 +47,8 @@ typedef struct _pdf_doc_internal
     int nocopy;
     int noprint;
    
-    GString*fileName;
-    GString*userPW;
+    GooString*fileName;
+    GooString*userPW;
     PDFDoc*doc;
 
     Object docinfo;
@@ -320,7 +314,7 @@ gfxpage_t* pdf_doc_getpage(gfxdocument_t*doc, int page)
 static char*getInfoString(Dict *infoDict, const char *key)
 {
     Object obj;
-    GString *s1, *s2;
+    GooString *s1, *s2;
     int i;
     unsigned int u;
 
@@ -328,7 +322,7 @@ static char*getInfoString(Dict *infoDict, const char *key)
 	s1 = obj.getString();
 	if ((s1->getChar(0) & 0xff) == 0xfe &&
 	    (s1->getChar(1) & 0xff) == 0xff) {
-	    s2 = new GString();
+	    s2 = new GooString();
 	    for (i = 2; i < obj.getString()->getLength(); i += 2) {
               u = ((s1->getChar(i) & 0xff) << 8) | (s1->getChar(i+1) & 0xff);
               s2->append(getUTF8(u));
@@ -381,13 +375,9 @@ char* pdf_doc_getinfo(gfxdocument_t*doc, const char*name)
     else if(!strcmp(name, "oktocopy")) return strdup(i->doc->okToCopy() ? "yes" : "no");
     else if(!strcmp(name, "oktochange")) return strdup(i->doc->okToChange() ? "yes" : "no");
     else if(!strcmp(name, "oktoaddnotes")) return strdup(i->doc->okToAddNotes() ? "yes" : "no");
-    else if(!strcmp(name, "version")) { 
+    else if(!strcmp(name, "version")) {
         char buf[32];
-#ifdef HAVE_POPPLER
         sprintf(buf, "%d.%d", i->doc->getPDFMajorVersion(), i->doc->getPDFMinorVersion());
-#else
-        sprintf(buf, "%.1f", i->doc->getPDFVersion());
-#endif
         return strdup(buf);
     }
     return strdup("");
@@ -497,11 +487,11 @@ static gfxdocument_t*pdf_open(gfxsource_t*src, const char*filename)
 	userPassword = x+1;
     }
     
-    i->fileName = new GString(filename);
+    i->fileName = new GooString(filename);
 
     // open PDF file
     if (userPassword && userPassword[0]) {
-      i->userPW = new GString(userPassword);
+      i->userPW = new GooString(userPassword);
     } else {
       i->userPW = NULL;
     }
@@ -598,7 +588,7 @@ gfxsource_t*gfxsource_pdf_create()
     i->parameters = gfxparams_new();
 
     if(!globalParams) {
-        globalParams = new GFXGlobalParams();
+        globalParams = new GlobalParams();
 	//globalparams_count++;
     }
     

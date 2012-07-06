@@ -104,14 +104,14 @@ InfoOutputDev::InfoOutputDev(PDFDoc*doc)
     previous_was_char = 0;
     SplashColor white = {255,255,255};
     splash = new GFXSplashOutputDev(splashModeRGB8,320,0,white,0,0);
-    splash->startDoc(INFO_OUTPUT_DEV_STARTDOC_ARG);
+    splash->startDoc(doc);
     last_font = 0;
     current_type3_font = 0;
     fontcache = dict_new2(&fontclass_type);
 }
 InfoOutputDev::~InfoOutputDev() 
 {
-    GHashIter*i;
+    GooHashIter*i;
     
     DICT_ITERATE_DATA(this->fontcache, FontInfo*, fd) {
 	delete fd;
@@ -449,18 +449,6 @@ GBool InfoOutputDev::useDrawChar() {return gTrue;}
 GBool InfoOutputDev::interpretType3Chars() {return gTrue;}
 GBool InfoOutputDev::useTilingPatternFill() {return gFalse;}
 
-GBool InfoOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
-             int rotate, GBool useMediaBox, GBool crop,
-             int sliceX, int sliceY, int sliceW, int sliceH,
-             GBool printing,
-             GBool (*abortCheckCbk)(void *data),
-             void *abortCheckCbkData
-             , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA)
-{
-    this->page = page;
-    return gTrue;
-}
-
 void InfoOutputDev::startPage(int pageNum, GfxState *state)
 {
     PDFRectangle *r = this->page->getCropBox();
@@ -488,7 +476,7 @@ void InfoOutputDev::endPage()
     if(num_chars) 
 	average_char_size /= num_chars;
 }
-void InfoOutputDev::processLink(Link *link)
+void InfoOutputDev::processLink(AnnotLink *link)
 {
     num_links++;
 }
@@ -505,7 +493,7 @@ void InfoOutputDev::processLink(Link *link)
 char*getFontID(GfxFont*font)
 {
     Ref*ref = font->getID();
-    GString*gstr = font->getName();
+    GooString*gstr = font->getName();
     char* fname = gstr==0?0:gstr->getCString();
     char buf[128];
     if(fname==0) {
@@ -574,9 +562,7 @@ void InfoOutputDev::updateFont(GfxState *state)
     state2->setCTM(1.0,0,0,1.0,0,0);
     splash->updateCTM(state2, 0,0,0,0,0,0);
     state2->setTextMat(1.0,0,0,1.0,0,0);
-#ifdef HAVE_POPPLER
     font->incRefCnt();
-#endif
     state2->setFont(font, 1024.0);
     splash->doUpdateFont(state2);
 
@@ -697,12 +683,9 @@ FontInfo* InfoOutputDev::getOrCreateFontInfo(GfxState*state)
 	fontinfo->font = font;
 	fontinfo->max_size = 0;
 	if(current_splash_font) {
-#ifdef HAVE_POPPLER
-            fontinfo->ascender = fontinfo->descender = 0;
-#else
-	    fontinfo->ascender = current_splash_font->ascender;
-	    fontinfo->descender = current_splash_font->descender;
-#endif
+            /* FIXME */
+	    //fontinfo->ascender = current_splash_font->ascender;
+	    //fontinfo->descender = current_splash_font->descender;
 	} else {
 	    fontinfo->ascender = fontinfo->descender = 0;
 	}
@@ -786,15 +769,10 @@ void InfoOutputDev::drawChar(GfxState *state, double x, double y,
     if(!g) {
 	g = fontinfo->glyphs[code] = new GlyphInfo();
 	g->advance_max = 0;
-#ifndef HAVE_POPPLER
-	current_splash_font->last_advance = -1;
-#endif
 	g->path = current_splash_font->getGlyphPath(code);
-#ifdef HAVE_POPPLER
-        g->advance = -1;
-#else
-	g->advance = current_splash_font->last_advance;
-#endif
+        //FIXME
+	//g->advance = current_splash_font->last_advance;
+	g->advance = -1;
 	g->unicode = 0;
     }
     if(uLen && ((u[0]>=32 && u[0]<g->unicode) || !g->unicode)) {
@@ -934,58 +912,58 @@ void InfoOutputDev::restoreState(GfxState *state)
 
 void InfoOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GBool invert,
-			   GBool interpolate
-			   GBool inlineImg) 
+			   GBool interpolate,
+			   GBool inlineImg)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawImageMask(state,ref,str,width,height,invert, interpolate inlineImg);
+    OutputDev::drawImageMask(state,ref,str,width,height,invert,interpolate,inlineImg);
 }
 void InfoOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
-		       GBool interpolate
+		       GBool interpolate,
 		       int *maskColors, GBool inlineImg)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawImage(state,ref,str,width,height,colorMap, interpolate maskColors,inlineImg);
+    OutputDev::drawImage(state,ref,str,width,height,colorMap,interpolate,maskColors,inlineImg);
 }
 void InfoOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				int width, int height,
 				GfxImageColorMap *colorMap,
-				GBool interpolate
+				GBool interpolate,
 				Stream *maskStr,
 				int maskWidth, int maskHeight,
-				GBool maskInvert
+				GBool maskInvert,
 				GBool maskInterpolate)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap, interpolate maskStr,maskWidth,maskHeight,maskInvert maskInterpolate);
+    OutputDev::drawMaskedImage(state,ref,str,width,height,colorMap,interpolate,maskStr,maskWidth,maskHeight,maskInvert,maskInterpolate);
 }
 
 void InfoOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				    int width, int height,
 				    GfxImageColorMap *colorMap,
-				    GBool interpolate
+				    GBool interpolate,
 				    Stream *maskStr,
 				    int maskWidth, int maskHeight,
-				    GfxImageColorMap *maskColorMap
+				    GfxImageColorMap *maskColorMap,
 				    GBool maskInterpolate)
 {
     previous_was_char=0;
     if(str->getKind()==strDCT) num_jpeg_images++; else num_ppm_images++;
 
-    OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap, interpolate maskStr,maskWidth,maskHeight,maskColorMap maskInterpolate);
+    OutputDev::drawSoftMaskedImage(state,ref,str,width,height,colorMap,interpolate,maskStr,maskWidth,maskHeight,maskColorMap,maskInterpolate);
 }
     
 void InfoOutputDev::dumpfonts(gfxdevice_t*dev)
 {
-    GHashIter*i;
-    GString*key;
+    GooHashIter*i;
+    GooString*key;
 
     DICT_ITERATE_DATA(fontcache, FontInfo*, info) {
         dev->addfont(dev, info->getGfxFont());

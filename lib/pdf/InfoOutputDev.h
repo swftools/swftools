@@ -21,30 +21,17 @@
 #ifndef __infooutputdev_h__
 #define __infooutputdev_h__
 
-#include "popplercompat.h"
+#include "popplerincludes.h"
 #include "GfxFont.h"
 #include "OutputDev.h"
 #include "GFXSplashOutputDev.h"
 #include "Page.h"
 
-#ifdef HAVE_POPPLER
-  #include <splash/SplashTypes.h>
-  #include <splash/SplashPath.h>
-  #include <splash/SplashFont.h>
-  #include <splash/SplashFontFile.h>
-#else
-  #include "xpdf/config.h"
-  #include "SplashTypes.h"
-  #include "SplashPath.h"
-  #include "SplashFont.h"
-  #include "SplashFontFile.h"
-#endif
-
-#ifdef HAVE_POPPLER
+#include <splash/SplashTypes.h>
+#include <splash/SplashPath.h>
+#include <splash/SplashFont.h>
+#include <splash/SplashFontFile.h>
 #include <goo/GooHash.h>
-#else
-#include "GHash.h"
-#endif
 #include "../gfxdevice.h"
 #include "../gfxtools.h"
 #include "../gfxfont.h"
@@ -153,12 +140,16 @@ class InfoOutputDev: public OutputDev
 			       GBool printing,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
                                void *abortCheckCbkData = NULL
-                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
-                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA_H);
+                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL,
+			       void *annotDisplayDecideCbkData = NULL)
+    {
+        this->page = page;
+        return gTrue;
+    }
 
     virtual void startPage(int pageNum, GfxState *state);
     virtual void endPage();
-    virtual void processLink(Link *link);
+    virtual void processLink(AnnotLink *link);
     virtual void updateFont(GfxState *state);
   
     virtual void saveState(GfxState *state);
@@ -181,27 +172,27 @@ class InfoOutputDev: public OutputDev
 
     virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,
-			       GBool interpolate
+			       GBool interpolate,
 			       GBool inlineImg);
     virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GfxImageColorMap *colorMap,
-			   GBool interpolate
+			   GBool interpolate,
 			   int *maskColors, GBool inlineImg);
     virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				  int width, int height,
 				  GfxImageColorMap *colorMap,
-				  GBool interpolate
+				  GBool interpolate,
 				  Stream *maskStr,
 				  int maskWidth, int maskHeight,
-				  GBool maskInvert
+				  GBool maskInvert,
 				  GBool maskInterpolate);
     virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				      int width, int height,
 				      GfxImageColorMap *colorMap,
-				      GBool interpolate
+				      GBool interpolate,
 				      Stream *maskStr,
 				      int maskWidth, int maskHeight,
-				      GfxImageColorMap *maskColorMap
+				      GfxImageColorMap *maskColorMap,
 				      GBool maskInterpolate);
     private:
     

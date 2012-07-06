@@ -25,18 +25,10 @@
 #include "CharOutputDev.h"
 #include "GFXSplashOutputDev.h"
 
-#ifdef HAVE_POPPLER
-  #include "splash/SplashBitmap.h"
-  #include "splash/SplashPattern.h"
-  #include "splash/SplashGlyphBitmap.h"
-  #include "splash/Splash.h"
-#else
-  #include "xpdf/config.h"
-  #include "SplashBitmap.h"
-  #include "SplashGlyphBitmap.h"
-  #include "SplashPattern.h"
-  #include "Splash.h"
-#endif
+#include "splash/SplashBitmap.h"
+#include "splash/SplashPattern.h"
+#include "splash/SplashGlyphBitmap.h"
+#include "splash/Splash.h"
 
 #include "../log.h"
 #include "../png.h"
@@ -987,19 +979,6 @@ GBool BitmapOutputDev::intersection(SplashBitmap*boolpoly, SplashBitmap*booltext
     }
 }
 
-GBool BitmapOutputDev::checkPageSlice(Page *page, double hDPI, double vDPI,
-             int rotate, GBool useMediaBox, GBool crop,
-             int sliceX, int sliceY, int sliceW, int sliceH,
-             GBool printing,
-             GBool (*abortCheckCbk)(void *data),
-             void *abortCheckCbkData
-             , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA)
-{
-    this->setPage(page);
-    gfxdev->setPage(page);
-    return gTrue;
-}
-
 void BitmapOutputDev::beginPage(GfxState *state, int pageNum)
 {
     rgbdev->startPage(pageNum, state);
@@ -1531,12 +1510,10 @@ GBool BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, Catalog *cat
                               tilingType, resDict, mat,
                               bbox, x0, y0, x1, y1, xStep, yStep);
     dbg_newdata("tilingpatternfill");
-#ifdef HAVE_POPPLER
     return gTrue;
-#endif
 }
 
-GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading) 
+GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *shading)
 {
     msg("<debug> functionShadedFill");
     boolpolydev->functionShadedFill(state, shading);
@@ -1544,20 +1521,20 @@ GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *s
     return rgbdev->functionShadedFill(state, shading);
 }
 
-GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading double min, double max)
+GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading, double min, double max)
 {
     msg("<debug> axialShadedFill");
-    boolpolydev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
+    boolpolydev->axialShadedFill(state, shading, min, max);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    return rgbdev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
+    return rgbdev->axialShadedFill(state, shading, min, max);
 }
 
-GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading double min, double max)
+GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading, double min, double max)
 {
     msg("<debug> radialShadedFill");
-    boolpolydev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
+    boolpolydev->radialShadedFill(state, shading, min, max);
     checkNewBitmap(UNKNOWN_BOUNDING_BOX);
-    return rgbdev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
+    return rgbdev->radialShadedFill(state, shading, min, max);
 }
 
 SplashColor black = {0,0,0};
@@ -1597,7 +1574,7 @@ void BitmapOutputDev::beginStringOp(GfxState *state)
     gfxdev->beginStringOp(state);
     this->gfxdev->setDevice(this->gfxoutput_string);
 }
-void BitmapOutputDev::beginString(GfxState *state, GString *s)
+void BitmapOutputDev::beginString(GfxState *state, GooString *s)
 {
     msg("<debug> beginString");
     clip0dev->beginString(state, s);
@@ -1645,12 +1622,10 @@ static void getGlyphBbox(GfxState*state, GFXSplashOutputDev*splash, double x, do
 
     SplashCoord*matrix = font->getMatrix();
 
-#ifdef HAVE_POPPLER
     double clipx1, clipy1, clipx2, clipy2;
     state->getClipBBox(&clipx1, &clipy1, &clipx2, &clipy2);
     SplashClip clip(clipx1, clipy1, clipx2, clipy2, gFalse);
     SplashClipResult clipRes;
-#endif
 
     if(font && font->getGlyph(code, xFrac, yFrac, &glyph , x0, y0, &clip, &clipRes)) {
         x1 = floor(x0-glyph.x);
@@ -1787,7 +1762,7 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
     }
     dbg_newdata("text");
 }
-void BitmapOutputDev::drawString(GfxState *state, GString *s)
+void BitmapOutputDev::drawString(GfxState *state, GooString *s)
 {
     msg("<error> internal error: drawString not implemented");
     return;
@@ -1915,7 +1890,7 @@ GBool invalid_size(int width, int height)
 }
 
 void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
-			   int width, int height, GBool invert, GBool interpolate
+			   int width, int height, GBool invert, GBool interpolate,
 			   GBool inlineImg)
 {
     msg("<debug> drawImageMask streamkind=%d", str->getKind());
@@ -1924,16 +1899,16 @@ void BitmapOutputDev::drawImageMask(GfxState *state, Object *ref, Stream *str,
     CopyStream*cpystr = new CopyStream(str, height * ((width + 7) / 8));
     str = cpystr->getStream();
     
-    boolpolydev->drawImageMask(state, ref, str, width, height, invert, interpolate inlineImg);
+    boolpolydev->drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
     gfxbbox_t bbox = getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawImageMask(state, ref, str, width, height, invert, interpolate inlineImg);
+    rgbdev->drawImageMask(state, ref, str, width, height, invert, interpolate, inlineImg);
     delete cpystr;
     dbg_newdata("imagemask");
 }
 void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
 		       int width, int height, GfxImageColorMap *colorMap,
-		       GBool interpolate
+		       GBool interpolate,
 		       int *maskColors, GBool inlineImg)
 {
     msg("<debug> drawImage streamkind=%d", str->getKind());
@@ -1942,19 +1917,19 @@ void BitmapOutputDev::drawImage(GfxState *state, Object *ref, Stream *str,
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
 
-    boolpolydev->drawImage(state, ref, str, width, height, colorMap, interpolate maskColors, inlineImg);
+    boolpolydev->drawImage(state, ref, str, width, height, colorMap, interpolate, maskColors, inlineImg);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawImage(state, ref, str, width, height, colorMap, interpolate maskColors, inlineImg);
+    rgbdev->drawImage(state, ref, str, width, height, colorMap, interpolate, maskColors, inlineImg);
     delete cpystr;
     dbg_newdata("image");
 }
 void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 			     int width, int height,
 			     GfxImageColorMap *colorMap,
-			     GBool interpolate
+			     GBool interpolate,
 			     Stream *maskStr, int maskWidth, int maskHeight,
-			     GBool maskInvert GBool maskInterpolate)
+			     GBool maskInvert, GBool maskInterpolate)
 {
     msg("<debug> drawMaskedImage streamkind=%d", str->getKind());
     if(invalid_size(width,height)) return;
@@ -1962,20 +1937,20 @@ void BitmapOutputDev::drawMaskedImage(GfxState *state, Object *ref, Stream *str,
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
 
-    boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, interpolate maskStr, maskWidth, maskHeight, maskInvert maskInterpolate);
+    boolpolydev->drawMaskedImage(state, ref, str, width, height, colorMap, interpolate, maskStr, maskWidth, maskHeight, maskInvert, maskInterpolate);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, interpolate maskStr, maskWidth, maskHeight, maskInvert maskInterpolate);
+    rgbdev->drawMaskedImage(state, ref, str, width, height, colorMap, interpolate, maskStr, maskWidth, maskHeight, maskInvert, maskInterpolate);
     delete cpystr;
     dbg_newdata("maskedimage");
 }
 void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				 int width, int height,
 				 GfxImageColorMap *colorMap,
-				 GBool interpolate
+				 GBool interpolate,
 				 Stream *maskStr,
 				 int maskWidth, int maskHeight,
-				 GfxImageColorMap *maskColorMap GBool maskInterpolate)
+				 GfxImageColorMap *maskColorMap, GBool maskInterpolate)
 {
     msg("<debug> drawSoftMaskedImage %dx%d (%dx%d) streamkind=%d", width, height, maskWidth, maskHeight, str->getKind());
     if(invalid_size(width,height)) return;
@@ -1983,10 +1958,10 @@ void BitmapOutputDev::drawSoftMaskedImage(GfxState *state, Object *ref, Stream *
     CopyStream*cpystr = new CopyStream(str, height * ((width * colorMap->getNumPixelComps() * colorMap->getBits() + 7) / 8));
     str = cpystr->getStream();
 
-    boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, interpolate maskStr, maskWidth, maskHeight, maskColorMap maskInterpolate);
+    boolpolydev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, interpolate, maskStr, maskWidth, maskHeight, maskColorMap, maskInterpolate);
     gfxbbox_t bbox=getImageBBox(state);
     checkNewBitmap(bbox.xmin, bbox.ymin, ceil(bbox.xmax), ceil(bbox.ymax));
-    rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, interpolate maskStr, maskWidth, maskHeight, maskColorMap maskInterpolate);
+    rgbdev->drawSoftMaskedImage(state, ref, str, width, height, colorMap, interpolate, maskStr, maskWidth, maskHeight, maskColorMap, maskInterpolate);
     delete cpystr;
     dbg_newdata("softmaskimage");
 }
@@ -1998,7 +1973,7 @@ void BitmapOutputDev::drawForm(Ref id)
     rgbdev->drawForm(id);
 }
 
-void BitmapOutputDev::processLink(Link *link)
+void BitmapOutputDev::processLink(AnnotLink *link)
 {
     msg("<debug> processLink");
     gfxdev->processLink(link);

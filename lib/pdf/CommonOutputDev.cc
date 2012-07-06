@@ -1,4 +1,4 @@
-#include "popplercompat.h"
+#include "popplerincludes.h"
 #include "CommonOutputDev.h"
 #include "../log.h"
 #include "../gfxdevice.h"

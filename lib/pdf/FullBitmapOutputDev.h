@@ -57,9 +57,14 @@ public:
 			       int sliceX, int sliceY, int sliceW, int sliceH,
 			       GBool printing,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
-			       void *abortCheckCbkData = NULL
-                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
-                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA_H);
+			       void *abortCheckCbkData = NULL,
+                               GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL,
+                               void *annotDisplayDecideCbkData = NULL)
+    {
+        this->setPage(page);
+        gfxdev->setPage(page);
+        return gTrue;
+    }
 
     virtual void beginPage(GfxState *state, int pageNum);
     virtual void endPage();
@@ -109,8 +114,8 @@ public:
 
     virtual GBool functionShadedFill(GfxState *state,
 				     GfxFunctionShading *shading);
-    virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading double min, double max);
-    virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading double min, double max);
+    virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading, double min, double max);
+    virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading, double min, double max);
 
     virtual void clip(GfxState *state);
     virtual void eoClip(GfxState *state);
@@ -118,13 +123,13 @@ public:
 
     virtual void beginStringOp(GfxState *state);
     virtual void endStringOp(GfxState *state);
-    virtual void beginString(GfxState *state, GString *s);
+    virtual void beginString(GfxState *state, GooString *s);
     virtual void endString(GfxState *state);
     virtual void drawChar(GfxState *state, double x, double y,
 			  double dx, double dy,
 			  double originX, double originY,
 			  CharCode code, int nBytes, Unicode *u, int uLen);
-    virtual void drawString(GfxState *state, GString *s);
+    virtual void drawString(GfxState *state, GooString *s);
     virtual GBool beginType3Char(GfxState *state, double x, double y,
 				 double dx, double dy,
 				 CharCode code, Unicode *u, int uLen);
@@ -133,26 +138,26 @@ public:
 
     virtual void drawImageMask(GfxState *state, Object *ref, Stream *str,
 			       int width, int height, GBool invert,
-			       GBool interpolate
+			       GBool interpolate,
 			       GBool inlineImg);
     virtual void drawImage(GfxState *state, Object *ref, Stream *str,
 			   int width, int height, GfxImageColorMap *colorMap,
-			   GBool interpolate
+			   GBool interpolate,
 			   int *maskColors, GBool inlineImg);
     virtual void drawMaskedImage(GfxState *state, Object *ref, Stream *str,
 				 int width, int height,
 				 GfxImageColorMap *colorMap,
-				 GBool interpolate
+				 GBool interpolate,
 				 Stream *maskStr, int maskWidth, int maskHeight,
-				 GBool maskInvert
+				 GBool maskInvert,
 				 GBool maskInterpolate);
     virtual void drawSoftMaskedImage(GfxState *state, Object *ref, Stream *str,
 				     int width, int height,
 				     GfxImageColorMap *colorMap,
-				     GBool interpolate
+				     GBool interpolate,
 				     Stream *maskStr,
 				     int maskWidth, int maskHeight,
-				     GfxImageColorMap *maskColorMap
+				     GfxImageColorMap *maskColorMap,
 				     GBool maskInterpolate);
 
     virtual void type3D0(GfxState *state, double wx, double wy);
@@ -169,7 +174,7 @@ public:
     virtual void setSoftMask(GfxState *state, double *bbox, GBool alpha, Function *transferFunc, GfxColor *backdropColor);
     virtual void clearSoftMask(GfxState *state);
 
-    virtual void processLink(Link *link);
+    virtual void processLink(AnnotLink *link);
   
 
 private:

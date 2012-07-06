@@ -21,10 +21,7 @@
 #include <stdlib.h>
 #include "XMLOutputDev.h"
 #include "GfxState.h"
-#include "popplercompat.h"
-#ifndef HAVE_POPPLER
-  #include "gfile.h"
-#endif
+#include "popplerincludes.h"
 
 XMLOutputDev::XMLOutputDev(char*filename)
 :TextOutputDev(mktmpname(0), false, 0, false, false)
@@ -59,7 +56,7 @@ void XMLOutputDev::endPage()
     int i;
 
     char textTag = 0;
-    GString*fontname = new GString();
+    GooString*fontname = new GooString();
     double fontsize = -99999;
     double base = -9999;
     double color_r = -1;
@@ -67,17 +64,13 @@ void XMLOutputDev::endPage()
     double color_b = -1;
     for(i=0;i<len;i++) {
 	TextWord*word = list->get(i);
-	GString*newfont = word->getFontName();
+	GooString*newfont = word->getFontName();
 	double newsize = word->getFontSize();
-#ifdef HAVE_POPPLER
 	double newbase = word->getBaseline();
-#else
-	double newbase = word->base;
-#endif
 	double newcolor_r;
 	double newcolor_g;
 	double newcolor_b;
-  word->getColor(&newcolor_r, &newcolor_g, &newcolor_b);
+        word->getColor(&newcolor_r, &newcolor_g, &newcolor_b);
 
 	if((newfont && newfont->cmp(fontname)) || 
 	   newsize != fontsize ||
@@ -85,7 +78,7 @@ void XMLOutputDev::endPage()
 	   newcolor_r != color_r ||
 	   newcolor_g != color_g ||
 	   newcolor_b != color_b
-	   ) 
+	   )
 	{
 	    TextFontInfo*info = word->getFontInfo();
 	    if(textTag)
@@ -112,10 +105,10 @@ void XMLOutputDev::endPage()
 		if(strstr(name, "serif")) serif = gTrue;
 	    }
 
-    double xMin,yMin,xMax,yMax;
-    word->getBBox(&xMin, &yMin, &xMax, &yMax);
+            double xMin,yMin,xMax,yMax;
+            word->getBBox(&xMin, &yMin, &xMax, &yMax);
 
-    int rot = word->getRotation();
+            int rot = word->getRotation();
 
 	    fprintf(out, "<t font=\"%s\" y=\"%f\" x=\"%f\" bbox=\"%f:%f:%f:%f\" style=\"%s%s%s%s\" fontsize=\"%.0fpt\" color=\"%02x%02x%02x\">", 
 		    name,
