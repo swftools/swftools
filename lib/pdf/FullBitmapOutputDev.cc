@@ -54,7 +54,7 @@ FullBitmapOutputDev::FullBitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*pag
     /* device for handling links */
     this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
 
-    this->rgbdev->startDoc(POPPLER_STARTDOC_ARG);
+    this->rgbdev->startDoc(this->doc);
 }
 FullBitmapOutputDev::~FullBitmapOutputDev()
 {
@@ -374,7 +374,7 @@ void FullBitmapOutputDev::eoFill(GfxState *state)
     msg("<debug> eoFill");
     rgbdev->eoFill(state);
 }
-POPPLER_TILING_PATERN_RETURN FullBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx,
+GBool FullBitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx,
                                POPPLER_TILING_PATTERN_CATALOG Object *str,
                                POPPLER_TILING_PATTERN_PMAT
 			       int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
@@ -395,12 +395,12 @@ GBool FullBitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShadin
     msg("<debug> functionShadedFill");
     return rgbdev->functionShadedFill(state, shading);
 }
-GBool FullBitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading POPPLER_RAXIAL_MIN_MAX)
+GBool FullBitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading double min, double max)
 {
     msg("<debug> axialShadedFill");
     return rgbdev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
 }
-GBool FullBitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading POPPLER_RAXIAL_MIN_MAX)
+GBool FullBitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading double min, double max)
 {
     msg("<debug> radialShadedFill");
     return rgbdev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);

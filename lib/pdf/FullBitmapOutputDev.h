@@ -99,7 +99,7 @@ public:
     virtual void stroke(GfxState *state);
     virtual void fill(GfxState *state);
     virtual void eoFill(GfxState *state);
-    virtual POPPLER_TILING_PATERN_RETURN tilingPatternFill(GfxState *state,
+    virtual GBool tilingPatternFill(GfxState *state,
                                Gfx *gfx, POPPLER_TILING_PATTERN_CATALOG Object *str,
                                POPPLER_TILING_PATTERN_PMAT
 			       int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
@@ -109,8 +109,8 @@ public:
 
     virtual GBool functionShadedFill(GfxState *state,
 				     GfxFunctionShading *shading);
-    virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading POPPLER_RAXIAL_MIN_MAX);
-    virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading POPPLER_RAXIAL_MIN_MAX);
+    virtual GBool axialShadedFill(GfxState *state, GfxAxialShading *shading double min, double max);
+    virtual GBool radialShadedFill(GfxState *state, GfxRadialShading *shading double min, double max);
 
     virtual void clip(GfxState *state);
     virtual void eoClip(GfxState *state);

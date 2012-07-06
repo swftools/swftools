@@ -270,7 +270,7 @@ GBool VectorGraphicOutputDev::useShadedFills(POPPLER_SHADED_FILL_TYPE)
     return gFalse;
 }
 
-POPPLER_TILING_PATERN_RETURN VectorGraphicOutputDev::tilingPatternFill(GfxState *state,
+GBool VectorGraphicOutputDev::tilingPatternFill(GfxState *state,
                                Gfx *gfx,
                                POPPLER_TILING_PATTERN_CATALOG
 			       Object *str,

@@ -89,11 +89,11 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     /* device for handling texts and links */
     this->gfxdev = new CharOutputDev(info, this->doc, page2page, num_pages, x, y, x1, y1, x2, y2);
 
-    this->rgbdev->startDoc(POPPLER_STARTDOC_ARG);
-    this->boolpolydev->startDoc(POPPLER_STARTDOC_ARG);
-    this->booltextdev->startDoc(POPPLER_STARTDOC_ARG);
-    this->clip0dev->startDoc(POPPLER_STARTDOC_ARG);
-    this->clip1dev->startDoc(POPPLER_STARTDOC_ARG);
+    this->rgbdev->startDoc(this->doc);
+    this->boolpolydev->startDoc(this->doc);
+    this->booltextdev->startDoc(this->doc);
+    this->clip0dev->startDoc(this->doc);
+    this->clip1dev->startDoc(this->doc);
 
     this->gfxoutput_string = device_new_record();
     this->gfxoutput = device_new_record();
@@ -1516,7 +1516,7 @@ void BitmapOutputDev::eoFill(GfxState *state)
     dbg_newdata("eofill");
 }
 
-POPPLER_TILING_PATERN_RETURN BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, POPPLER_TILING_PATTERN_CATALOG Object *str,
+GBool BitmapOutputDev::tilingPatternFill(GfxState *state, Gfx *gfx, POPPLER_TILING_PATTERN_CATALOG Object *str,
 			       POPPLER_TILING_PATTERN_PMAT int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
@@ -1544,7 +1544,7 @@ GBool BitmapOutputDev::functionShadedFill(GfxState *state, GfxFunctionShading *s
     return rgbdev->functionShadedFill(state, shading);
 }
 
-GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading POPPLER_RAXIAL_MIN_MAX)
+GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading double min, double max)
 {
     msg("<debug> axialShadedFill");
     boolpolydev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
@@ -1552,7 +1552,7 @@ GBool BitmapOutputDev::axialShadedFill(GfxState *state, GfxAxialShading *shading
     return rgbdev->axialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
 }
 
-GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading POPPLER_RAXIAL_MIN_MAX)
+GBool BitmapOutputDev::radialShadedFill(GfxState *state, GfxRadialShading *shading double min, double max)
 {
     msg("<debug> radialShadedFill");
     boolpolydev->radialShadedFill(state, shading POPPLER_RAXIAL_MIN_MAX_ARG);
