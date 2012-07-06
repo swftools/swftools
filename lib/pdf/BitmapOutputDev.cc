@@ -100,6 +100,7 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     this->gfxdev->setDevice(this->gfxoutput);
     
     this->config_extrafontdata = 0;
+    this->config_transparent = 0;
     this->config_optimizeplaincolorfills = 0;
     this->config_skewedtobitmap = 0;
     this->config_alphatobitmap = 0;
@@ -167,6 +168,8 @@ void BitmapOutputDev::setParameter(const char*key, const char*value)
        this->config_skewedtobitmap = atoi(value);
     } else if(!strcmp(key, "alphatobitmap")) {
        this->config_alphatobitmap = atoi(value);
+    } else if(!strcmp(key, "transparent")) {
+       this->config_transparent = atoi(value);
     }
 
     this->gfxdev->setParameter(key, value);
@@ -1013,14 +1016,23 @@ void BitmapOutputDev::beginPage(GfxState *state, int pageNum)
     booltextbitmap = booltextdev->getBitmap();
     staletextbitmap = new SplashBitmap(booltextbitmap->getWidth(), booltextbitmap->getHeight(), 1, booltextbitmap->getMode(), 0);
     assert(staletextbitmap->getRowSize() == booltextbitmap->getRowSize());
-    
+
     msg("<debug> startPage %dx%d (%dx%d)", this->width, this->height, booltextbitmap->getWidth(), booltextbitmap->getHeight());
 
     clip0bitmap = clip0dev->getBitmap();
     clip1bitmap = clip1dev->getBitmap();
     rgbbitmap = rgbdev->getBitmap();
-    
-    flushText(); // write out the initial clipping rectangle
+
+    flushText();
+
+    /* draw white background */
+    gfxline_t*clippath = gfxline_makerectangle(0, 0, width, height);
+    this->dev->startclip(this->dev, clippath);
+    if(!config_transparent) {
+        gfxcolor_t white = {255,255,255,255};
+        this->dev->fill(this->dev, clippath, &white);
+    }
+    gfxline_free(clippath);
 
     /* just in case any device did draw a white background rectangle 
        into the device */
