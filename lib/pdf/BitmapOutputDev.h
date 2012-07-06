@@ -70,8 +70,8 @@ public:
 			       GBool printing,
 			       GBool (*abortCheckCbk)(void *data) = NULL,
 			       void *abortCheckCbkData = NULL
-                               POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_H
-                               POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA_H);
+                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
+                               , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA_H);
 
     virtual void beginPage(GfxState *state, int pageNum);
     virtual void endPage();

@@ -842,7 +842,7 @@ GBool VectorGraphicOutputDev::checkPageSlice(Page *page, double hDPI, double vDP
 			   GBool printing,
 			   GBool (*abortCheckCbk)(void *data),
 			   void *abortCheckCbkData
-                           POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA)
+                           , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA)
 {
     this->setPage(page);
     charDev->setPage(page);

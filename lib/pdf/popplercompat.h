@@ -40,15 +40,15 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_H , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA_H , void *annotDisplayDecideCbkData = NULL
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA , void *annotDisplayDecideCbkData
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA_H , void *annotDisplayDecideCbkData = NULL
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA , void *annotDisplayDecideCbkData
 #else
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_H
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA_H
-  #define POPPLER_CHECK_PAGE_SLICE_ANNOT_CBK_DATA
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data) = NULL
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA_H
+  #define , GBool (*annotDisplayDecideCbk)(Annot *annot, void *user_data)_DATA
 #endif
 
 #ifdef HAVE_POPPLER
