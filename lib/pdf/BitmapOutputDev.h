@@ -113,9 +113,9 @@ public:
     virtual void fill(GfxState *state);
     virtual void eoFill(GfxState *state);
     virtual GBool tilingPatternFill(
-                               GfxState *state, Gfx *gfx, POPPLER_TILING_PATTERN_CATALOG Object *str,
-                               POPPLER_TILING_PATTERN_PMAT
-			       int paintType, POPPLER_TILING_PATTERN_TILING_TYPE Dict *resDict,
+                               GfxState *state, Gfx *gfx, Catalog *cat, Object *str,
+                               double *pmat,
+			       int paintType, int tilingType, Dict *resDict,
 			       double *mat, double *bbox,
 			       int x0, int y0, int x1, int y1,
 			       double xStep, double yStep);

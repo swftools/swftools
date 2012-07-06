@@ -14,19 +14,19 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
-  #define POPPLER_TILING_PATTERN_CATALOG Catalog *cat,
-  #define POPPLER_TILING_PATTERN_CATALOG_ARG cat,
-  #define POPPLER_TILING_PATTERN_PMAT double *pmat,
-  #define POPPLER_TILING_PATTERN_PMAT_ARG pmat,
-  #define POPPLER_TILING_PATTERN_TILING_TYPE int tilingType,
-  #define POPPLER_TILING_PATTERN_TILING_TYPE_ARG tilingType,
+  #define Catalog *cat, Catalog *cat,
+  #define cat, cat,
+  #define double *pmat, double *pmat,
+  #define pmat, pmat,
+  #define int tilingType, int tilingType,
+  #define tilingType, tilingType,
 #else
-  #define POPPLER_TILING_PATTERN_CATALOG
-  #define POPPLER_TILING_PATTERN_CATALOG_ARG
-  #define POPPLER_TILING_PATTERN_PMAT
-  #define POPPLER_TILING_PATTERN_PMAT_ARG
-  #define POPPLER_TILING_PATTERN_TILING_TYPE
-  #define POPPLER_TILING_PATTERN_TILING_TYPE_ARG
+  #define Catalog *cat,
+  #define cat,
+  #define double *pmat,
+  #define pmat,
+  #define int tilingType,
+  #define tilingType,
 #endif
 
 #ifdef HAVE_POPPLER
