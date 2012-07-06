@@ -1652,7 +1652,7 @@ static void getGlyphBbox(GfxState*state, GFXSplashOutputDev*splash, double x, do
     SplashClipResult clipRes;
 #endif
 
-    if(font && font->getGlyph(code, xFrac, yFrac, &glyph POPPLER_GET_GLYPH_ARGS)) {
+    if(font && font->getGlyph(code, xFrac, yFrac, &glyph , x0, y0, &clip, &clipRes)) {
         x1 = floor(x0-glyph.x);
         y1 = floor(y0-glyph.y);
         x2 = ceil(x0-glyph.x+glyph.w);

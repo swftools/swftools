@@ -30,9 +30,9 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
-  #define POPPLER_GET_GLYPH_ARGS , x0, y0, &clip, &clipRes
+  #define , x0, y0, &clip, &clipRes , x0, y0, &clip, &clipRes
 #else
-  #define POPPLER_GET_GLYPH_ARGS
+  #define , x0, y0, &clip, &clipRes
 #endif
 
 #ifndef HAVE_POPPLER
@@ -52,9 +52,9 @@ char* mktmpname(char*ptr);
 #endif
 
 #ifdef HAVE_POPPLER
-  #define POPPLER_COPY_STATE_PATH gTrue
+  #define gTrue gTrue
 #else
-  #define POPPLER_COPY_STATE_PATH gFalse
+  #define gTrue gFalse
 #endif
 
 #ifdef HAVE_POPPLER
