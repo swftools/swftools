@@ -28,7 +28,9 @@
 #include "splash/SplashBitmap.h"
 #include "splash/SplashPattern.h"
 #include "splash/SplashGlyphBitmap.h"
+
 #include "splash/Splash.h"
+#include "splash/SplashScreen.h"
 
 #include "../log.h"
 #include "../png.h"
@@ -69,10 +71,34 @@ BitmapOutputDev::BitmapOutputDev(InfoOutputDev*info, PDFDoc*doc, int*page2page, 
     /* color mode for binary bitmaps */
     SplashColorMode colorMode = splashModeMono1;
 
+    /* make sure that no matter what color we draw on the monochromatic bitmaps,
+       it always comes out as black (for collision testing) */
+    globalParams->setScreenBlackThreshold(0.0);
+    globalParams->setScreenWhiteThreshold(0.0);
+    globalParams->setScreenGamma(0.0);
+
     /* two devices for testing things against clipping: one clips, the other doesn't */
     this->clip0dev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
     this->clip1dev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
-    
+
+
+#if 0
+    Splash*splash = this->clip0dev->getSplash();
+    SplashScreen*screen = splash->getScreen();
+    screen->test(0,0,0);
+    printf("size: %dx%d\n", screen->size, screen->size);
+    int x,y;
+    /* Display/Verify the splash pattern matrix- all values should be 0 */
+    for(y=0;y<screen->size;y++) {
+        for(x=0;x<screen->size;x++) {
+            printf("%d ", screen->mat[y*screen->size+x]);
+            assert(screen->mat[y*screen->size+x]);
+        }
+        printf("\n");
+    }
+    printf("%02x %02x\n", screen->minVal, screen->maxVal);
+#endif
+
     /* device indicating where polygonal pixels were drawn */
     this->boolpolydev = new GFXSplashOutputDev(colorMode, 1, gFalse, splash_black, gTrue, gFalse);
     /* device indicating where text pixels were drawn */
@@ -1693,7 +1719,6 @@ void BitmapOutputDev::drawChar(GfxState *state, double x, double y,
     if((state->getRender()&3)) {
 	render_as_bitmap = 1;
     }
-
     if(state->getRender()&RENDER_CLIP) {
 	//char is, amongst others, a clipping boundary
 	rgbdev->drawChar(state, x, y, dx, dy, originX, originY, code, nBytes, u, uLen);
