@@ -248,9 +248,11 @@ void pdf_fill(gfxdevice_t*dev, gfxline_t*line, gfxcolor_t*color)
     }
 }
 
-void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*matrix, gfxcxform_t*cxform)
+void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t*_matrix, gfxcxform_t*cxform)
 {
     internal_t*i = (internal_t*)dev->internal;
+    gfxmatrix_t _m = *_matrix;
+    gfxmatrix_t*matrix = &_m;
 
     int t,size=img->width*img->height;
     int has_alpha=0;
@@ -273,6 +275,11 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     if(i->config_maxdpi && dpi > i->config_maxdpi) {
 	int newwidth = img->width*i->config_maxdpi/dpi;
 	int newheight = img->height*i->config_maxdpi/dpi;
+        double s = dpi/i->config_maxdpi;
+        matrix->m00 *= s;
+        matrix->m01 *= s;
+        matrix->m10 *= s;
+        matrix->m11 *= s;
 	rescaled_image = gfximage_rescale(img, newwidth, newheight);
 	msg("<notice> Downscaling %dx%d image (dpi %f, %.0fx%.0f on page) to %dx%d (dpi %d)", 
 		img->width, img->height, dpi, l1, l2, newwidth, newheight, i->config_maxdpi);
@@ -287,7 +294,7 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     char tempfile[128];
     mktempname(tempfile, "jpg");
 
-    gfximage_save_jpeg(img, tempfile, 96);
+    gfximage_save_jpeg(img, tempfile, 90);
 
     int imgid=-1;
     if(has_alpha) {
@@ -593,5 +600,6 @@ void gfxdevice_pdf_init(gfxdevice_t*dev)
     i->lastx = -1e38;
     i->lasty = -1e38;
     i->has_matrix = 0;
+    i->config_maxdpi = 72;
     i->p = PDF_new();
 }
