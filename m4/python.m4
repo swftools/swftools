@@ -86,6 +86,14 @@ if test "x$PY_VERSION" "!=" "x"; then
         PYTHON_EXECUTABLE=python$PY_VERSION
         AC_SUBST(PYTHON_EXECUTABLE)
         AC_MSG_RESULT([$PYTHON_EXECUTABLE])
+    elif python -V >&5 2>&5;then
+        if python -V 2>&1 | grep -q "\b$PY_VERSION"; then
+          PYTHON_EXECUTABLE=python
+          AC_SUBST(PYTHON_EXECUTABLE)
+          AC_MSG_RESULT([$PYTHON_EXECUTABLE])
+        else
+          AC_MSG_RESULT(["'python' executable is not version $PY_VERSION"])
+        fi
     else
         AC_MSG_RESULT([failed])
     fi
