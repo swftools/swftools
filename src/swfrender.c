@@ -67,7 +67,7 @@ int args_callback_option(char*name,char*val)
 	    *c = 0;
 	    c++;
 	    p->name = s;
-	    p->value = s;
+	    p->value = c;
 	} else {
 	    p->name = s;
 	    p->value = "1";
