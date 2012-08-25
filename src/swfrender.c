@@ -60,7 +60,7 @@ int args_callback_option(char*name,char*val)
 	pagerange = val;
 	return 1;
     } else if(!strcmp(name, "r")) {
-    resolution = atoi(val);
+        resolution = atoi(val);
 	return 1;
     } else if(!strcmp(name, "s")) {
 	char*s = strdup(val);
