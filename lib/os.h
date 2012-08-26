@@ -53,6 +53,8 @@ void move_file(const char*from, const char*to);
 char file_exists(const char*filename);
 int file_size(const char*filename);
 
+int open_file_or_stdin(const char*filename, int attr);
+
 #ifdef __cplusplus
 }
 #endif

@@ -343,3 +343,15 @@ int file_size(const char*filename)
     }
     return 0;
 }
+
+int open_file_or_stdin(const char*filename, int attr)
+{
+    int f;
+    if(strcmp(filename, "-")) {
+        f = open(filename, attr);
+    } else {
+        f = 0; //stdin
+    }
+    return f;
+}
+
