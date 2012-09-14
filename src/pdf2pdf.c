@@ -46,7 +46,6 @@ static char * outputname = 0;
 static int loglevel = 3;
 static char * pagerange = 0;
 static char * filename = 0;
-static const char * format = "ocr";
 
 int args_callback_option(char*name,char*val) {
     if (!strcmp(name, "o"))
@@ -59,11 +58,6 @@ int args_callback_option(char*name,char*val) {
 	loglevel ++;
         setConsoleLogging(loglevel);
 	return 0;
-    }
-    else if (!strcmp(name, "f"))
-    {
-	format = val;
-	return 1;
     }
     else if (!strcmp(name, "q"))
     {

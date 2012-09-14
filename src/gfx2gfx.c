@@ -39,7 +39,6 @@
 #ifdef HAVE_LRF
 #include "../../swftools/lib/devices/lrf.h"
 #endif
-#include "../../swftools/lib/devices/ocr.h"
 #include "../../swftools/lib/devices/rescale.h"
 #include "../../swftools/lib/devices/record.h"
 #include "../../swftools/lib/readers/image.h"
@@ -250,9 +249,7 @@ int main(int argn, char *argv[])
 #endif
     {
         gfxdevice_t _out,*out=&_out;
-        if(!strcasecmp(format, "ocr")) {
-            gfxdevice_ocr_init(out);
-        } else if(!strcasecmp(format, "swf")) {
+        if(!strcasecmp(format, "swf")) {
             gfxdevice_swf_init(out);
         } else if(!strcasecmp(format, "img") || !strcasecmp(format, "png")) {
             gfxdevice_render_init(out);

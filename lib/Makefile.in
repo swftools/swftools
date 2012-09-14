@@ -3,7 +3,7 @@ srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 include ../Makefile.common
 
-all: librfxswf$(A) libgfxpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A) libocr$(A)
+all: librfxswf$(A) libgfxpdf$(A) libbase$(A) libgfx$(A) libgfxswf$(A)
 
 lame_objects = lame/psymodel.$(O) lame/fft.$(O) lame/newmdct.$(O) lame/quantize.$(O) lame/takehiro.$(O) lame/reservoir.$(O) lame/quantize_pvt.$(O) lame/vbrquantize.$(O) lame/encoder.$(O) lame/id3tag.$(O) lame/version.$(O) lame/tables.$(O) lame/util.$(O) lame/bitstream.$(O) lame/set_get.$(O) lame/VbrTag.$(O) lame/lame.$(O)
 lame_in_source = @lame_in_source@
@@ -24,7 +24,6 @@ filters=filters/alpha.$(O) filters/remove_font_transforms.$(O) filters/one_big_f
 gfx_objects=gfximage.$(O) gfxtools.$(O) gfxfont.$(O) gfxfilter.$(O) $(devices) $(filters)
 
 rfxswf_objects=modules/swfaction.$(O) modules/swfbits.$(O) modules/swfbutton.$(O) modules/swfcgi.$(O) modules/swfdraw.$(O) modules/swfdump.$(O) modules/swffilter.$(O) modules/swffont.$(O) modules/swfobject.$(O) modules/swfrender.$(O) modules/swfshape.$(O) modules/swfsound.$(O) modules/swftext.$(O) modules/swftools.$(O) modules/swfalignzones.$(O)
-ocr_objects=gocr/box.$(O) gocr/database.$(O) gocr/detect.$(O) gocr/job.$(O) gocr/lines.$(O) gocr/list.$(O) gocr/ocr0.$(O) gocr/ocr0n.$(O) gocr/ocr1.$(O) gocr/otsu.$(O) gocr/output.$(O) gocr/pgm2asc.$(O) gocr/pixel.$(O) gocr/progress.$(O) gocr/remove.$(O) gocr/unicode.$(O)
 
 %.$(O): %.c 
 	$(C) $< -o $@
@@ -144,8 +143,6 @@ devices/bbox.$(O):  devices/bbox.c devices/bbox.h
 	$(C) devices/bbox.c -o devices/bbox.$(O)
 devices/lrf.$(O):  devices/lrf.c devices/lrf.h
 	$(C) devices/lrf.c -o devices/lrf.$(O)
-devices/ocr.$(O): devices/ocr.c devices/ocr.h gocr/gocr.h
-	$(C) devices/ocr.c -o devices/ocr.$(O)
 
 filters/alpha.$(O): filters/alpha.c gfxfilter.h
 	$(C) filters/alpha.c -o filters/alpha.$(O)
@@ -162,11 +159,6 @@ readers/swf2.$(O): readers/swf.c readers/swf.h
 	$(C) readers/swf.c -o readers/swf2.$(O)
 readers/image.$(O): readers/image.c readers/image.h
 	$(C) readers/image.c -o readers/image.$(O)
-
-libocr$(A): $(ocr_objects) devices/ocr.$(O)
-	rm -f libocr$(A)
-	$(AR) r libocr$(A) $(ocr_objects) devices/ocr.$(O)
-	$(RANLIB) libocr$(A)
 
 libbase$(A): $(base_objects) Makefile
 	rm -f libbase$(A)
@@ -199,7 +191,7 @@ uninstall:
 
 clean: 
 	rm -f *.o *.obj *.lo *.a *.lib *.la gmon.out
-	for dir in modules filters devices swf as3 readers art gocr h.263 gfxpoly;do rm -f $$dir/*.o $$dir/*.obj $$dir/*.lo $$dir/*.a $$dir/*.lib $$dir/*.la $$dir/gmon.out;done
+	for dir in modules filters devices swf as3 readers art h.263 gfxpoly;do rm -f $$dir/*.o $$dir/*.obj $$dir/*.lo $$dir/*.a $$dir/*.lib $$dir/*.la $$dir/gmon.out;done
 	cd lame && $(MAKE) clean && cd .. || true
 	cd action && $(MAKE) clean && cd ..
 	cd python && $(MAKE) clean && cd ..

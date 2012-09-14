@@ -8,7 +8,7 @@ all: gfx.$(SLEXT)
 gfx.$(O): gfx.c 
 	$(C) $(RUBY_CPPFLAGS) -Wall -Wno-unused -fPIC -c gfx.c -o gfx.$(O)
 
-GFX_DEPS=../libgfxpdf$(A) ../libgfxswf$(A)  ../librfxswf$(A) ../libgfx$(A) ../libocr$(A) ../libbase$(A) 
+GFX_DEPS=../libgfxpdf$(A) ../libgfxswf$(A)  ../librfxswf$(A) ../libgfx$(A) ../libbase$(A) 
 gfx.$(SLEXT): gfx.$(O) $(GFX_DEPS) Makefile
 	$(L) $(RUBY_LDFLAGS) $(SHARED) gfx.$(O) -o gfx.$(SLEXT) $(GFX_DEPS) $(PYTHON_LIB) $(LIBS) $(RUBY_LIBS) $(CXXLIBS)
 

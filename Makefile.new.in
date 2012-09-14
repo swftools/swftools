@@ -34,7 +34,6 @@ art_objects = lib/art/art_affine.$(O) lib/art/art_alphagamma.$(O) lib/art/art_bp
 art_in_source = @art_in_source@
 
 rfxswf_objects=lib/modules/swfaction.$(O) lib/modules/swfbits.$(O) lib/modules/swfbutton.$(O) lib/modules/swfcgi.$(O) lib/modules/swfdraw.$(O) lib/modules/swfdump.$(O) lib/modules/swffilter.$(O) lib/modules/swffont.$(O) lib/modules/swfobject.$(O) lib/modules/swfrender.$(O) lib/modules/swfshape.$(O) lib/modules/swfsound.$(O) lib/modules/swftext.$(O) lib/modules/swftools.$(O)
-ocr_objects=lib/gocr/box.$(O) lib/gocr/database.$(O) lib/gocr/detect.$(O) lib/gocr/job.$(O) lib/gocr/lines.$(O) lib/gocr/list.$(O) lib/gocr/ocr0.$(O) lib/gocr/ocr0n.$(O) lib/gocr/ocr1.$(O) lib/gocr/otsu.$(O) lib/gocr/output.$(O) lib/gocr/pgm2asc.$(O) lib/gocr/pixel.$(O) lib/gocr/progress.$(O) lib/gocr/remove.$(O) lib/gocr/unicode.$(O)
 
 libpdf_objects = lib/pdf/GFXOutputDev.$(O) lib/pdf/InfoOutputDev.$(O) lib/pdf/BitmapOutputDev.$(O) lib/pdf/FullBitmapOutputDev.$(O) lib/pdf/pdf.$(O) lib/pdf/fonts.$(O)
 
@@ -59,7 +58,7 @@ splash_objects = lib/pdf/xpdf/SplashOutputDev.$(O) lib/pdf/xpdf/SplashFont.$(O) 
 
 OBJECTS=$(executables) $(lame_in_source) $(h263_objects) $(as12compiler_in_source)  \
 	$(as3compiler_objects) $(rfxswf_modules) $(base_objects) $(gfx_objects) $(art_objects) \
-	$(rfx_objects) $(ocr_objects) \
+	$(rfx_objects)  \
 	$(libpdf_objects) $(xpdf_in_source) $(splash_in_source)
 
 SOURCES=$(patsubst %.$(O),%.c,$(OBJECTS))

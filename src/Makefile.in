@@ -118,7 +118,6 @@ swfrender$(E): swfrender.$(O) ../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/l
 	$(STRIP) $@
 
 PDF2SWF_OBJ=../lib/libgfxswf$(A) ../lib/librfxswf$(A) ../lib/libgfxpdf$(A) ../lib/libgfx$(A) ../lib/libbase$(A)
-OCR_OBJ=../lib/libocr$(A)
 
 pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)
 	$(LL) pdf2swf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
@@ -126,8 +125,8 @@ pdf2swf$(E): pdf2swf.$(O) $(PDF2SWF_OBJ)
 pdf2pdf$(E): pdf2pdf.$(O) $(PDF2SWF_OBJ)
 	$(LL) pdf2pdf.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
-gfx2gfx$(E): gfx2gfx.$(O) $(OCR_OBJ) $(PDF2SWF_OBJ) 
-	$(LL) gfx2gfx.$(O) -o $@ $(OCR_OBJ) $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
+gfx2gfx$(E): gfx2gfx.$(O) $(PDF2SWF_OBJ) 
+	$(LL) gfx2gfx.$(O) -o $@ $(PDF2SWF_OBJ) $(LIBS) $(CXXLIBS)
 	$(STRIP) $@
 swfc$(E): parser.$(O) swfc.$(O) swfc-feedback.$(O) swfc-history.$(O) swfc-interpolation.$(O) ../lib/librfxswf$(A) ../lib/libbase$(A) 
 	$(L) parser.$(O) swfc.$(O) swfc-feedback.$(O) swfc-history.$(O) swfc-interpolation.$(O) -o $@ ../lib/librfxswf$(A) ../lib/libbase$(A) $(LIBS)

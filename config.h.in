@@ -50,11 +50,6 @@
 /* Define if you have the unistd.h header file */
 #undef HAVE_UNISTD_H
 
-/* for gocr */
-#undef HAVE_WCHAR_H
-#undef HAVE_WCSCHR
-#undef HAVE_WCSDUP
-
 /* Define if you have the open64 function.  */
 #undef HAVE_OPEN64
 
