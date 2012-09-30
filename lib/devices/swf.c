@@ -2086,6 +2086,8 @@ int swf_setparameter(gfxdevice_t*dev, const char*name, const char*value)
 	i->config_opennewwindow = atoi(value);
     } else if(!strcmp(name, "storeallcharacters")) {
 	i->config_storeallcharacters = atoi(value);
+    } else if(!strcmp(name, "alignfonts")) {
+	i->config_alignfonts = atoi(value);
     } else if(!strcmp(name, "enablezlib")) {
 	i->config_enablezlib = atoi(value);
     } else if(!strcmp(name, "bboxvars")) {
