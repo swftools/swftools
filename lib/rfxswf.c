@@ -94,7 +94,6 @@ U8 swf_GetU8(TAG * t)
   #ifdef DEBUG_RFXSWF
     if ((int)t->pos>=(int)t->len) 
     { fprintf(stderr,"GetU8() out of bounds: TagID = %i\n",t->id);
-      *(int*)0=0;
       return 0;
     }
   #endif

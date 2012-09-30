@@ -2605,7 +2605,6 @@ typedcode_t node_const_read(node_t*n)
         case CONSTANT_UNKNOWN:
             syntaxerror("internal error: invalid constant");
         default: 
-            *(int*)0=0;
             syntaxerror("invalid constant (%d)", v->type);
 
     }
