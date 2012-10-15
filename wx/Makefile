@@ -11,7 +11,7 @@ pdf2swf_gui.exe: gpdf2swf.py gui/*.py viewers/*.py
 	cp -a -R viewers gui lib /xpython/
 	rm -f /xpython/swftools/lib/python/gfx.a
 	rm -f /xpython/swftools/lib/python/gfx.lib
-	cd /xpython/swftools;git pull
+	cd /xpython/swftools;git stash && git pull && git stash apply
 	cd /xpython;make xpython.exe
 	ln -f /xpython/xpython.exe ./gpdf2swf.exe
 	#ln -f gpdf2swf.exe ../win32_gui/
