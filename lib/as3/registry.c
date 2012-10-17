@@ -538,13 +538,13 @@ classinfo_t* registry_getMovieClip() {
 
 // ----------------------- builtin dummy types -------------------------
 classinfo_t nullclass = {
-    INFOTYPE_CLASS,0,0,ACCESS_PACKAGE, "", "null", 0, 0, 0
+    INFOTYPE_CLASS,0,0,ACCESS_PACKAGE, "", "null", 0,0,0,0,0,0,0,0,0,0,0,0,0,
 };
 classinfo_t* registry_getnullclass() {
     return &nullclass;
 }
 classinfo_t voidclass = {
-    INFOTYPE_CLASS,0,0,ACCESS_PACKAGE, "", "void", 0, 0, 0
+    INFOTYPE_CLASS,0,0,ACCESS_PACKAGE, "", "void", 0,0,0,0,0,0,0,0,0,0,0,0,0,
 };
 classinfo_t* registry_getvoidclass() {
     return &voidclass;
