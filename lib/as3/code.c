@@ -66,7 +66,7 @@ opcode_t opcodes[]={
 {0x4c, "callproplex", "2n",    -1, 1, 0, OP_STACK_ARGS|OP_STACK_NS},
 {0x46, "callproperty", "2n",   -1, 1, 0, OP_STACK_ARGS|OP_STACK_NS},
 {0x4f, "callpropvoid", "2n",   -1, 0, 0, OP_STACK_ARGS|OP_STACK_NS},
-{0x44, "callstatic", "in",     -1, 1, 0, OP_STACK_ARGS},
+{0x44, "callstatic", "mn",     -1, 1, 0, OP_STACK_ARGS},
 {0x45, "callsuper", "2n",      -1, 1, 0, OP_STACK_ARGS|OP_STACK_NS},
 {0x4e, "callsupervoid", "2n",  -1, 0, 0, OP_STACK_ARGS|OP_STACK_NS},
 {0x78, "checkfilter", "",      -1, 1, 0, 0},
