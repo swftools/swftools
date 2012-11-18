@@ -494,6 +494,26 @@ float floatToF16(float f)
     return u;
 }
 
+float swf_GetFloat(TAG *tag)
+{
+    union {
+        U32 uint_bits;
+        float float_bits;
+    } f;
+    f.uint_bits = swf_GetU32(tag);
+    return f.float_bits;
+}
+
+void swf_SetFloat(TAG *tag, float v)
+{
+    union {
+        U32 uint_bits;
+        float float_bits;
+    } f;
+    f.float_bits = v;
+    swf_SetU32(tag, f.uint_bits);
+}
+
 double swf_GetD64(TAG*tag)
 {
     /* FIXME: this is not big-endian compatible */

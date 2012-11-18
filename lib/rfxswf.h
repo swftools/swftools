@@ -248,6 +248,9 @@ void  swf_SetString(TAG*t,const char*s);
 float floatToF16(float f);
 float F16toFloat(U16 x);
 
+float swf_GetFloat(TAG *tag);
+void swf_SetFloat(TAG *tag, float v);
+
 /* abc datatypes */
 U32 swf_GetU30(TAG*tag);
 int swf_SetU30(TAG*tag, U32 u);
@@ -1196,6 +1199,38 @@ typedef struct _FILTER_GLOW {
     char knockout;
     char composite;
 } FILTER_GLOW;
+
+typedef struct _FILTER_GRADIENTBEVEL {
+    U8 type;
+    GRADIENT*gradient;
+    double blurx;
+    double blury;
+    double angle;
+    double distance;
+    float strength;
+    char innershadow;
+    char knockout;
+    char composite;
+    char ontop;
+    int passes;
+} FILTER_GRADIENTBEVEL;
+
+typedef struct _FILTER_CONVOLUTION {
+    U8 type;
+    U8 matrixx;
+    U8 matrixy;
+    float divisor;
+    float bias;
+    float *matrix;
+    RGBA defaultcolor;
+    char clampmode;
+    char preservealpha;
+} FILTER_CONVOLUTION;
+
+typedef struct _FILTER_COLORMATRIX {
+    U8 type;
+    float matrix[20];
+} FILTER_COLORMATRIX;
 
 void swf_SetFilter(TAG*tag, FILTER*f);
 FILTER*swf_GetFilter(TAG*tag);
