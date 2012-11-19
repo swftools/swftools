@@ -10,7 +10,7 @@ all: ../libgfxpdf$(A)
 
 libgfxpdf: ../libgfxpdf$(A)
 
-libgfxpdf_objects = VectorGraphicOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) CharOutputDev.$(O) CommonOutputDev.$(O) InfoOutputDev.$(O) XMLOutputDev.$(O) pdf.$(O) fonts.$(O) bbox.$(O)
+libgfxpdf_objects = VectorGraphicOutputDev.$(O) BitmapOutputDev.$(O) FullBitmapOutputDev.$(O) CharOutputDev.$(O) CommonOutputDev.$(O) InfoOutputDev.$(O) pdf.$(O) fonts.$(O) bbox.$(O)
 
 fonts.$(O): fonts.c
 	$(C) fonts.c -o $@
@@ -28,8 +28,6 @@ InfoOutputDev.$(O): InfoOutputDev.cc InfoOutputDev.h GFXSplashOutputDev.h
 	$(CC) -I ./ $(xpdf_include) InfoOutputDev.cc -o $@
 BitmapOutputDev.$(O): BitmapOutputDev.cc BitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h GFXSplashOutputDev.h
 	$(CC) -I ./ $(xpdf_include) BitmapOutputDev.cc -o $@
-XMLOutputDev.$(O): XMLOutputDev.cc XMLOutputDev.h
-	$(CC) -I ./ $(xpdf_include) XMLOutputDev.cc -o $@
 FullBitmapOutputDev.$(O): FullBitmapOutputDev.cc FullBitmapOutputDev.h CommonOutputDev.h InfoOutputDev.h
 	$(CC) -I ./ $(xpdf_include) FullBitmapOutputDev.cc -o $@
 DummyOutputDev.$(O): DummyOutputDev.cc DummyOutputDev.h InfoOutputDev.h
