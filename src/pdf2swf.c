@@ -24,6 +24,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <memory.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include "../config.h"
 #ifdef HAVE_SIGNAL_H
@@ -644,10 +645,10 @@ int main(int argn, char *argv[])
     }*/
 
 #ifdef HAVE_SRAND48
-    srand48(time(0));
+    srand48(time(0)*getpid());
 #else
 #ifdef HAVE_SRAND
-    srand(time(0));
+    srand(time(0)*getpid());
 #endif
 #endif
 

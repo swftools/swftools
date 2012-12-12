@@ -1033,7 +1033,6 @@ void  swf_SetPassword(TAG * t, const char * password)
     char* md5string;
 
 #if defined(HAVE_LRAND48) && defined(HAVE_SRAND48) && defined(HAVE_TIME_H) && defined(HAVE_TIME)
-    srand48(time(0));
     salt[0] = "abcdefghijklmnopqrstuvwxyz0123456789"[lrand48()%36];
     salt[1] = "abcdefghijklmnopqrstuvwxyz0123456789"[lrand48()%36];
 #else
