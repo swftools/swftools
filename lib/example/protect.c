@@ -25,6 +25,7 @@
 
 int main(int argn,char ** argv)
 { 
+    srand48(time(0));
     int fi;
     SWF swf;
     TAG* tag;

@@ -21,6 +21,8 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #include <Python.h>
+#include <sys/types.h>
+#include <unistd.h>
 #undef HAVE_STAT
 #include "../rfxswf.h"
 #include "../log.h"
@@ -443,6 +445,8 @@ static PyMethodDef LoggingMethods[] =
 
 void initSWF(void)
 {
+    srand48(time(0)*getpid());
+
     PyObject*module;
     PyMethodDef* primitive_methods = primitive_getMethods();
     PyMethodDef* tag_methods = tags_getMethods();
