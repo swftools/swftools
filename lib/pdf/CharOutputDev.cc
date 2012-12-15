@@ -388,7 +388,6 @@ char* fontconfig_searchForFont(char*name)
 	msg("<debug> FontConfig: Looking for font %s (family=%s)", name, family);
 	pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
     }
-    pattern = FcPatternBuild(NULL, FC_OUTLINE, FcTypeBool, FcTrue, FC_SCALABLE, FcTypeBool, FcTrue, FC_FAMILY, FcTypeString, family, NULL);
 
     FcResult result;
     FcConfigSubstitute(0, pattern, FcMatchPattern); 
