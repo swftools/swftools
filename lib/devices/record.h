@@ -38,6 +38,8 @@ void gfxdevice_record_flush(gfxdevice_t*, gfxdevice_t*, gfxfontlist_t**);
 
 void gfxresult_record_replay(gfxresult_t*, gfxdevice_t*, gfxfontlist_t**);
 
+void gfxdevice_record_show(gfxdevice_t*dev);
+
 #ifdef __cplusplus
 }
 #endif

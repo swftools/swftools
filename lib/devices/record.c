@@ -908,6 +908,22 @@ static void hexdumpMem(unsigned char*data, int len)
     }
 }
 
+void gfxdevice_record_show(gfxdevice_t*dev)
+{
+    internal_t*i = (internal_t*)dev->internal;
+    writer_t w;
+
+    int len;
+    void*data = writer_growmemwrite_memptr(&i->w, &len);
+
+    gfxdevice_t out;
+    gfxdevice_dummy_init(&out, NULL);
+
+    reader_t r;
+    reader_init_memreader(&r, data, len);
+    replay(dev, &out, &r, NULL);
+}
+
 void gfxdevice_record_flush(gfxdevice_t*dev, gfxdevice_t*out, gfxfontlist_t**fontlist)
 {
     internal_t*i = (internal_t*)dev->internal;
