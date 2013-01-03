@@ -361,7 +361,7 @@ char* fontconfig_searchForFont(char*name)
     char*family = strdup(name);
     int len = strlen(family);
 
-    const char*styles[] = {"Medium", "Regular", "Bold", "Italic", "Black", "Narrow"};
+    const char*styles[] = {"BoldItalic", "Medium", "Regular", "Bold", "Italic", "Black", "Narrow"};
     const char*style = 0;
     int t;
     for(t=0;t<sizeof(styles)/sizeof(styles[0]);t++) {
