@@ -190,8 +190,8 @@
    str = new EmbedStream(parser->getStream(), &dict, gFalse, 0);
    str = str->addFilters(&dict);
  
---- xpdf/GfxFont.cc.orig	2010-08-16 14:02:38.000000000 -0700
-+++ xpdf/GfxFont.cc	2010-08-16 14:02:38.000000000 -0700
+--- xpdf/GfxFont.cc.orig	2013-01-30 07:58:34.012007573 -0800
++++ xpdf/GfxFont.cc	2013-02-11 12:09:34.104997688 -0800
 @@ -194,7 +194,7 @@
        embFontID = obj2.getRef();
        if (type != fontType1) {
@@ -212,7 +212,37 @@
  CharCodeToUnicode *Gfx8BitFont::getToUnicode() {
    ctu->incRefCnt();
    return ctu;
-@@ -1411,6 +1415,10 @@
+@@ -1193,24 +1197,14 @@
+   }
+ 
+   // encoding (i.e., CMap)
+-  //~ need to handle a CMap stream here
+-  //~ also need to deal with the UseCMap entry in the stream dict
+-  if (!fontDict->lookup("Encoding", &obj1)->isName()) {
+-    error(-1, "Missing or invalid Encoding entry in Type 0 font");
+-    delete collection;
+-    goto err3;
++  if (fontDict->lookup("Encoding", &obj1)->isNull()) {
++    error(-1, "Missing Encoding entry in Type 0 font");
++    goto err2;
+   }
+-  cMapName = new GString(obj1.getName());
+-  obj1.free();
+-  if (!(cMap = globalParams->getCMap(collection, cMapName))) {
+-    error(-1, "Unknown CMap '%s' for character collection '%s'",
+-	  cMapName->getCString(), collection->getCString());
+-    delete collection;
+-    delete cMapName;
++  if (!(cMap = CMap::parse(NULL, collection, &obj1))) {
+     goto err2;
+   }
+-  delete collection;
+-  delete cMapName;
++  obj1.free();
+ 
+   // CIDToGIDMap (for embedded TrueType fonts)
+   if (type == fontCIDType2) {
+@@ -1411,6 +1405,10 @@
    }
  }
  
@@ -2327,3 +2357,208 @@
    // parse args
    ok = parseArgs(argDesc, &argc, argv);
    if (!ok || argc != 2 || printVersion || printHelp) {
+--- xpdf/CMap.cc.orig	2013-01-30 07:58:34.012007573 -0800
++++ xpdf/CMap.cc	2013-02-11 12:08:20.808997738 -0800
+@@ -22,6 +22,8 @@
+ #include "Error.h"
+ #include "GlobalParams.h"
+ #include "PSTokenizer.h"
++#include "Object.h"
++#include "Stream.h"
+ #include "CMap.h"
+ 
+ //------------------------------------------------------------------------
+@@ -40,8 +42,35 @@
+   return fgetc((FILE *)data);
+ }
+ 
++static int getCharFromStream(void *data) {
++  return ((Stream *)data)->getChar();
++}
++
+ //------------------------------------------------------------------------
+ 
++CMap *CMap::parse(CMapCache *cache, GString *collectionA, Object *obj) {
++  CMap *cMap;
++  GString *cMapNameA;
++
++  if (obj->isName()) {
++    cMapNameA = new GString(obj->getName());
++    if (!(cMap = globalParams->getCMap(collectionA, cMapNameA))) {
++      error(-1,
++	    "Unknown CMap '{0:t}' for character collection '{1:t}'",
++	    cMapNameA, collectionA);
++    }
++    delete cMapNameA;
++  } else if (obj->isStream()) {
++    if (!(cMap = CMap::parse(NULL, collectionA, obj->getStream()))) {
++      error(-1, "Invalid CMap in Type 0 font");
++    }
++  } else {
++    error(-1, "Invalid Encoding in Type 0 font");
++    return NULL;
++  }
++  return cMap;
++}
++
+ CMap *CMap::parse(CMapCache *cache, GString *collectionA,
+ 		  GString *cMapNameA) {
+   FILE *f;
+@@ -156,6 +185,93 @@
+   return cmap;
+ }
+ 
++CMap *CMap::parse(CMapCache *cache, GString *collectionA, Stream *str) {
++  Object obj1;
++  CMap *cMap;
++
++  cMap = new CMap(collectionA->copy(), NULL);
++
++  if (!str->getDict()->lookup("UseCMap", &obj1)->isNull()) {
++    cMap->useCMap(cache, &obj1);
++  }
++  obj1.free();
++
++  str->reset();
++  cMap->parse2(cache, &getCharFromStream, str);
++  str->close();
++  return cMap;
++}
++
++void CMap::parse2(CMapCache *cache, int (*getCharFunc)(void *), void *data) {
++  PSTokenizer *pst;
++  char tok1[256], tok2[256], tok3[256];
++  int n1, n2, n3;
++  Guint start, end, code;
++
++  pst = new PSTokenizer(getCharFunc, data);
++  pst->getToken(tok1, sizeof(tok1), &n1);
++  while (pst->getToken(tok2, sizeof(tok2), &n2)) {
++    if (!strcmp(tok2, "usecmap")) {
++      if (tok1[0] == '/') {
++	useCMap(cache, tok1 + 1);
++      }
++      pst->getToken(tok1, sizeof(tok1), &n1);
++    } else if (!strcmp(tok1, "/WMode")) {
++      wMode = atoi(tok2);
++      pst->getToken(tok1, sizeof(tok1), &n1);
++    } else if (!strcmp(tok2, "begincidchar")) {
++      while (pst->getToken(tok1, sizeof(tok1), &n1)) {
++	if (!strcmp(tok1, "endcidchar")) {
++	  break;
++	}
++	if (!pst->getToken(tok2, sizeof(tok2), &n2) ||
++	    !strcmp(tok2, "endcidchar")) {
++	  error(-1, "Illegal entry in cidchar block in CMap");
++	  break;
++	}
++	if (!(tok1[0] == '<' && tok1[n1 - 1] == '>' &&
++	      n1 >= 4 && (n1 & 1) == 0)) {
++	  error(-1, "Illegal entry in cidchar block in CMap");
++	  continue;
++	}
++	tok1[n1 - 1] = '\0';
++	if (sscanf(tok1 + 1, "%x", &code) != 1) {
++	  error(-1, "Illegal entry in cidchar block in CMap");
++	  continue;
++	}
++	n1 = (n1 - 2) / 2;
++	addCIDs(code, code, n1, (CID)atoi(tok2));
++      }
++      pst->getToken(tok1, sizeof(tok1), &n1);
++    } else if (!strcmp(tok2, "begincidrange")) {
++      while (pst->getToken(tok1, sizeof(tok1), &n1)) {
++	if (!strcmp(tok1, "endcidrange")) {
++	  break;
++	}
++	if (!pst->getToken(tok2, sizeof(tok2), &n2) ||
++	    !strcmp(tok2, "endcidrange") ||
++	    !pst->getToken(tok3, sizeof(tok3), &n3) ||
++	    !strcmp(tok3, "endcidrange")) {
++	  error(-1, "Illegal entry in cidrange block in CMap");
++	  break;
++	}
++	if (tok1[0] == '<' && tok2[0] == '<' &&
++	    n1 == n2 && n1 >= 4 && (n1 & 1) == 0) {
++	  tok1[n1 - 1] = tok2[n1 - 1] = '\0';
++	  sscanf(tok1 + 1, "%x", &start);
++	  sscanf(tok2 + 1, "%x", &end);
++	  n1 = (n1 - 2) / 2;
++	  addCIDs(start, end, n1, (CID)atoi(tok3));
++	}
++      }
++      pst->getToken(tok1, sizeof(tok1), &n1);
++    } else {
++      strcpy(tok1, tok2);
++    }
++  }
++  delete pst;
++}
++
+ CMap::CMap(GString *collectionA, GString *cMapNameA) {
+   int i;
+ 
+@@ -198,6 +314,19 @@
+   subCMap->decRefCnt();
+ }
+ 
++void CMap::useCMap(CMapCache *cache, Object *obj) {
++  CMap *subCMap;
++
++  subCMap = CMap::parse(cache, collection, obj);
++  if (!subCMap) {
++    return;
++  }
++  if (subCMap->vector) {
++    copyVector(vector, subCMap->vector);
++  }
++  subCMap->decRefCnt();
++}
++
+ void CMap::copyVector(CMapVectorEntry *dest, CMapVectorEntry *src) {
+   int i, j;
+ 
+--- xpdf/CMap.h.orig	2013-01-30 07:58:34.012007573 -0800
++++ xpdf/CMap.h	2013-02-11 12:08:29.416997732 -0800
+@@ -23,6 +23,8 @@
+ #endif
+ 
+ class GString;
++class Object;
++class Stream;
+ struct CMapVectorEntry;
+ class CMapCache;
+ 
+@@ -30,12 +32,20 @@
+ 
+ class CMap {
+ public:
++  // Parse a CMap from <obj>, which can be a name or a stream.  Sets
++  // the initial reference count to 1.  Returns NULL on failure.
++  static CMap *parse(CMapCache *cache, GString *collectionA, Object *obj);
++
+ 
+   // Create the CMap specified by <collection> and <cMapName>.  Sets
+   // the initial reference count to 1.  Returns NULL on failure.
+   static CMap *parse(CMapCache *cache, GString *collectionA,
+ 		     GString *cMapNameA);
+ 
++  // Parse a CMap from <str>.  Sets the initial reference count to 1.
++  // Returns NULL on failure.
++  static CMap *parse(CMapCache *cache, GString *collectionA, Stream *str);
++
+   ~CMap();
+ 
+   void incRefCnt();
+@@ -58,9 +68,11 @@
+ 
+ private:
+ 
++  void parse2(CMapCache *cache, int (*getCharFunc)(void *), void *data);
+   CMap(GString *collectionA, GString *cMapNameA);
+   CMap(GString *collectionA, GString *cMapNameA, int wModeA);
+   void useCMap(CMapCache *cache, char *useName);
++  void useCMap(CMapCache *cache, Object *obj);
+   void copyVector(CMapVectorEntry *dest, CMapVectorEntry *src);
+   void addCodeSpace(CMapVectorEntry *vec, Guint start, Guint end,
+ 		    Guint nBytes);
