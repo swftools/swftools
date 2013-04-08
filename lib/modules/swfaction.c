@@ -281,12 +281,12 @@ int OpAdvance(char c, U8*data)
 	    U8* odata = data;
 	    int t;
 	    while(*data++); //name
-	    num = (*data++)*256; //num
-	    num += (*data++);
+	    num = (*data++); //num
+	    num += (*data++)*256;
 	    for(t=0;t<num;t++)
 		while(*data++); //param
-	    codesize = (*data++)*256; //num
-	    codesize += (*data++);
+	    codesize = (*data++); //num
+	    codesize += (*data++)*256;
 	    return data-odata;
 	}
     }
