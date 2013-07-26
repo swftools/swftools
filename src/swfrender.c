@@ -48,6 +48,10 @@ int args_callback_option(char*name,char*val)
         printf("swfrender - part of %s %s\n", PACKAGE, VERSION);
         exit(0);
     } else if(!strcmp(name, "o")) {
+        if(!val) {
+            fprintf(stderr, "use \"-o <filename>\"\n");
+            exit(1);
+        }
 	outputname = strdup(val);
 	return 1;
     } else if(!strcmp(name, "l")) {

@@ -257,6 +257,9 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     memset(pal, 0, 256 * sizeof(RGBA));
 
     img = &gft->SavedImages[imgidx].ImageDesc;
+    if(!img) {
+        exit(1);
+    }
 
     // Local colormap has precedence over Global colormap
     colormap = img->ColorMap ? img->ColorMap : gft->SColorMap;

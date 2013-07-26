@@ -103,6 +103,8 @@ static void convertFont(char*infile, char*outfile)
     SWFFONT * font;
     
     font = swf_LoadFont(infile, config_flashtype);
+    if(!font) 
+        exit(1);
     swf_FontCreateAlignZones(font);
 
     if(fontname)

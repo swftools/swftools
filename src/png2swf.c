@@ -691,9 +691,9 @@ int args_callback_option(char *arg, char *val)
 	}
 
 	case 'm': {
-	    char*s = strdup(val);
-	    char*c = strchr(s, ':');
-	    if(!c) {
+	    char*s = val ? strdup(val) : NULL;
+	    char*c = s ? strchr(s, ':') : NULL;
+	    if(!s || !c) {
 		fprintf(stderr, "-m option requires two arguments, <x>:<y>\n");
 		exit(1);
 	    }
