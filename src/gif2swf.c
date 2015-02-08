@@ -468,7 +468,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 
     free(pal);
     free(imagedata);
-    DGifCloseFile(gft);
+    DGifCloseFile(gft, D_GIF_SUCCEEDED);
 
     return t;
 }
@@ -541,7 +541,7 @@ int CheckInputFile(char *fname, char **realname)
             fprintf(stderr, "frame: %u, delay: %.3f sec\n", i + 1, getGifDelayTime(gft, i) / 100.0);
     }
 
-    DGifCloseFile(gft);
+    DGifCloseFile(gft, D_GIF_SUCCEEDED);
 
     return 0;
 }
