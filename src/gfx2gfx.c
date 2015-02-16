@@ -251,6 +251,7 @@ int main(int argn, char *argv[])
         gfxdevice_t _out,*out=&_out;
         if(!strcasecmp(format, "swf")) {
             gfxdevice_swf_init(out);
+	    out->setparameter(out, "maxdpi", "320");
         } else if(!strcasecmp(format, "img") || !strcasecmp(format, "png")) {
             gfxdevice_render_init(out);
 	    out->setparameter(out, "antialize", "4");
