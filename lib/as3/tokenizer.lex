@@ -530,7 +530,7 @@ XMLSTRING   ["][^"]*["]
 
 STRING   ["](\\[\x00-\xff]|[^\\"\n])*["]|['](\\[\x00-\xff]|[^\\'\n])*[']
 S 	 ([ \n\r\t\xa0]|[\xc2][\xa0])
-MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*][/]|[\x00-\x1f])*[*]+[/]
+MULTILINE_COMMENT [/][*]+([*][^/]|[^/*]|[^*]?[/]|[\x00-\x1f])*[*]+[/]
 SINGLELINE_COMMENT \/\/[^\n\r]*[\n\r]
 REGEXP   [/]([^/\n]|\\[/])*[/][a-zA-Z]*
 %%
