@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from distutils import ccompiler
-from distutils.core import CompileError
+from distutils.core import CCompilerError as CompileError
 
 try:
     from setuptools import setup, Extension
@@ -228,12 +228,13 @@ class ConfigScript:
             return 0
         fi = open("config.h", "rb")
         for line in fi.readlines():
-            if line.startswith("// python: lib "):
-                self.libraries = line[15:].split(" ")
+            if line.startswith("// python:lib "):
+                self.libraries = line.strip()[14:].split(" ")
         fi.close()
         return
 
 config = ConfigScript()
+
 # if either setup.py or config.h.in were modfied, rebuild config.h
 if not config.load() or \
    os.stat("setup.py")[stat.ST_MTIME] > os.stat("config.h")[stat.ST_MTIME] or \
