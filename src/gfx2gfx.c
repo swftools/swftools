@@ -50,6 +50,7 @@ static gfxsource_t*driver = 0;
 
 static char * outputname = 0;
 static int loglevel = 3;
+static char * maxdpi = "72";
 static char * pagerange = 0;
 static char * filename = 0;
 static const char * format = 0;
@@ -76,6 +77,11 @@ int args_callback_option(char*name,char*val) {
 	loglevel --;
         setConsoleLogging(loglevel);
 	return 0;
+    }
+    else if (!strcmp(name, "r"))
+    {
+	maxdpi = val;
+	return 1;
     }
     else if (name[0]=='p')
     {
@@ -110,7 +116,7 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "V"))
     {	
-	printf("pdf2swf - part of %s %s\n", PACKAGE, VERSION);
+	printf("gfx2gfx - part of %s %s\n", PACKAGE, VERSION);
 	exit(0);
     }
     else 
@@ -126,6 +132,7 @@ struct options_t options[] =
  {"q","quiet"},
  {"V","version"},
  {"s","set"},
+ {"r","resolution"},
  {"p","pages"},
  {0,0}
 };
@@ -265,6 +272,8 @@ int main(int argn, char *argv[])
 	    msg("<error> Invalid output format: %s", format);
 	    exit(1);
 	}
+	    
+	out->setparameter(out, "maxdpi", maxdpi);
 
         int pagenr;
         for(pagenr = 1; pagenr <= doc->num_pages; pagenr++) 
