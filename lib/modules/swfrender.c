@@ -1045,6 +1045,7 @@ typedef struct
 {
     int numchars;
     SHAPE2**glyphs;
+    char version;
 } font_t;
 
 enum CHARACTER_TYPE {none_type, shape_type, image_type, text_type, edittext_type, font_type, sprite_type};
@@ -1138,6 +1139,11 @@ static void textcallback(void*self, int*chars, int*xpos, int nr, int fontid, int
 	m.r1 = (m.r1 * fontsize) / 1024;
 	m.tx = p.x;
 	m.ty = p.y;
+
+	if (font->version == 3) {
+		m.sx /= 20;
+		m.sy /= 20;
+	}
 
 	if(chars[t]<0 || chars[t]>= font->numchars) {
 	    fprintf(stderr, "Character out of range: %d\n", chars[t]);
@@ -1282,11 +1288,13 @@ void swf_RenderSWF(RENDERBUF*buf, SWF*swf)
                 swf_Render_AddImage(buf, id, data, width, height);
 		free(data);
             } else if(tag->id == ST_DEFINEFONT ||
-                      tag->id == ST_DEFINEFONT2) {
+                      tag->id == ST_DEFINEFONT2 ||
+                      tag->id == ST_DEFINEFONT3) {
 		int t;
 		SWFFONT*swffont;
 		font_t*font = (font_t*)rfx_calloc(sizeof(font_t));
 		idtable[id].obj.font = font;
+		font->version = tag->id == ST_DEFINEFONT3 ? 3 : 2;
                 swf_FontExtract(swf,id,&swffont);
 		font->numchars = swffont->numchars;
 		font->glyphs = (SHAPE2**)rfx_calloc(sizeof(SHAPE2*)*font->numchars);
