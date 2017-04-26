@@ -575,8 +575,12 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 
     *destwidth = header.width;
     *destheight = header.height;
-	
-    data2 = (unsigned char*)malloc(header.width*header.height*4);
+
+    unsigned long long alloclen_64 = (unsigned long long)header.width * header.height * 4;
+    if (alloclen_64 > 0xffffffffl) {
+        return 0;
+    }
+    data2 = (unsigned char*)malloc((size_t)alloclen_64);
 
     if(header.mode == 4)
     {
