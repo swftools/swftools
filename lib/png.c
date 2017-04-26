@@ -499,7 +499,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	return 0;
     }
 
-    unsigned long long imagedatalen_64 = ((unsigned long long)header.width + 1) * header.height * bypp;
+    unsigned long long imagedatalen_64 = ((unsigned long long)header.width + 1) * header.height * bypp + 1;
     if(imagedatalen_64 > 0xffffffff)
 	return 0;
     unsigned long imagedatalen = (unsigned long)imagedatalen_64;
