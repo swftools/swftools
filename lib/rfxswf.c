@@ -525,8 +525,11 @@ double swf_GetD64(TAG*tag)
 int swf_SetD64(TAG*tag, double v)
 {
     /* FIXME: this is not big-endian compatible */
-    swf_SetU32(tag, ((U32*)&v)[0]);
-    swf_SetU32(tag, ((U32*)&v)[1]);
+    U32 tmp;
+    memcpy(&tmp, &v, sizeof(tmp));
+    swf_SetU32(tag, tmp);
+    memcpy(&tmp, (char *)&v + sizeof(tmp), sizeof(tmp));
+    swf_SetU32(tag, tmp);
     return 8;
 }
 int swf_GetU24(TAG*tag)
