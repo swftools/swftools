@@ -100,7 +100,7 @@ static inline node_t* posqueue_extract(posqueue_t*queue)
 }
 static inline int posqueue_notempty(posqueue_t*queue)
 {
-    return (int)queue->list;
+    return NULL != queue->list;
 }
 
 #define NR(p) ((p)->nr)
