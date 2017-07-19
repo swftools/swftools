@@ -409,12 +409,12 @@ char* swf_GetName(TAG * t)
               swf_GetCXForm(t, &c, 1);
             if(flags&PF_RATIO)
               swf_GetU16(t);
-            if(flags&PF_CLIPDEPTH)
-              swf_GetU16(t);
             if(flags&PF_NAME) {
               swf_ResetReadBits(t);
               name = (char*)&t->data[swf_GetTagPos(t)];
             }
+            if(flags&PF_CLIPDEPTH)
+              swf_GetU16(t);
         }
         break;
     }
