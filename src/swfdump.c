@@ -707,6 +707,7 @@ void handlePlaceObject23(TAG*tag, char*prefix)
 	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
 	}
     }
+    if(flags&32) { while(swf_GetU8(tag)); }
     if(flags&64) {
 	U16 clip = swf_GetU16(tag); //clip
 	if(placements) {
@@ -715,7 +716,6 @@ void handlePlaceObject23(TAG*tag, char*prefix)
 	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
 	}
     }
-    if(flags&32) { while(swf_GetU8(tag)); }
 
     if(flags2&1) { // filter list
 	U8 num = swf_GetU8(tag);
