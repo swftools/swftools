@@ -226,8 +226,7 @@ void dumpButton2Actions(TAG*tag, char*prefix)
     swf_GetU16(tag);          // Character ID
     swf_GetU8(tag);           // Flags;
 
-    offsetpos = swf_GetTagPos(tag);  // first offset
-    swf_GetU16(tag);
+    offsetpos = swf_GetU16(tag);  // first offset
 
     while (swf_GetU8(tag))      // state  -> parse ButtonRecord
     { swf_GetU16(tag);          // id
