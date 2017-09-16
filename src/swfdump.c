@@ -218,6 +218,8 @@ void dumpButton2Actions(TAG*tag, char*prefix)
     U32 oldTagPos;
     U32 offsetpos;
     U32 condition;
+    U8 state;
+    int nfilters, i;
 
     oldTagPos = swf_GetTagPos(tag);
 
@@ -228,11 +230,25 @@ void dumpButton2Actions(TAG*tag, char*prefix)
 
     offsetpos = swf_GetU16(tag);  // first offset
 
-    while (swf_GetU8(tag))      // state  -> parse ButtonRecord
-    { swf_GetU16(tag);          // id
+    while (state = swf_GetU8(tag))      // state  -> parse ButtonRecord
+    {
+      swf_GetU16(tag);          // id
       swf_GetU16(tag);          // layer
       swf_GetMatrix(tag,NULL);  // matrix
       swf_GetCXForm(tag,NULL,1);  // cxform
+      if (state & 16)
+      {   // ButtonHasFilterList
+          nfilters = swf_GetU8(tag);
+          for (i = 0; i < nfilters; i++)
+          {
+              FILTER *f = swf_GetFilter(tag);
+              swf_DeleteFilter(f);
+          }
+      }
+      if (state & 32)
+      {   // ButtonHasBlendMode
+          swf_GetU8(tag);
+      }
     }
 
     while(offsetpos)
