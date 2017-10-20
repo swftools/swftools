@@ -97,10 +97,10 @@ static int png_read_header(FILE*fi, struct png_header*header)
     int len;
     int ok=0;
     unsigned char head[8] = {137,80,78,71,13,10,26,10};
-    unsigned char head2[8];
+    unsigned char head2[sizeof(head)];
     unsigned char*data;
-    fread(head2,8,1,fi);
-    if(strncmp((const char*)head,(const char*)head2,4))
+    if(fread(head2,sizeof(head2),1,fi) != 1) return 0;
+    if(strncmp((const char*)head,(const char*)head2,sizeof(head)))
 	return 0; // not a png file
     
     while(png_read_chunk(&id, &len, &data, fi))
