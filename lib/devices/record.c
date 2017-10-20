@@ -44,6 +44,7 @@
 #include "../fastlz.h"
 #endif
 #include "record.h"
+#include "dummy.h"
 
 //#define STATS
 //#define COMPRESS_IMAGES
