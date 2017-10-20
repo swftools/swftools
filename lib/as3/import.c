@@ -238,10 +238,12 @@ void as3_import_zipfile(char*filename)
 void as3_import_file(char*filename)
 {
     FILE*fi = fopen(filename, "rb");
+    int l;
     if(!fi) return;
     char head[3];
-    fread(head, 3, 1, fi);
+    l = fread(head, 3, 1, fi);
     fclose(fi);
+    if (l != 1) return;
     if(!strncmp(head, "FWS", 3) ||
        !strncmp(head, "CWS", 3)) {
         as3_import_swf(filename);
