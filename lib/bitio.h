@@ -46,6 +46,11 @@
 #define WRITER_TYPE_NULL 5
 #define WRITER_TYPE_GROWING_MEM  6
 #define WRITER_TYPE_ZLIB WRITER_TYPE_ZLIB_C
+typedef union {
+    int fd;
+    int null;
+    void *ptr;
+} handle_u;
 
 typedef struct _reader
 {
@@ -53,7 +58,7 @@ typedef struct _reader
     int (*seek)(struct _reader*, int pos);
     void (*dealloc)(struct _reader*);
 
-    void *internal;
+    handle_u h;
     int type;
     unsigned char mybyte;
     unsigned char bitpos;
@@ -66,7 +71,7 @@ typedef struct _writer
     void (*flush)(struct _writer*);
     void (*finish)(struct _writer*);
 
-    void *internal;
+    handle_u h;
     int type;
     unsigned char mybyte;
     unsigned char bitpos;
