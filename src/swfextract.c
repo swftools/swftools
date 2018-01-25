@@ -1124,7 +1124,8 @@ int handledefinesound(TAG*tag)
 	printf("Sound is ADPCM, format: %s samples/sec, %d bit, %s\n", rates[rate], bits, stereo?"stereo":"mono");
 	extension = "adpcm";
     } else {
-        return 0;
+	printf("Unknown sound format %d: %s samples/sec, %d bit, %s\n", format, rates[rate], bits, stereo?"stereo":"mono");
+	extension = "unknown";
     }
     prepare_name(buf, sizeof(buf), "sound", extension, id);
     if(numextracts==1) {
