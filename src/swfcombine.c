@@ -575,13 +575,13 @@ void changedepth(TAG*tag, int add)
 {
     if(tag->id == ST_PLACEOBJECT)
 	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
-    if(tag->id == ST_PLACEOBJECT2)
+    if(tag->id >= ST_PLACEOBJECT2)
 	PUT16(&tag->data[1],GET16(&tag->data[1])+add);
     if(tag->id == ST_REMOVEOBJECT)
 	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == ST_REMOVEOBJECT2)
 	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
-    if(tag->id == ST_PLACEOBJECT2) {
+    if(tag->id >= ST_PLACEOBJECT2) {
 	SWFPLACEOBJECT obj;
 	U8 flags;
 	swf_SetTagPos(tag, 0);
@@ -620,7 +620,8 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
     {
 	switch(tag->id)
 	{
-	    case ST_PLACEOBJECT2: {
+	    case ST_PLACEOBJECT2: // FALLTHROUGH
+	    case ST_PLACEOBJECT3: {
 		MATRIX m;
 		U8 flags;
 		swf_GetMatrix(0, &m);
@@ -839,6 +840,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    switch(rtag->id) {
 		case ST_PLACEOBJECT:
 		case ST_PLACEOBJECT2:
+		case ST_PLACEOBJECT3:
 		    if(frame == slaveframe && !config.overlay)
 			dontwrite = 1;
 		case ST_REMOVEOBJECT:
@@ -949,7 +951,8 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 	msg("<debug> [master] write tag %02x (%d bytes in body)", 
 		mtag->id, mtag->len);
 	switch(mtag->id) {
-	    case ST_PLACEOBJECT2:
+	    case ST_PLACEOBJECT2: // FALLTHROUGH
+	    case ST_PLACEOBJECT3:
 		num++;
 	    case ST_PLACEOBJECT: {
 	       depth = swf_GetDepth(mtag);
@@ -1048,7 +1051,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		}
 		swf_GetString(tag);
 	    }
-	} else if(tag->id == ST_PLACEOBJECT2) {
+	} else if(tag->id >= ST_PLACEOBJECT2) {
 	    char * name = swf_GetName(tag);
 	    int id = swf_GetPlaceID(tag);
 
