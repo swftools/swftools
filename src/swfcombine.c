@@ -586,11 +586,13 @@ void changedepth(TAG*tag, int add)
 	U8 flags;
 	swf_SetTagPos(tag, 0);
 	flags = swf_GetU8(tag);
+	swf_GetU16(tag); //depth
 	if(flags&2) swf_GetU16(tag); //id
 	if(flags&4) swf_GetMatrix(tag, 0);
 	if(flags&8) swf_GetCXForm(tag, 0,1);
 	if(flags&16) swf_GetU16(tag); //ratio
-	if(flags&64) {
+	if(flags&32) swf_GetString(tag); //name
+	if(flags&64) { //clipdepth
 	    swf_ResetReadBits(tag);
 	    printf("%d->%d\n", GET16(&tag->data[tag->pos]),
 		               GET16(&tag->data[tag->pos])+add);
@@ -629,13 +631,13 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
 		tag->readBit = 0;
 
 		flags = swf_GetU8(tag);
-		swf_SetU8(output, flags|4);
+		swf_SetU8(output, flags|4); //hasMatrix
 		swf_SetU16(output, swf_GetU16(tag)); //depth
+
 		//flags&1: move
 		if(flags&2) {
 		    swf_SetU16(output, swf_GetU16(tag)); //id
 		}
-		// flags & 4
 		if(flags&4) {
 		    swf_GetMatrix(tag, &m);
 		} else {
