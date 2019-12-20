@@ -948,14 +948,12 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     mtag = master->firstTag;
     while(mtag && mtag->id!=ST_END)
     {
-	int num=1;
 	U16 depth;
 	msg("<debug> [master] write tag %02x (%d bytes in body)", 
 		mtag->id, mtag->len);
 	switch(mtag->id) {
 	    case ST_PLACEOBJECT2: // FALLTHROUGH
-	    case ST_PLACEOBJECT3:
-		num++;
+	    case ST_PLACEOBJECT3: // FALLTHROUGH
 	    case ST_PLACEOBJECT: {
 	       depth = swf_GetDepth(mtag);
 	       depths[depth] = 1;
