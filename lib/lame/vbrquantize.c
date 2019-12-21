@@ -319,7 +319,7 @@ calc_sfb_noise_ave(const FLOAT8 *xr, const FLOAT8 *xr34, int bw, int sf)
 
 
 
-static INLINE int
+INLINE static int
 find_scalefac( const FLOAT8 *xr, const FLOAT8 *xr34, FLOAT8 l3_xmin, int bw )
 {
     FLOAT8 xfsf;
@@ -355,7 +355,7 @@ find_scalefac( const FLOAT8 *xr, const FLOAT8 *xr34, FLOAT8 l3_xmin, int bw )
     return sf_ok > 45 ? sf : sf_ok;
 }
 
-static INLINE int
+INLINE static int
 find_scalefac_mq( const FLOAT8 *xr, const FLOAT8 *xr34, FLOAT8 l3_xmin, 
                   int bw, int mq, FLOAT8 *scratch )
 {
@@ -392,7 +392,7 @@ find_scalefac_mq( const FLOAT8 *xr, const FLOAT8 *xr34, FLOAT8 l3_xmin,
     return sf_ok > 45 ? sf : sf_ok;
 }
 
-static INLINE int
+INLINE static int
 find_scalefac_ave( const FLOAT8 *xr, const FLOAT8 *xr34, FLOAT8 l3_xmin, int bw )
 {
     FLOAT8 xfsf; 
@@ -433,7 +433,7 @@ find_scalefac_ave( const FLOAT8 *xr, const FLOAT8 *xr34, FLOAT8 l3_xmin, int bw 
  *  Robert Hegemann 2001-05-01
  *  calculates quantization step size determined by allowed masking
  */
-static INLINE int
+INLINE static int
 calc_scalefac( FLOAT8 l3_xmin, int bw, FLOAT8 preset_tune )
 {
     FLOAT8 const c = (preset_tune > 0 ? preset_tune
@@ -464,7 +464,7 @@ static const int max_range_long_lsf_pretab[SBMAX_l] =
     ol_sf -= ifqstep*scalefac[gr][ch].s[sfb][i];
 
 */
-static INLINE int
+INLINE static int
 compute_scalefacs_short(
     int sf[][3], const gr_info *cod_info, int scalefac[][3], int *sbg )
 {
@@ -526,7 +526,7 @@ compute_scalefacs_short(
 	  if (cod_info->preflag && sfb>=11) 
 	  ol_sf -= ifqstep*pretab[sfb];
 */
-static INLINE int
+INLINE static int
 compute_scalefacs_long_lsf( int *sf, const gr_info * cod_info, int *scalefac )
 {
     const int * max_range = max_range_long;
@@ -571,7 +571,7 @@ compute_scalefacs_long_lsf( int *sf, const gr_info * cod_info, int *scalefac )
 	  if (cod_info->preflag && sfb>=11) 
 	  ol_sf -= ifqstep*pretab[sfb];
 */
-static INLINE int
+INLINE static int
 compute_scalefacs_long( int *sf, const gr_info * cod_info, int *scalefac )
 {
     int ifqstep = ( cod_info->scalefac_scale == 0 ) ? 2 : 4;
