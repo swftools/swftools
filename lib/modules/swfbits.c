@@ -638,7 +638,7 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
 #ifdef HAVE_ZLIB
     if(offset) {
 	uLongf datalen = cinfo.output_width*cinfo.output_height;
-	U8* alphadata = (U8*)rfx_alloc(datalen);
+	U8* alphadata = (U8*)rfx_calloc(datalen);
 	int error;
 	tag->len = oldtaglen;
 	swf_SetTagPos(tag, 6+offset);
@@ -981,7 +981,7 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 	if (data)
 	    rfx_free(data);
 	datalen += 4096;
-	data = (U8*)rfx_alloc(datalen);
+	data = (U8*)rfx_calloc(datalen);
 	error =
 	    uncompress(data, &datalen, &tag->data[tag->pos],
 		       tag->len - tag->pos);
