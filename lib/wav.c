@@ -212,6 +212,11 @@ int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
     int i;
     int fill;
 
+    if (src->align != (channels*bps/8)) {
+	fprintf(stderr, "Unsupported non-PCM convert to mono: align:%d != (channels:%d*bps:%d/8)\n", src->align , channels, bps);
+	return 0;
+    }
+
     dest->sampsPerSec = rate;
     dest->bps = 16;
     dest->channels = 1;
