@@ -291,6 +291,9 @@ int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
 	}
     } else {
 	fprintf(stderr, "Unsupported bitspersample value: %d\n", bps);
+	free(dest->data);
+	dest->data = 0;
+	return 0;
     }
     return 1;
 }
