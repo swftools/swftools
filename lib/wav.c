@@ -203,7 +203,7 @@ void wav_print(struct WAV*wav)
 
 int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
 {
-    int samplelen=src->size/src->align;
+    int samplelen=(src->size+(src->align-1))/src->align; // round up
     int bps=src->bps;
     double ratio;
     double pos = 0;
