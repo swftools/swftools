@@ -5619,6 +5619,12 @@ _ACEOF
 
 fi
  #needed for jpeglib
+
+$as_echo "#define TRUE 1" >>confdefs.h
+
+
+$as_echo "#define FALSE 0" >>confdefs.h
+
  for ac_func in popen mkstemp stat mmap lrand48 rand srand48 srand bcopy bzero time getrusage mallinfo open64 calloc
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
@@ -7111,15 +7117,11 @@ else
     esac
     for v in $VERSIONS; do
         # Linux
-        linux_arch=`uname -m`
         if test -f "/usr/include/python$v/Python.h";then
             PY_VERSION=$v
 	    PYTHON_LIB="-lpython$PY_VERSION"
             if test -f "/usr/lib/python$v/site-packages/PIL/_imaging.so";then
                 PYTHON_LIB2="$PYTHON_LIB /usr/lib/python$v/site-packages/PIL/_imaging.so"
-                HAVE_PYTHON_IMAGING_LIB=1
-            elif test -f "/usr/lib/python$v/dist-packages/PIL/_imaging.$linux_arch-linux-gnu.so";then
-                PYTHON_LIB2="$PYTHON_LIB /usr/lib/python$v/dist-packages/PIL/_imaging.$linux_arch-linux-gnu.so"
                 HAVE_PYTHON_IMAGING_LIB=1
             else
                 PYTHON_LIB2="$PYTHON_LIB"

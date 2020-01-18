@@ -232,7 +232,12 @@ int main (int argc,char ** argv)
 	msg("<fatal> Error reading %s", filename);
 	exit(1);
     }
-    wav_convert2mono(&wav,&wav2, samplerate);
+
+    if(!wav_convert2mono(&wav, &wav2, samplerate))
+    {
+	msg("<fatal> Error convert %s to mono", filename);
+	exit(1);
+    }
     //wav_print(&wav);
     //wav_print(&wav2);
     samples = (U16*)wav2.data;

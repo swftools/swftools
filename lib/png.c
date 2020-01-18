@@ -111,7 +111,7 @@ static int png_read_header(FILE*fi, struct png_header*header)
 	    if(len < 8) exit(1);
 	    header->width = data[0]<<24|data[1]<<16|data[2]<<8|data[3];
 	    header->height = data[4]<<24|data[5]<<16|data[6]<<8|data[7];
-	    a = data[8];      // should be 8
+	    a = data[8];      // should be 1,2,4,8,16 adapting to Image mode
 	    b = data[9];      // should be 3(indexed) or 2(rgb)
 
 	    c = data[10];     // compression mode (0)
@@ -122,9 +122,19 @@ static int png_read_header(FILE*fi, struct png_header*header)
 		fprintf(stderr, "Image mode %d not supported!\n", b);
 		return 0;
 	    }
-	    if(a!=8 && (b==2 || b==6)) {
-		printf("Bpp %d in mode %d not supported!\n", b, a);
-		return 0;
+	    // ColorType  Allowed Bit Depths  Interpretation
+	    //     0          1,2,4,8,16       grayscale            (PNG0)
+	    //     2          8,16             R,G,B triple         (PNG24)
+	    //     3          1,2,4,8          palette              (PNG8)
+	    //     4          8,16             grayscale, alpha (YA)
+	    //     6          8,16             R,G,B triple, alpha  (PNG32)
+	    if(a!=8) {
+		if(((b==2 || b==4 || b==6) && a!=16) ||  // YA, RGB, RGBA
+		   (b==3 && (a!=1 && a!=2 && a!=4)) ||   // palette
+		   (b==0 && (a!=1 && a!=2 && a!=4 && a!=16))) {  // grayscale
+		    fprintf(stderr, "Bpp %d in mode %d not supported!\n", a, b);
+		    return 0;
+		}
 	    }
 	    if(c!=0) {
 		printf("Compression mode %d not supported!\n", c);
