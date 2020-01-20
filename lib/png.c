@@ -496,6 +496,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     }
 
     if(!png_read_header(fi, &header)) {
+	fprintf(stderr, "Couldn't png read header %s\n", sname);
 	fclose(fi);
 	return 0;
     }
