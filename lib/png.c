@@ -536,9 +536,11 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	}
 	if(!strncmp(tagid, "tRNS", 4)) {
 	    if(header.mode == 3) {
-		alphapalette = data;
-		alphapalettelen = len;
-		data = 0; //don't free data
+		if(!alphapalette) { // guard from redundant tRNS
+		    alphapalette = data;
+		    alphapalettelen = len;
+		    data = 0; //don't free data
+		}
 		//printf("found %d alpha colors\n", alphapalettelen);
 	    } else if(header.mode == 0 || header.mode == 2) {
 		int t;
