@@ -545,11 +545,15 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    } else if(header.mode == 0 || header.mode == 2) {
 		int t;
 		if(header.mode == 2) {
-		    alphacolor[0] = data[1];
-		    alphacolor[1] = data[3];
-		    alphacolor[2] = data[5];
+		    if(len > 5) {
+			alphacolor[0] = data[1];
+			alphacolor[1] = data[3];
+			alphacolor[2] = data[5];
+		    }
 		} else {
-		    alphacolor[0] = alphacolor[1] = alphacolor[2] = data[1];
+		    if(len > 1) {
+			alphacolor[0] = alphacolor[1] = alphacolor[2] = data[1];
+		    }
 		}
 		hasalphacolor = 1;
 	    }
