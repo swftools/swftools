@@ -473,7 +473,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     if(global.mkjpeg) {
 #ifdef HAVE_JPEGLIB
 	RGBA*data = 0;
-	png_load(sname, &width, &height, (unsigned char**)&data);
+	if(!png_load(sname, &width, &height, (unsigned char**)&data)) {
+	    msg("<fatal>  Failed to load from %s", sname);
+	    exit(1);
+	}
 	if(!data) 
 	    exit(1);
 	if(swf_ImageHasAlpha(data, width, height)) {
@@ -488,7 +491,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 #endif
     } else {
 	RGBA*data = 0;
-	png_load(sname, &width, &height, (unsigned char**)&data);
+	if(!png_load(sname, &width, &height, (unsigned char**)&data)) {
+	    msg("<fatal>  Failed to load from %s", sname);
+	    exit(1);
+	}
 	if(!data) 
 	    exit(1);
 	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);
