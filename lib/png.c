@@ -491,7 +491,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     unsigned char *scanline;
 
     if ((fi = fopen(sname, "rb")) == NULL) {
-	printf("Couldn't open %s\n", sname);
+	fprintf(stderr, "Couldn't open %s\n", sname);
 	return 0;
     }
 
@@ -505,7 +505,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     else if(header.mode == 2) bypp = 3;
     else if(header.mode == 6) bypp = 4;
     else {
-	printf("ERROR: mode:%d\n", header.mode);
+	fprintf(stderr, "ERROR: mode:%d\n", header.mode);
 	return 0;
     }
 
@@ -576,7 +576,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     
     fclose(fi);
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
-	printf("Couldn't uncompress %s!\n", sname);
+	fprintf(stderr, "Couldn't uncompress sname:%s!\n", sname);
 	if(zimagedata)
 	    free(zimagedata);
 	return 0;
@@ -774,7 +774,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	free(rgba);
         free(imagedata);
     } else {
-	printf("expected PNG mode to be 2, 3 or 6 (is:%d)\n", header.mode);
+	fprintf(stderr, "expected PNG mode to be 2, 3 or 6 (is:%d)\n", header.mode);
 	return 0;
     }
 
