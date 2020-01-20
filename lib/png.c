@@ -515,6 +515,10 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	return 0;
     unsigned long imagedatalen = (unsigned long)imagedatalen_64;
     imagedata = (unsigned char*)malloc(imagedatalen);
+    if (!imagedata) {
+	fprintf(stderr, "ERROR: malloc imagedatalen:%lu\n", imagedatalen);
+	return 0;
+    }
 
     fseek(fi,8,SEEK_SET);
     while(!feof(fi))
@@ -552,6 +556,12 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    if(!zimagedata) {
 		zimagedatalen = len;
 		zimagedata = (unsigned char*)malloc(len);
+		if(!zimagedata) {
+		    fprintf(stderr, "ERROR: malloc zimagedata len:%d\n", len);
+		    free(imagedata);
+		    free(alphapalette);
+		    return 0;
+		}
 		memcpy(zimagedata,data,len);
 	    } else {
 		zimagedata = (unsigned char*)realloc(zimagedata, zimagedatalen+len);
@@ -596,6 +606,12 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	return 0;
     }
     data2 = (unsigned char*)malloc((size_t)alloclen_64);
+    if(!data2) {
+	fprintf(stderr, "ERROR: malloc alloclen_64:%d\n", len);
+	free(imagedata);
+	free(alphapalette);
+	return 0;
+    }
 
     if(header.mode == 4)
     {
