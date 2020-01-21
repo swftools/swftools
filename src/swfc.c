@@ -1495,7 +1495,10 @@ void s_image(const char*name, const char*type, const char*filename, int quality)
 	RGBA*data = 0;
 	swf_SetU16(tag, imageID);
 
-	png_load(filename, &width, &height, (unsigned char**)&data);
+	if(!png_load(filename, &width, &height, (unsigned char**)&data)) {
+	    msg("<error>  Failed to load from %s", filename);
+	    return;
+	}
 
 	if(!data) {
 	    syntaxerror("Image \"%s\" not found, or contains errors", filename);

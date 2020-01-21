@@ -491,11 +491,12 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     unsigned char *scanline;
 
     if ((fi = fopen(sname, "rb")) == NULL) {
-	printf("Couldn't open %s\n", sname);
+	fprintf(stderr, "Couldn't open %s\n", sname);
 	return 0;
     }
 
     if(!png_read_header(fi, &header)) {
+	fprintf(stderr, "Couldn't png read header %s\n", sname);
 	fclose(fi);
 	return 0;
     }
@@ -505,7 +506,7 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     else if(header.mode == 2) bypp = 3;
     else if(header.mode == 6) bypp = 4;
     else {
-	printf("ERROR: mode:%d\n", header.mode);
+	fprintf(stderr, "ERROR: mode:%d\n", header.mode);
 	return 0;
     }
 
@@ -514,6 +515,10 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	return 0;
     unsigned long imagedatalen = (unsigned long)imagedatalen_64;
     imagedata = (unsigned char*)malloc(imagedatalen);
+    if (!imagedata) {
+	fprintf(stderr, "ERROR: malloc imagedatalen:%lu\n", imagedatalen);
+	return 0;
+    }
 
     fseek(fi,8,SEEK_SET);
     while(!feof(fi))
@@ -531,18 +536,24 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	}
 	if(!strncmp(tagid, "tRNS", 4)) {
 	    if(header.mode == 3) {
-		alphapalette = data;
-		alphapalettelen = len;
-		data = 0; //don't free data
+		if(!alphapalette) { // guard from redundant tRNS
+		    alphapalette = data;
+		    alphapalettelen = len;
+		    data = 0; //don't free data
+		}
 		//printf("found %d alpha colors\n", alphapalettelen);
 	    } else if(header.mode == 0 || header.mode == 2) {
 		int t;
 		if(header.mode == 2) {
-		    alphacolor[0] = data[1];
-		    alphacolor[1] = data[3];
-		    alphacolor[2] = data[5];
+		    if(len > 5) {
+			alphacolor[0] = data[1];
+			alphacolor[1] = data[3];
+			alphacolor[2] = data[5];
+		    }
 		} else {
-		    alphacolor[0] = alphacolor[1] = alphacolor[2] = data[1];
+		    if(len > 1) {
+			alphacolor[0] = alphacolor[1] = alphacolor[2] = data[1];
+		    }
 		}
 		hasalphacolor = 1;
 	    }
@@ -551,6 +562,12 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    if(!zimagedata) {
 		zimagedatalen = len;
 		zimagedata = (unsigned char*)malloc(len);
+		if(!zimagedata) {
+		    fprintf(stderr, "ERROR: malloc zimagedata len:%d\n", len);
+		    free(imagedata);
+		    free(alphapalette);
+		    return 0;
+		}
 		memcpy(zimagedata,data,len);
 	    } else {
 		zimagedata = (unsigned char*)realloc(zimagedata, zimagedatalen+len);
@@ -576,21 +593,31 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
     
     fclose(fi);
     if(!zimagedata || uncompress(imagedata, &imagedatalen, zimagedata, zimagedatalen) != Z_OK) {
-	printf("Couldn't uncompress %s!\n", sname);
-	if(zimagedata)
-	    free(zimagedata);
+	fprintf(stderr, "Couldn't uncompress sname:%s!\n", sname);
+	free(imagedata);
+	free(zimagedata);
+	free(alphapalette);
 	return 0;
     }
-    free(zimagedata);
+    free(zimagedata); zimagedata = 0;
 
     *destwidth = header.width;
     *destheight = header.height;
 
     unsigned long long alloclen_64 = (unsigned long long)header.width * header.height * 4;
     if (alloclen_64 > 0xffffffffl) {
-        return 0;
+	fprintf(stderr, "ERROR: alloclen_64:%llu > 0xffffffff\n", alloclen_64);
+	free(imagedata);
+	free(alphapalette);
+	return 0;
     }
     data2 = (unsigned char*)malloc((size_t)alloclen_64);
+    if(!data2) {
+	fprintf(stderr, "ERROR: malloc alloclen_64:%d\n", len);
+	free(imagedata);
+	free(alphapalette);
+	return 0;
+    }
 
     if(header.mode == 4)
     {
@@ -614,7 +641,10 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    } else {
 		/* not implemented yet */
 		fprintf(stderr, "ERROR: mode=4 bpp:%d\n", header.bpp);
+		free(imagedata);
+		free(alphapalette);
 		free(data2);
+		*destdata = 0;
 		return 0;
 	    }
 
@@ -631,7 +661,6 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    }
 	}
 	free(old);
-        free(imagedata);
     } else if(header.mode == 6 || header.mode == 2) {
 	int i,s=0;
 	int x,y;
@@ -639,6 +668,15 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	*destdata = data2;
 	
 	unsigned char* firstline = malloc(header.width*4);
+	if(!firstline) {
+		fprintf(stderr, "ERROR: malloc firstline width*4:%d\n", header.width*4);
+		free(imagedata);
+		free(data2);
+		free(alphapalette);
+		free(firstline);
+		*destdata = 0;
+		return 0;
+	}
 	memset(firstline,0,header.width*4);
 	for(y=0;y<header.height;y++) {
 	    int mode = imagedata[pos++]; //filter mode
@@ -655,7 +693,11 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    } else {
 		/* not implemented yet */
 		fprintf(stderr, "ERROR: bpp:%d\n", header.bpp);
+		free(imagedata);
 		free(data2);
+		free(alphapalette);
+		free(firstline);
+		*destdata = 0;
 		return 0;
 	    }
 
@@ -682,14 +724,20 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	    }
 	}
 	free(firstline);
-        free(imagedata);
     } else if(header.mode == 0 || header.mode == 3) {
 	COL*rgba = 0;
 	unsigned char*tmpline = (unsigned char*)malloc(header.width+1);
 	unsigned char*destline = (unsigned char*)malloc(header.width+1);
 	int i,x,y;
 	int pos=0;
-	
+	if(!tmpline || !destline) {
+	    free(imagedata);
+	    free(alphapalette);
+	    free(data2);
+	    free(tmpline);
+	    free(destline);
+	    return 0;
+	}
 	*destdata = data2;
 	
 	if(header.mode == 0) { // grayscale palette
@@ -709,9 +757,24 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	} else {
 	    if(!palette) {
 		fprintf(stderr, "Error: No palette found!\n");
-		exit(1);
+		free(imagedata);
+		free(alphapalette);
+		free(data2);
+		free(tmpline);
+		free(destline);
+		*destdata = 0;
+		return 0;
 	    }
 	    rgba = (COL*)malloc(palettelen*4);
+	    if(!rgba) {
+		free(imagedata);
+		free(alphapalette);
+		free(data2);
+		free(tmpline);
+		free(destline);
+		*destdata = 0;
+		return 0;
+	    }
 	    /* 24->32 bit conversion */
 	    for(i=0;i<palettelen;i++) {
 		rgba[i].r = palette[i*3+0];
@@ -772,12 +835,17 @@ EXPORT int png_load(const char*sname, unsigned*destwidth, unsigned*destheight, u
 	free(tmpline);
 	free(destline);
 	free(rgba);
-        free(imagedata);
     } else {
-	printf("expected PNG mode to be 2, 3 or 6 (is:%d)\n", header.mode);
+	fprintf(stderr, "expected PNG mode to be 2, 3 or 6 (is:%d)\n", header.mode);
+	free(imagedata);
+	free(alphapalette);
+	free(data2);
+	*destdata = 0;
 	return 0;
     }
 
+    free(imagedata);
+    free(alphapalette);
     return 1;
 }
 
