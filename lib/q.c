@@ -508,7 +508,7 @@ void _trie_dump(trielayer_t*t, char*buffer, int pos)
     }
     if(t->rest) {
         buffer[pos]=0;
-        printf("%s%s %08x\n", buffer, t->rest, (int)t->data);
+        printf("%s%s %p\n", buffer, t->rest, t->data);
     }
 }
 
@@ -1171,9 +1171,9 @@ void dict_dump(dict_t*h, FILE*fi, const char*prefix)
         dictentry_t*e = h->slots[t];
         while(e) {
             if(h->key_type!=&charptr_type) {
-                fprintf(fi, "%s%08x=%08x\n", prefix, (int)e->key, (int)e->data);
+                fprintf(fi, "%s%p=%p\n", prefix, e->key, e->data);
             } else {
-                fprintf(fi, "%s%s=%08x\n", prefix, (char*)e->key, (int)e->data);
+                fprintf(fi, "%s%s=%p\n", prefix, (char*)e->key, e->data);
             }
             e = e->next;
         }

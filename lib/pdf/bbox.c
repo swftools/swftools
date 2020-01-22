@@ -406,7 +406,7 @@ static void display(context_t*context)
 	    } else if(POINTS_TO_HEAD(group[y*width+x])) {
 		printf("g%02d ", ((head_t*)group[y*width+x])->nr);
 	    } else {
-		printf("x%02d ", (void**)group[y*width+x]-(void**)group);
+		printf("x%0td ", (void**)group[y*width+x]-(void**)group);
 	    }
 	}
 	printf("\n");
