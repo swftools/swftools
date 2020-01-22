@@ -45,11 +45,14 @@ if test "x${srcdir}" != "x."; then
     echo "--srcdir is not supported"
     exit 1
 fi
-
-WARNINGS="-Wimplicit -Wreturn-type -Wno-write-strings -Wformat"
+WARNINGS="-Wreturn-type -Wno-write-strings -Wformat"
 if test "x$ENABLE_WARNINGS" '!=' "x";then
     WARNINGS="-Wall -Wno-unused -Wno-format -Wno-redundant-decls -Wno-write-strings -D_FORTIFY_SOURCE=2 "
 fi
+# C-specific warnings
+CWARNINGS="-Wimplicit $WARNINGS"
+# C++-specific warnings
+CXXWARNINGS="$WARNINGS"
 
 if test "x$CHECKMEM" '!=' "x";then
     DEBUG=yes
@@ -59,25 +62,25 @@ if test "x$PROFILING" '!=' "x";then
 fi
 if test "x$DEBUG" '!=' "x";then
     if test "x$PROFILING" = "x";then
-        CFLAGS="$WARNINGS -O2 -g $CFLAGS"
-        CXXFLAGS="$WARNINGS -O2 -g $CXXFLAGS"
+        CFLAGS="$CWARNINGS -O2 -g $CFLAGS"
+        CXXFLAGS="$CXXWARNINGS -O2 -g $CXXFLAGS"
         LDFLAGS="-g $LDFLAGS"
     else
-        CFLAGS="$WARNINGS -O2 -g -pg $CFLAGS"
-        CXXFLAGS="$WARNINGS -O2 -g -pg $CXXFLAGS"
+        CFLAGS="$CWARNINGS -O2 -g -pg $CFLAGS"
+        CXXFLAGS="$CXXWARNINGS -O2 -g -pg $CXXFLAGS"
         LDFLAGS="-g -pg $LDFLAGS"
     fi
 else if test "x$OPTIMIZE" '!=' "x"; then
-    CFLAGS="$WARNINGS -O3 -fomit-frame-pointer -Winline $CFLAGS"
-    CXXFLAGS="$WARNINGS -O3 -fomit-frame-pointer -Winline $CXXFLAGS"
+    CFLAGS="$CWARNINGS -O3 -fomit-frame-pointer -Winline $CFLAGS"
+    CXXFLAGS="$CXXWARNINGS -O3 -fomit-frame-pointer -Winline $CXXFLAGS"
 else
-    CFLAGS="$WARNINGS -O -fomit-frame-pointer $CFLAGS"
-    CXXFLAGS="$WARNINGS -O -fomit-frame-pointer $CXXFLAGS"
+    CFLAGS="$CWARNINGS -O -fomit-frame-pointer $CFLAGS"
+    CXXFLAGS="$CXXWARNINGS -O -fomit-frame-pointer $CXXFLAGS"
 fi
 fi
 
 CFLAGS="-fPIC $CFLAGS"
-CXXFLAGS="-fPIC $CFLAGS"
+CXXFLAGS="-fPIC $CXXFLAGS"
 
 #OLDGCC=1
 #if test "x$OLDGCC" '!=' "x";then
