@@ -577,20 +577,30 @@ void changedepth(TAG*tag, int add)
 	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == ST_PLACEOBJECT2)
 	PUT16(&tag->data[1],GET16(&tag->data[1])+add);
+    if(tag->id == ST_PLACEOBJECT3)
+	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == ST_REMOVEOBJECT)
 	PUT16(&tag->data[2],GET16(&tag->data[2])+add);
     if(tag->id == ST_REMOVEOBJECT2)
 	PUT16(&tag->data[0],GET16(&tag->data[0])+add);
-    if(tag->id == ST_PLACEOBJECT2) {
+    if((tag->id == ST_PLACEOBJECT2) || (tag->id == ST_PLACEOBJECT3)) {
 	SWFPLACEOBJECT obj;
 	U8 flags;
+	U8 flags2 = 0;
 	swf_SetTagPos(tag, 0);
 	flags = swf_GetU8(tag);
+	if(tag->id == ST_PLACEOBJECT3) {
+	    flags2 = swf_GetU8(tag);
+	}
+	swf_GetU16(tag); //depth
+	if((flags2&8) || // hasClassname or (hasImage & hasCharacter)
+           ((flags2&16) && (flags&2))) swf_GetString(tag); //classname
 	if(flags&2) swf_GetU16(tag); //id
 	if(flags&4) swf_GetMatrix(tag, 0);
 	if(flags&8) swf_GetCXForm(tag, 0,1);
 	if(flags&16) swf_GetU16(tag); //ratio
-	if(flags&64) {
+	if(flags&32) swf_GetString(tag); //name
+	if(flags&64) { //clipdepth
 	    swf_ResetReadBits(tag);
 	    printf("%d->%d\n", GET16(&tag->data[tag->pos]),
 		               GET16(&tag->data[tag->pos])+add);
@@ -620,21 +630,30 @@ void write_changepos(TAG*output, TAG*tag, int movex, int movey, float scalex, fl
     {
 	switch(tag->id)
 	{
-	    case ST_PLACEOBJECT2: {
+	    case ST_PLACEOBJECT2: // FALLTHROUGH
+	    case ST_PLACEOBJECT3: {
 		MATRIX m;
 		U8 flags;
+		U8 flags2 = 0;
 		swf_GetMatrix(0, &m);
 		tag->pos = 0;
 		tag->readBit = 0;
 
 		flags = swf_GetU8(tag);
-		swf_SetU8(output, flags|4);
+		swf_SetU8(output, flags|4); //hasMatrix
+		if(tag->id == ST_PLACEOBJECT3) {
+		    flags2 = swf_GetU8(tag);
+		    swf_SetU8(output, flags2);
+		}
 		swf_SetU16(output, swf_GetU16(tag)); //depth
+
+		if (flags2&8) {
+		    swf_SetString(output, swf_GetString(tag)); //classname
+		}
 		//flags&1: move
 		if(flags&2) {
 		    swf_SetU16(output, swf_GetU16(tag)); //id
 		}
-		// flags & 4
 		if(flags&4) {
 		    swf_GetMatrix(tag, &m);
 		} else {
@@ -839,6 +858,7 @@ TAG* write_master(TAG*tag, SWF*master, SWF*slave, int spriteid, int replaceddefi
 	    switch(rtag->id) {
 		case ST_PLACEOBJECT:
 		case ST_PLACEOBJECT2:
+		case ST_PLACEOBJECT3:
 		    if(frame == slaveframe && !config.overlay)
 			dontwrite = 1;
 		case ST_REMOVEOBJECT:
@@ -944,13 +964,12 @@ void catcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
     mtag = master->firstTag;
     while(mtag && mtag->id!=ST_END)
     {
-	int num=1;
 	U16 depth;
 	msg("<debug> [master] write tag %02x (%d bytes in body)", 
 		mtag->id, mtag->len);
 	switch(mtag->id) {
-	    case ST_PLACEOBJECT2:
-		num++;
+	    case ST_PLACEOBJECT2: // FALLTHROUGH
+	    case ST_PLACEOBJECT3: // FALLTHROUGH
 	    case ST_PLACEOBJECT: {
 	       depth = swf_GetDepth(mtag);
 	       depths[depth] = 1;
@@ -1048,7 +1067,7 @@ void normalcombine(SWF*master, char*slave_name, SWF*slave, SWF*newswf)
 		}
 		swf_GetString(tag);
 	    }
-	} else if(tag->id == ST_PLACEOBJECT2) {
+	} else if((tag->id == ST_PLACEOBJECT2) || (tag->id == ST_PLACEOBJECT3)) {
 	    char * name = swf_GetName(tag);
 	    int id = swf_GetPlaceID(tag);
 
