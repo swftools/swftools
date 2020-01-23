@@ -242,7 +242,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     }
 
     if ((ret = DGifSlurp(gft)) != GIF_OK) {
-#if !defined(GIFLIB_MAJOR)  // ungif
+#if !defined(GIFLIB_MAJOR)  // libungif
         PrintGifError();
 #elif GIFLIB_MAJOR < 5
         fprintf(stderr, "GIF-LIB: %s\n", GifErrorString());
@@ -525,7 +525,7 @@ int CheckInputFile(char *fname, char **realname)
         global.max_image_height = gft->SHeight;
 
     if ((ret = DGifSlurp(gft)) != GIF_OK) {
-#if !defined(GIFLIB_MAJOR)  // ungif
+#if !defined(GIFLIB_MAJOR)  // libungif
         PrintGifError();
 #elif GIFLIB_MAJOR < 5
         fprintf(stderr, "GIF-LIB: %s\n", GifErrorString());
