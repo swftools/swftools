@@ -20,7 +20,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #ifndef __HISTORY_H
-#define __HISTORY_Y
+#define __HISTORY_H
 
 #include "../lib/types.h"
 #include "../lib/rfxswf.h"
