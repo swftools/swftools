@@ -243,7 +243,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 
     if ((ret = DGifSlurp(gft)) != GIF_OK) {
 #if !defined(GIFLIB_MAJOR)  // ungif
-		PrintGifError();
+        PrintGifError();
 #elif GIFLIB_MAJOR < 5
         fprintf(stderr, "GIF-LIB: %s\n", GifErrorString());
 #else
@@ -474,7 +474,7 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 #if GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1 || GIFLIB_MAJOR > 5
     DGifCloseFile(gft, D_GIF_SUCCEEDED);
 #else
-	DGifCloseFile(gft);
+    DGifCloseFile(gft);
 #endif
 
     return t;
@@ -526,7 +526,7 @@ int CheckInputFile(char *fname, char **realname)
 
     if ((ret = DGifSlurp(gft)) != GIF_OK) {
 #if !defined(GIFLIB_MAJOR)  // ungif
-		PrintGifError();
+        PrintGifError();
 #elif GIFLIB_MAJOR < 5
         fprintf(stderr, "GIF-LIB: %s\n", GifErrorString());
 #else
@@ -553,7 +553,7 @@ int CheckInputFile(char *fname, char **realname)
 #if GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1 || GIFLIB_MAJOR > 5
     DGifCloseFile(gft, D_GIF_SUCCEEDED);
 #else
-	DGifCloseFile(gft);
+    DGifCloseFile(gft);
 #endif
 
     return 0;
