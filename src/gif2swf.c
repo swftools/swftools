@@ -468,7 +468,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 
     free(pal);
     free(imagedata);
+
+#if GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1 || GIFLIB_MAJOR > 5
     DGifCloseFile(gft, D_GIF_SUCCEEDED);
+#else
+	DGifCloseFile(gft);
+#endif
 
     return t;
 }
@@ -541,7 +546,11 @@ int CheckInputFile(char *fname, char **realname)
             fprintf(stderr, "frame: %u, delay: %.3f sec\n", i + 1, getGifDelayTime(gft, i) / 100.0);
     }
 
+#if GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1 || GIFLIB_MAJOR > 5
     DGifCloseFile(gft, D_GIF_SUCCEEDED);
+#else
+	DGifCloseFile(gft);
+#endif
 
     return 0;
 }
