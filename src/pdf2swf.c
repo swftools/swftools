@@ -767,6 +767,7 @@ int main(int argn, char *argv[])
             }
     	}
     }
+
     gfxdocument_t* pdf = driver->open(driver, filename);
     if(!pdf) {
         msg("<error> Couldn't open %s", filename);
