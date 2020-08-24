@@ -763,7 +763,7 @@ int main(int argn, char *argv[])
     		}
     		strcat(outputname, pattern); 
     	}else{
-    	outputname = pattern;
+            outputname = pattern;
     	    }
     	}
     }
