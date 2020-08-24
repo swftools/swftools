@@ -762,8 +762,8 @@ int main(int argn, char *argv[])
     		    match++;
     		}
     		strcat(outputname, pattern); 
-    	}else{
-            outputname = pattern;
+    	    }else{
+                outputname = pattern;
     	    }
     	}
     }
