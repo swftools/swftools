@@ -735,7 +735,7 @@ int main(int argn, char *argv[])
 	}
     }
     if(checkoutputname){
-	char*u = 0;
+    	char*u = 0;
 	if((u = strchr(optoken, '%')))
 	    if(strchr(u+1, '%') || strchr(optoken, '%')!=u) {
 		msg("<error> only one %% allowed in filename\n");
