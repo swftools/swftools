@@ -718,21 +718,21 @@ int main(int argn, char *argv[])
     char*match = 0;
     int len; 
     if(lastocc != NULL) {
-        optoken = lastocc+1;
+	optoken = lastocc+1;
     }
     char*v = 0;
     if((v = strchr(optoken, '\\'))) {
-        if(strchr(v+1, '%')) {
-            checkoutputname = 0;
-            char*bsl = "\\";
-            match = optoken;
-            len = strlen(bsl);
-            while((match = strstr(match, bsl))) {
-                *match = '\0';
-                strcat(optoken, match+len);
-                match++;
-            }
-        }
+	if(strchr(v+1, '%')) {
+	    checkoutputname = 0;
+	    char*bsl = "\\";
+	    match = optoken;
+	    len = strlen(bsl);
+	    while((match = strstr(match, bsl))) {
+		*match = '\0';
+		strcat(optoken, match+len);
+		match++;
+	    }
+	}
     }
     if(checkoutputname){
     	char*u = 0;
