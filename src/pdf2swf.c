@@ -735,37 +735,37 @@ int main(int argn, char *argv[])
 	}
     }
     if(checkoutputname){
-    	char*u = 0;
-	if((u = strchr(optoken, '%'))) {
-            if(strchr(u+1, '%') || strchr(optoken, '%')!=u) {
-                msg("<error> only one %% allowed in filename\n");
+	char*u = 0;
+	if((u = strchr(optoken, '%')))
+	    if(strchr(u+1, '%') || strchr(optoken, '%')!=u) {
+		msg("<error> only one %% allowed in filename\n");
 		return 1;
-            }
-            if(preloader || viewer) {
-                msg("<error> -b/-l/-B/-L not supported together with %% in filename\n");
-                return 1;
-            }
-            msg("<notice> outputting one file per page");
-            one_file_per_page = 1;
-            char*pattern = (char*)malloc(strlen(optoken)+2);
-            /* convert % to %d */
-            int l = u-optoken+1;
-            memcpy(pattern, optoken, l);
-            pattern[l]='d';
-            strcpy(pattern+l+1, optoken+l);
-            if(lastocc != NULL){
-                match = strdup(outputname);
-                len = strlen(optoken);
-                while((match = strstr(outputname, optoken))) {
-                    *match = '\0';
-                    strcat(outputname, match+len);
-                    match++;
-                }
-                strcat(outputname, pattern); 
-            }else{
-                outputname = pattern;
-            }
-    	}
+	    }
+	    if(preloader || viewer) {
+		msg("<error> -b/-l/-B/-L not supported together with %% in filename\n");
+		return 1;
+	    }
+	    msg("<notice> outputting one file per page");
+	    one_file_per_page = 1;
+	    char*pattern = (char*)malloc(strlen(optoken)+2);
+	    /* convert % to %d */
+	    int l = u-optoken+1;
+	    memcpy(pattern, optoken, l);
+	    pattern[l]='d';
+	    strcpy(pattern+l+1, optoken+l);
+	    if(lastocc != NULL){
+		match = strdup(outputname);
+		len = strlen(optoken);
+		while((match = strstr(outputname, optoken))) {
+		    *match = '\0';
+		    strcat(outputname, match+len);
+		    match++;
+		}
+		strcat(outputname, pattern); 
+	    }else{
+	    	outputname = pattern;
+	    }
+	}
     }
 
     gfxdocument_t* pdf = driver->open(driver, filename);
