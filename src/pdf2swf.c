@@ -718,11 +718,11 @@ int main(int argn, char *argv[])
     char*match = 0;
     int len; 
     if(lastocc != NULL) {
-    	optoken = lastocc+1;
+        optoken = lastocc+1;
     }
     char*v = 0;
     if((v = strchr(optoken, '\\'))) {
-    	if(strchr(v+1, '%')) {
+        if(strchr(v+1, '%')) {
     	    checkoutputname = 0;
     	    char*bsl = "\\";
     	    match = optoken;
@@ -762,9 +762,9 @@ int main(int argn, char *argv[])
     		    match++;
     		}
     		strcat(outputname, pattern); 
-    	    }else{
-    		outputname = pattern;
-	    }
+    	}else{
+    	outputname = pattern;
+    	    }
     	}
     }
 
