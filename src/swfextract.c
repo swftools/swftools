@@ -963,6 +963,7 @@ int handlelossless(TAG*tag)
     error = uncompress (data, &datalen, &tag->data[tag->pos], tag->len-tag->pos);
     if(error != Z_OK) {
 	fprintf(stderr, "Zlib error %d (image %d)\n", error, id);
+	free(data);
 	return 0;
     }
     msg("<verbose> Uncompressed image is %d bytes (%d colormap)", datalen, (3+alpha)*cols);
