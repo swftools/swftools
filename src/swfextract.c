@@ -938,15 +938,25 @@ int handlelossless(TAG*tag)
     msg("<verbose> Format %d", format);
     msg("<verbose> Cols %d", cols);
     msg("<verbose> Bpp %d", bpp);
+    msg("<verbose> Alpha %d", alpha);
 
-    datalen = (width*height*bpp/8+cols*8);
-    do {
-	if(data)
-	    free(data);
-	datalen+=4096;
-	data = malloc(datalen);
-	error = uncompress (data, &datalen, &tag->data[tag->pos], tag->len-tag->pos);
-    } while(error == Z_BUF_ERROR);
+#define align_width(w, a) (((w) + ((a)-1)) & -(a))
+    if(format == 3) {
+	// row widths in the pixel data field must be rounded up to 32-bit word
+	datalen = (3+alpha)*cols + align_width((uLongf)width, 4)*height;
+    } else if (format == 5) {
+	datalen = 4*(uLongf)width*height;  // XRGB or ARGB
+    } else {  // fail safe
+	fprintf(stderr, "wrong format:%d (image %d)\n",format,id);
+	return 0;
+    }
+    data = malloc(datalen);
+    if(!data) {
+	fprintf(stderr, "malloc error datalen:%ld tag->id:%d\n",
+		datalen, tag->id);
+        return 0;
+    }
+    error = uncompress (data, &datalen, &tag->data[tag->pos], tag->len-tag->pos);
     if(error != Z_OK) {
 	fprintf(stderr, "Zlib error %d (image %d)\n", error, id);
 	return 0;
