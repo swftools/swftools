@@ -650,7 +650,6 @@ int handlefont(SWF*swf, TAG*tag)
     U16 id;
     char name[80];
     char*filename = name;
-    int t;
 
     id = swf_GetDefineID(tag);
     prepare_name(name, sizeof(name), "font", "swf", id);
@@ -884,12 +883,10 @@ int handlelossless(TAG*tag)
     char*filename = name;
     FILE*fi;
     int width, height;
-    int crc;
     int id;
     int t;
     U8 bpp = 1;
     U8 format;
-    U8 tmp;
     Bytef* data=0;
     U8* data2=0;
     U8* data3=0;
@@ -902,7 +899,6 @@ int handlelossless(TAG*tag)
     RGBA* palette;
     int pos;
     int error;
-    U32 tmp32;
 
     make_crc32_table();
 
@@ -931,10 +927,6 @@ int handlelossless(TAG*tag)
     width = swf_GetU16(tag);
     height = swf_GetU16(tag);
     if(format == 3) cols = swf_GetU8(tag) + 1;
-// this is what format means according to the flash specification. (which is
-// clearly wrong)
-//    if(format == 4) cols = swf_GetU16(tag) + 1;
-//    if(format == 5) cols = swf_GetU32(tag) + 1;
     else cols = 0;
 
     msg("<verbose> Width %d", width);
