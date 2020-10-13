@@ -937,15 +937,7 @@ int handlelossless(TAG*tag)
     msg("<verbose> Alpha %d", alpha);
 
 #define align_width(w, a) (((w) + ((a)-1)) & -(a))
-    if(format == 3) {
-	// row widths in the pixel data field must be rounded up to 32-bit word
-	datalen = (3+alpha)*cols + align_width((uLongf)width, 4)*height;
-    } else if (format == 5) {
-	datalen = 4*(uLongf)width*height;  // XRGB or ARGB
-    } else {  // fail safe
-	fprintf(stderr, "wrong format:%d (image %d)\n",format,id);
-	return 0;
-    }
+    datalen = (3+alpha)*cols + align_width((uLongf)width*(bpp/8), 4)*height;
     data = malloc(datalen);
     if(!data) {
 	fprintf(stderr, "malloc error datalen:%ld tag->id:%d\n",
