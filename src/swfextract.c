@@ -788,7 +788,11 @@ int handlejpeg(TAG*tag)
 
 	uLongf datalen = width*height;
 	Bytef *data = malloc(datalen);
-
+        if(!data) {
+            fprintf(stderr, "malloc error datalen:%ld tag->id:%d\n",
+                    datalen, tag->id);
+            return 0;
+        }
 	int error = uncompress(data, &datalen, &tag->data[end], (uLong)(tag->len - end));
 	if(error != Z_OK) {
 	  fprintf(stderr, "Zlib error %d\n", error);
