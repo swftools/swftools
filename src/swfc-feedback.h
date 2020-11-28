@@ -4,7 +4,7 @@
 
    Copyright (c) 2007 Huub Schaeks <huub@h-schaeks.speedlinq.nl>
    Copyright (c) 2007 Matthias Kramm <kramm@quiss.org>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -22,10 +22,10 @@
 #ifndef __FEEDBACK_H
 #define __FEEDBACK_H
 
-char* filename;
-int line;
-int column;
-void (*cleanUp)();
+extern char* filename;
+extern int line;
+extern int column;
+extern void (*cleanUp)();
 
 void syntaxerror(char*format, ...);
 void warning(char*format, ...);
