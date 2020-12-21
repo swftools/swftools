@@ -4,7 +4,7 @@
 
    Copyright (c) 2007 Huub Schaeks <huub@h-schaeks.speedlinq.nl>
    Copyright (c) 2007 Matthias Kramm <kramm@quiss.org>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -29,6 +29,12 @@ enum
     T_AFTER,
     T_SYMMETRIC
 };
+
+FILTER* noFilters = NULL;
+FILTER_BLUR* noBlur = NULL;
+FILTER_BEVEL* noBevel = NULL;
+FILTER_DROPSHADOW* noDropshadow = NULL;
+FILTER_GRADIENTGLOW* noGradientGlow = NULL;
 
 state_t* state_new(U16 frame, int function, float value, interpolation_t* inter)
 {
@@ -235,7 +241,7 @@ float state_value(state_t* modification, float frame)
 		return previous->value;
     if (modification->frame == frame)
 	{
-		do 
+		do
 		{
 	    previous = modification;
 	    modification = modification->next;
@@ -424,7 +430,7 @@ void insertOptimalNode(GRADIENT* g)
     	pos = g->num;
     insertNode(g, pos);
 }
-   
+
 void growGradient(GRADIENT* start, int size)
 {
     while (start->num < size)
@@ -525,7 +531,7 @@ FILTER* interpolateDropshadow(FILTER* filter1,FILTER* filter2, float ratio, inte
     if (!f2)
     	f2 = noDropshadow;
     if(!memcmp(&f1->color,&f2->color,sizeof(RGBA)) && f1->strength == f2->strength &&
-				f1->blurx == f2->blurx && f1->blury == f2->blury && 
+				f1->blurx == f2->blurx && f1->blury == f2->blury &&
 				f1->angle == f2->angle && f1->distance == f2->distance)
 		return copyFilter(filter1);
 			FILTER_DROPSHADOW*f = (FILTER_DROPSHADOW*)swf_NewFilter(FILTERTYPE_DROPSHADOW);
@@ -570,7 +576,7 @@ FILTER* interpolateBevel(FILTER* filter1,FILTER* filter2, float ratio, interpola
     if (!f2)
     	f2 = noBevel;
     if(!memcmp(&f1->shadow,&f2->shadow,sizeof(RGBA)) &&
-					!memcmp(&f1->highlight,&f2->highlight,sizeof(RGBA)) && 
+					!memcmp(&f1->highlight,&f2->highlight,sizeof(RGBA)) &&
 					f1->blurx == f2->blurx && f1->blury == f2->blury && f1->angle == f2->angle && f1->strength == f2->strength && f1->distance == f2->distance)
 		return copyFilter(filter1);
 				FILTER_BEVEL*f = (FILTER_BEVEL*)swf_NewFilter(FILTERTYPE_BEVEL);
@@ -791,7 +797,7 @@ FILTERLIST* filterState_value(filterState_t* modification, U16 frame)
 	return copyFilterList(previous->value);
     if (modification->frame == frame)
 	{
-		do 
+		do
 		{
 	    previous = modification;
 	    modification = modification->next;
