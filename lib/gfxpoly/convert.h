@@ -5,6 +5,8 @@
 #include "../gfxtools.h"
 #include "poly.h"
 
+extern type_t point_type;
+
 typedef struct _polywriter
 {
     void(*moveto)(struct _polywriter*, int32_t x, int32_t y);
