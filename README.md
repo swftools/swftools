@@ -1,3 +1,13 @@
+# Seeking For New Maintainer(s)
+
+This project hasn’t been actively developed for more than a decade.
+
+There is a bunch of issues that need to be fixed in this project.
+
+Although this software is widely distributed, it needs a new maintainer.
+
+If you are interested in being the new maintainer, please open an issue.
+
 # SWFTools
 
 SWFTools is a collection of utilities for working with Adobe Flash files (SWF files).
