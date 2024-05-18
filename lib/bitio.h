@@ -53,7 +53,11 @@ typedef struct _reader
     int (*seek)(struct _reader*, int pos);
     void (*dealloc)(struct _reader*);
 
-    void *internal;
+    union {
+        int fd;
+        int null;
+        void *ptr;
+    };
     int type;
     unsigned char mybyte;
     unsigned char bitpos;
@@ -66,7 +70,11 @@ typedef struct _writer
     void (*flush)(struct _writer*);
     void (*finish)(struct _writer*);
 
-    void *internal;
+    union {
+        int fd;
+        int null;
+        void *ptr;
+    };
     int type;
     unsigned char mybyte;
     unsigned char bitpos;
