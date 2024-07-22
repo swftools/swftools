@@ -444,7 +444,9 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		      } else if (type == 1) {
 			  U32 f = value[0]+(value[1]<<8)+
 				  (value[2]<<16)+(value[3]<<24);
-			  printf(" Float:%f", *(float*)&f);
+			  float f2;
+			  memcpy(&f2, f, sizeof(f2));
+			  printf(" Float:%f", f2);
 		      } else if (type == 2) {
 			  printf(" NULL");
 		      } else if (type == 3) {
@@ -455,6 +457,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 			  printf(" bool:%s", *value?"true":"false");
 		      } else if (type == 6) {
 			  U8 a[8];
+			  double b;
 			  memcpy(&a[4],value,4);
 			  memcpy(a,&value[4],4);
 #ifdef WORDS_BIGENDIAN
@@ -465,7 +468,8 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 			      a[7-t] = tmp;
 			  }
 #endif
-			  printf(" double:%f", *(double*)a);
+			  memcpy(&b, a, sizeof(b));
+			  printf(" double:%f", b);
 		      } else if (type == 7) {
 			  printf(" int:%d", value[0]+(value[1]<<8)+
 					    (value[2]<<16)+(value[3]<<24));
@@ -937,21 +941,27 @@ ActionTAG* action_Call(ActionTAG*atag) {return swf_AddActionTAG(atag, ACTION_CAL
 ActionTAG* action_End(ActionTAG*atag) {return swf_AddActionTAG(atag, ACTION_END, 0, 0);}
 ActionTAG* action_GotoFrame(ActionTAG*atag, U16 frame) 
 {
+    U16 tmp;
     atag = swf_AddActionTAG(atag, ACTION_GOTOFRAME, 0, 2);
-    *(U16*)atag->tmp = LE_16_TO_NATIVE(frame);
+    tmp = LE_16_TO_NATIVE(frame);
+    memcpy(&atag->tmp, tmp, sizeof(tmp));
     return atag;
 }
 
 ActionTAG* action_Jump(ActionTAG*atag, U16 branch) 
 {
+    U16 tmp;
     atag = swf_AddActionTAG(atag, ACTION_JUMP, 0, 2);
-    *(U16*)atag->tmp = LE_16_TO_NATIVE(branch);
+    tmp = LE_16_TO_NATIVE(branch);
+    memcpy(&atag->tmp, tmp, sizeof(tmp));
     return atag;
 }
 ActionTAG* action_If(ActionTAG*atag, U16 branch) 
 {
+    U16 tmp;
     atag = swf_AddActionTAG(atag, ACTION_IF, 0, 2);
-    *(U16*)atag->tmp = LE_16_TO_NATIVE(branch);
+    tmp = LE_16_TO_NATIVE(branch);
+    memcpy(&atag->tmp, tmp, sizeof(tmp));
     return atag;
 }
 ActionTAG* action_StoreRegister(ActionTAG*atag, U8 reg) 
@@ -980,8 +990,10 @@ ActionTAG* action_WaitForFrame2(ActionTAG*atag, U8 skip)
 }
 ActionTAG* action_WaitForFrame(ActionTAG*atag, U16 frame, U8 skip) 
 {
+    U16 tmp;
     atag = swf_AddActionTAG(atag, ACTION_WAITFORFRAME, 0, 3);
-    *(U16*)atag->tmp = LE_16_TO_NATIVE(frame);
+    tmp = LE_16_TO_NATIVE(frame);
+    memcpy(&atag->tmp, tmp, sizeof(tmp));
     *(U8*)&atag->tmp[2] = skip;
     return atag;
 }
@@ -1042,7 +1054,8 @@ ActionTAG* action_PushString(ActionTAG*atag, const char*str)
 ActionTAG* action_PushFloat(ActionTAG*atag, float f)
 {
     char*ptr = (char*)rfx_alloc(5);
-    U32 fd = *(U32*)&f;
+    U32 fd;
+    memcpy(&fd, &f, sizeof(f));
     ptr[0] = 1; //float
     ptr[1]  = fd;
     ptr[2]  = fd>>8;
