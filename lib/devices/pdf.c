@@ -26,6 +26,7 @@
 #include <memory.h>
 #include <pdflib.h>
 #include <math.h>
+#include "pdf.h"
 #include "../os.h"
 #include "../q.h"
 #include "../log.h"
@@ -38,26 +39,10 @@
 #include "../gfximage.h"
 #include "../gfxfont.h"
 
-typedef struct _internal {
-    PDF* p;
-    
-    char config_addblankpages;
-    double config_xpad;
-    double config_ypad;
-    int config_maxdpi;
-    int config_mindpi;
-
-    int width,height;
-    int num_pages;
-
-    char*tempfile;
-    char*page_opts;
-    double lastx,lasty;
-    gfxfontlist_t*fontlist;
-
-    char has_matrix;
-    double m00, m01, m10, m11;
-} internal_t;
+internal_t* get_internal(gfxdevice_t*dev) {
+	internal_t* internal = (internal_t*)dev->internal;
+	return internal;
+}
 
 static void restore_matrix(internal_t*i)
 {
@@ -109,7 +94,7 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
 	PDF_begin_document(i->p, i->tempfile, 0, "");
 	//PDF_set_value(i->p, "compress", 0);
 	PDF_set_parameter(i->p, "usercoordinates", "true");
-	PDF_set_parameter(i->p, "topdown", "true");
+	//PDF_set_parameter(i->p, "topdown", "true");
     }
 
     int width_plus_pad = width+floor(i->config_xpad*2);
@@ -328,7 +313,7 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     unlink(tempfile);
     
     char options[80];
-    set_matrix(i, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
+    set_matrix(i, matrix->m00, matrix->m01, -matrix->m10, -matrix->m11);
     /* an image's (0,0) is at the lower left corner */
     double x=matrix->tx + i->config_xpad + matrix->m10*img->height;
     double y=matrix->ty + i->config_ypad + matrix->m11*img->height;
@@ -353,7 +338,7 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 {
     internal_t*i = (internal_t*)dev->internal;
 
-    int num = font->num_glyphs<256-32?font->num_glyphs:256-32;
+    int num = font->num_glyphs<256?font->num_glyphs:256;
     if(type3) {
 	int fontid = 0;
 	if(!gfxfontlist_hasfont(i->fontlist, font)) {
@@ -389,17 +374,51 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
     } else if(ttf) {
 	int fontid = 0;
 	if(!gfxfontlist_hasfont(i->fontlist, font)) {
-	    char fontname[32],filename[32],fontname2[64];
-	    static int fontnr = 1;
-	    sprintf(fontname, "font%d", fontnr);
-	    sprintf(filename, "font%d.ttf", fontnr);
-	    fontnr++;
+	    char fontname[32],filename[32],fontnameutf16[64];
+		#ifdef FONT_TEST
+		char fontname2[32] = "FreeSerif";
+		#else
+		#define fontname2 fontname
+		#endif
+		
+	    sprintf(fontname, "font%s", font->id);
+	    sprintf(filename, "font%s.ttf", font->id);
 	    const char*old_id = font->id;
 	    font->id = fontname;
 	    int t;
+		// PDFlib lite doesn't support Unicode, so we need to hack up a custom encoding :/
+		int gt7bits = 0;
+		int numPrintableASCII = 0;
 	    for(t=0;t<num;t++) {
-		font->glyphs[t].unicode = 32+t;
+		if (font->glyphs[t].unicode >= 32 && font->glyphs[t].unicode <= 126) {
+			font->glyphs[t].eightbit = font->glyphs[t].unicode;
+			numPrintableASCII += 1;
+		} else {
+			font->glyphs[t].eightbit = 128 + (gt7bits++);
+			#ifndef FONT_TEST
+			/*font->glyphs[t].unicode = font->glyphs[t].eightbit + 128;*/
+			font->glyphs[t].unicode = 57343 + gt7bits;
+			#endif
+		}
+		/*printf("%s: %d (%d) -> %d\n", fontname, t, font->glyphs[t].eightbit, font->glyphs[t].unicode);*/
+		if (font->glyphs[t].unicode > 0) { // PDFlib thinks 0 means no Unicode value
+			PDF_encoding_set_char(i->p, fontname, font->glyphs[t].eightbit, "", font->glyphs[t].unicode); // cross our fingers and hope there aren't more than 256 glyphs
+		}
 	    }
+		
+		if (numPrintableASCII == 0) {
+			// Create a dummy glyph, or else PDFlib will complain that the encoding is not supported if there are no printable characters
+			gfxglyph_t*gfxglyph = (gfxglyph_t*)rfx_calloc(sizeof(gfxglyph_t));
+			gfxglyph->unicode = 32;
+			gfxglyph->name = NULL;
+			char* glyphname = (char*)malloc(sizeof(char)*10);
+			sprintf(glyphname, " ");
+			gfxglyph->name = glyphname;
+			font->glyphs[0] = *gfxglyph;
+			/*font->num_glyphs += 1;*/
+			PDF_encoding_set_char(i->p, fontname, 32, "", 32);
+		}
+		
 	    font->max_unicode = 0;
 	    font->unicode2glyph = 0;
 	    gfxfont_save(font, filename);
@@ -411,22 +430,49 @@ void pdf_addfont(gfxdevice_t*dev, gfxfont_t*font)
 	    sprintf(cmd, "mv %s.ttf test.ttf", fontname);system(cmd);
 	    system("rm -f test.ttx");
 	    if(system("ttx test.ttf")&0xff00) exit(1);
-	    sprintf(cmd, "mv test.ttf %s.old.ttf", fontname, fontname);system(cmd);
+	    sprintf(cmd, "mv test.ttf %s.old.ttf", fontname);system(cmd);
 	    sprintf(cmd, "ttx test.ttx;mv test.ttf %s.ttf", fontname);system(cmd);
 	    sprintf(cmd, "rm -f test.ttx");system(cmd);
 #endif
 	   
-	    int l = strlen(fontname);
+	    int l = strlen(fontname2);
 	    for(t=0;t<l+1;t++) {
-		fontname2[t*2+0] = fontname[t];
-		fontname2[t*2+1] = 0;
+		fontnameutf16[t*2+0] = fontname2[t];
+		fontnameutf16[t*2+1] = 0;
 	    }
 	    
-	    fontid = PDF_load_font(i->p, fontname2, l*2, "host", "embedding=true");
+		#ifdef FONT_TEST
+	    fontid = PDF_load_font(i->p, fontnameutf16, l*2, fontname, "embedding=false");
+		#else
+		fontid = PDF_load_font(i->p, fontnameutf16, l*2, fontname, "embedding=true");
+		#endif
 	    i->fontlist = gfxfontlist_addfont2(i->fontlist, font, (void*)(ptroff_t)fontid);
 	    unlink(filename);
 	}
     }
+}
+
+void pdf_charpos(gfxdevice_t*dev, gfxmatrix_t*matrix, double* tx, double* ty)
+{
+	internal_t*i = (internal_t*)dev->internal;
+	gfxmatrix_t m = *matrix;
+
+	m.m00*=64;
+	m.m01*=64;
+	m.m10*=64;
+	m.m11*=64;
+	if(ttf) {
+	    m.m10 = -m.m10;
+	    m.m11 = -m.m11;
+	}
+
+	if(!(fabs(m.m00 - i->m00) < 1e-6 &&
+	     fabs(m.m01 - i->m01) < 1e-6 &&
+	     fabs(m.m10 - i->m10) < 1e-6 &&
+	     fabs(m.m11 - i->m11) < 1e-6)) {
+	    set_matrix(i, m.m00, m.m01, m.m10, m.m11);
+	}
+	transform_back(i, m.tx+i->config_xpad, m.ty+i->config_ypad, tx, ty);
 }
 
 void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color, gfxmatrix_t*matrix)
@@ -454,31 +500,14 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
 	assert(gfxfontlist_hasfont(i->fontlist, font));
 	int fontid = (int)(ptroff_t)gfxfontlist_getuserdata(i->fontlist, font->id);
 
-	gfxmatrix_t m = *matrix;
-
-	m.m00*=64;
-	m.m01*=64;
-	m.m10*=64;
-	m.m11*=64;
-	if(ttf) {
-	    m.m10 = -m.m10;
-	    m.m11 = -m.m11;
-	}
-
-	if(!(fabs(m.m00 - i->m00) < 1e-6 &&
-	     fabs(m.m01 - i->m01) < 1e-6 &&
-	     fabs(m.m10 - i->m10) < 1e-6 &&
-	     fabs(m.m11 - i->m11) < 1e-6)) {
-	    set_matrix(i, m.m00, m.m01, m.m10, m.m11);
-	}
 	double tx, ty;
-	transform_back(i, m.tx+i->config_xpad, m.ty+i->config_ypad, &tx, &ty);
+	pdf_charpos(dev, matrix, &tx, &ty);
 	
 	PDF_setfont(i->p, fontid, ttf?16.0:1.0);
 	PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
 
 	char name[32];
-	sprintf(name, "%c", glyphnr+32);
+	sprintf(name, "%c", font->glyphs[glyphnr].eightbit);
 
 	if(fabs(tx - i->lastx) > 0.001 || ty != i->lasty) {
 	    PDF_show_xy2(i->p, name, strlen(name), tx, ty);
@@ -489,6 +518,43 @@ void pdf_drawchar(gfxdevice_t*dev, gfxfont_t*font, int glyphnr, gfxcolor_t*color
 	i->lastx = tx + glyph->advance;
 	i->lasty = ty;
     }
+}
+
+void pdf_drawchars(gfxdevice_t*dev, gfxfont_t*font, int* chars, int len, gfxcolor_t*color, gfxmatrix_t*matrixes)
+{
+	internal_t*i = (internal_t*)dev->internal;
+	
+	double tx0, ty0;
+	pdf_charpos(dev, &matrixes[0], &tx0, &ty0);
+	double txlast = tx0, tylast = ty0;
+	
+	char text[len + 32];
+	double xadvance[len + 32];
+	
+	int k;
+	for (k = 0; k < len; k++) {
+		gfxglyph_t*glyph = &font->glyphs[chars[k]];
+		assert(gfxfontlist_hasfont(i->fontlist, font));
+		
+		char name[32];
+		sprintf(name, "%c", font->glyphs[chars[k]].eightbit);
+		text[k] = name[0];
+		
+		if (k > 0) {
+			double tx, ty;
+			pdf_charpos(dev, &matrixes[k], &tx, &ty);
+			xadvance[k - 1] = tx - txlast;
+			txlast = tx; tylast = ty;
+		}
+	}
+	// y u do dis, pdflib
+	xadvance[len - 1] = 0;
+	
+	int fontid = (int)(ptroff_t)gfxfontlist_getuserdata(i->fontlist, font->id);
+	PDF_setfont(i->p, fontid, ttf?16.0:1.0);
+	PDF_setrgbcolor_fill(i->p, color->r/255.0, color->g/255.0, color->b/255.0);
+	PDF_set_text_pos(i->p, tx0, ty0);
+	PDF_xshow(i->p, text, len, xadvance);
 }
 
 void pdf_drawlink(gfxdevice_t*dev, gfxline_t*line, const char*action, const char*text)
@@ -602,4 +668,6 @@ void gfxdevice_pdf_init(gfxdevice_t*dev)
     i->has_matrix = 0;
     i->config_maxdpi = 72;
     i->p = PDF_new();
+    /*PDF_set_parameter(i->p, "logging", "filename=stderr classes={api=9 warning=9 font=9}");*/
+    PDF_set_info(i->p, "Creator", "gfx2gfx-pdftext by RunasSudo");
 }

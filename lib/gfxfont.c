@@ -614,9 +614,10 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font, char eot)
     int num_glyphs = font->num_glyphs;
     int offset = 0;
     int t;
-    char has_nondef_glyph = 
+    /*char has_nondef_glyph = 
 	font->num_glyphs && font->glyphs[0].unicode==-1 && 
-	(!font->glyphs[0].line || !font->glyphs[0].line->next);
+	(!font->glyphs[0].line || !font->glyphs[0].line->next);*/
+	char has_nondef_glyph = 0;
 
     if(!has_nondef_glyph) {
 	/* insert a new .nondef glyph at the start of the font */
@@ -698,7 +699,7 @@ ttf_t* gfxfont_to_ttf(gfxfont_t*font, char eot)
 	}
 	dest->advance = src->advance*scale;
 
-	//dest->xmin=0; //TODO: might be necessary for some font engines?
+	dest->xmin=0; //TODO: might be necessary for some font engines?
 
 	dest->advance = src->advance*scale;
 
