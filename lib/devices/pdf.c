@@ -94,7 +94,7 @@ void pdf_startpage(gfxdevice_t*dev, int width, int height)
 	PDF_begin_document(i->p, i->tempfile, 0, "");
 	//PDF_set_value(i->p, "compress", 0);
 	PDF_set_parameter(i->p, "usercoordinates", "true");
-	//PDF_set_parameter(i->p, "topdown", "true");
+	PDF_set_parameter(i->p, "topdown", "true");
     }
 
     int width_plus_pad = width+floor(i->config_xpad*2);
@@ -313,7 +313,7 @@ void pdf_fillbitmap(gfxdevice_t*dev, gfxline_t*line, gfximage_t*img, gfxmatrix_t
     unlink(tempfile);
     
     char options[80];
-    set_matrix(i, matrix->m00, matrix->m01, -matrix->m10, -matrix->m11);
+    set_matrix(i, matrix->m00, matrix->m01, matrix->m10, matrix->m11);
     /* an image's (0,0) is at the lower left corner */
     double x=matrix->tx + i->config_xpad + matrix->m10*img->height;
     double y=matrix->ty + i->config_ypad + matrix->m11*img->height;

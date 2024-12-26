@@ -169,7 +169,7 @@ static gfxgradient_t* convertGradient(GRADIENT*from)
 
 gfxline_t* swfline_to_gfxline(SHAPELINE*line, int linestyle, int fillstyle0, bool flip)
 {
-    int flipflop = flip ? -1 : 1;
+    int flipflop = flip ? 1 : 1;
     gfxdrawer_t d;
     SCOORD x=0,y=0,xx=0,yy=0;
     gfxline_t*l;
