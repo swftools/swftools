@@ -27,6 +27,7 @@ typedef struct _gfxglyph
     gfxcoord_t advance;
 
     int unicode; // array?
+    int eightbit;
     const char*name;
 } gfxglyph_t;
 
