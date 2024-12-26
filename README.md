@@ -1,12 +1,21 @@
-# Seeking For New Maintainer(s)
-
-This project hasn’t been actively developed for more than a decade.
-
-There is a bunch of issues that need to be fixed in this project.
-
-Although this software is widely distributed, it needs a new maintainer.
-
-If you are interested in being the new maintainer, please open an issue.
+# Compile instructions
+1) Clone repo
+```
+git clone https://github.com/flanter21/swftools.git
+```
+2) Update config.guess and config.sub
+```
+cd swftools
+autoreconf --install --force --include=m4
+autoupdate
+autoconf
+./configure
+```
+3) Compile twice (for some reason)
+```
+make
+make
+```
 
 # SWFTools
 

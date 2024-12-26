@@ -46,6 +46,10 @@
 #include "../lib/pdf/pdf.h"
 #include "../lib/log.h"
 
+#define STRINGIFY2(s) #s
+#define STRINGIFY(s) STRINGIFY2(s)
+#define GIT_VERSION_STRING STRINGIFY(GIT_VERSION)
+
 static gfxsource_t*driver = 0;
 
 static char * outputname = 0;
@@ -116,7 +120,7 @@ int args_callback_option(char*name,char*val) {
     }
     else if (!strcmp(name, "V"))
     {	
-	printf("gfx2gfx - part of %s %s\n", PACKAGE, VERSION);
+	printf("gfx2gfx-pdf2text - part of %s %s (build %s)\n", PACKAGE, VERSION, GIT_VERSION_STRING);
 	exit(0);
     }
     else 
