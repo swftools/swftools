@@ -749,10 +749,21 @@ int handlejpeg(TAG*tag)
 	int end = tag->len;
 	int pos = findjpegboundary(&tag->data[2], tag->len-2);
 	if(pos>=0) {
+            int skip1=0;
+            int skip2=0;
             pos+=2;
             fi = save_fopen(filename, "wb");
-            fwrite(&tag->data[2], pos-2, 1, fi);
-            fwrite(&tag->data[pos+4], end-(pos+4), 1, fi);
+            if (end-pos > 8 && tag->data[pos+4] == 0xff && tag->data[pos+5] == 0xe0) { // app0 in second? move it
+                int len = 2+(tag->data[pos+6]<<8)+tag->data[pos+7];
+                if (pos+4+len <= end && tag->data[0] == 0xff && tag->data[1] == 0xd8) {
+                    skip1 = 2;
+                    skip2 = len;
+                    fwrite(&tag->data[2], skip1, 1, fi); // write soi
+                    fwrite(&tag->data[pos+4], skip2, 1, fi); // write app0
+                }
+            }
+            fwrite(&tag->data[2+skip1], pos-2-skip1, 1, fi);
+            fwrite(&tag->data[pos+4+skip2], end-(pos+4+skip2), 1, fi);
             fclose(fi);
         } else {
             fi = save_fopen(filename, "wb");
@@ -1124,7 +1135,8 @@ int handledefinesound(TAG*tag)
 	printf("Sound is ADPCM, format: %s samples/sec, %d bit, %s\n", rates[rate], bits, stereo?"stereo":"mono");
 	extension = "adpcm";
     } else {
-        return 0;
+	printf("Unknown sound format %d: %s samples/sec, %d bit, %s\n", format, rates[rate], bits, stereo?"stereo":"mono");
+	extension = "unknown";
     }
     prepare_name(buf, sizeof(buf), "sound", extension, id);
     if(numextracts==1) {

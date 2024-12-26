@@ -110,6 +110,7 @@ enum
   SWFACTION_SHIFTRIGHT2             = 0x65,
   SWFACTION_STRICTEQ                = 0x66,
   SWFACTION_CONSTANTPOOL            = 0x88,
+  SWFACTION_DEFINEFUNCTION2         = 0x8E,
   SWFACTION_WITH                    = 0x94,
   SWFACTION_DEFINEFUNCTION          = 0x9B,
 

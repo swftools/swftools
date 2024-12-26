@@ -681,11 +681,11 @@ static SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebi
 		y = swf_GetSBits(tag, n); //y
 	    }
 	    if(flags&2)
-		fill0 = swf_GetBits(tag, fillbits) + fillstyleadd; 
+		fill0 = swf_GetBits(tag, fillbits);
 	    if(flags&4)
-		fill1 = swf_GetBits(tag, fillbits) + fillstyleadd; 
+		fill1 = swf_GetBits(tag, fillbits);
 	    if(flags&8)
-		line = swf_GetBits(tag, linebits) + linestyleadd; 
+		line  = swf_GetBits(tag, linebits);
 	    if(flags&16) {
 		if(!shape2) {
 		    fprintf(stderr, "rfxswf: Error: Additional fillstyles not supported\n");fflush(stderr);
@@ -699,6 +699,12 @@ static SHAPELINE* swf_ParseShapeData(U8*data, int bits, int fillbits, int linebi
 		fillbits = swf_GetBits(tag, 4);
 		linebits = swf_GetBits(tag, 4);
 	    }
+	    if((flags&2) && fill0)
+		fill0 += fillstyleadd;
+	    if((flags&4) && fill1)
+		fill1 += fillstyleadd;
+	    if((flags&8) && line)
+		line  += linestyleadd;
 	    if(flags&1) { //move
 		lines->next = (SHAPELINE*)rfx_alloc(sizeof(SHAPELINE));
 		lines = lines->next;

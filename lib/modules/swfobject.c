@@ -79,9 +79,8 @@ static int objectplace(TAG * t,U16 id,U16 depth,MATRIX * m,CXFORM * cx,const cha
   if (flags&PF_MATRIX) swf_SetMatrix(t,m);
   if (flags&PF_CXFORM) swf_SetCXForm(t,cx,1);
   if (flags&PF_RATIO) swf_SetU16(t,0);
-  /* ??? The spec states that name comes first? */
-  if (flags&PF_CLIPDEPTH) swf_SetU16(t, clipaction);
   if (flags&PF_NAME) swf_SetString(t,name);
+  if (flags&PF_CLIPDEPTH) swf_SetU16(t, clipaction);
 	
   if (flags2&PF2_BLENDMODE)
     swf_SetU8(t,blendmode);
@@ -133,9 +132,8 @@ void swf_SetPlaceObject(TAG * t,SWFPLACEOBJECT* obj)
 	if (flags&PF_CXFORM) swf_SetCXForm(t,&obj->cxform,1);
 	if (flags&PF_RATIO) swf_SetU16(t,obj->ratio);
   
-	/* ??? The spec states that name comes first? */
-	if (flags&PF_CLIPDEPTH) swf_SetU16(t,obj->clipdepth);
 	if (flags&PF_NAME) swf_SetString(t,obj->name);
+	if (flags&PF_CLIPDEPTH) swf_SetU16(t,obj->clipdepth);
 
 	if (flags2&PF2_FILTERS) {
 	    swf_SetU8(t,obj->filters->num);
@@ -190,8 +188,6 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
         if(flags&PF_RATIO) obj->ratio = swf_GetU16(tag);
         /* if you modify the order of these operations, also
            modify it in ../src/swfcombine.c */
-        if(flags&PF_CLIPDEPTH) 
-            obj->clipdepth = swf_GetU16(tag); //clip
         if(flags&PF_NAME) {
             int l,t;
             U8*data;
@@ -202,6 +198,8 @@ void swf_GetPlaceObject(TAG * tag,SWFPLACEOBJECT* obj)
             obj->name = (char*)data;
             while((data[t++] = swf_GetU8(tag))); 
         }
+        if(flags&PF_CLIPDEPTH) 
+            obj->clipdepth = swf_GetU16(tag); //clip
 	if(flags2&PF2_BLENDMODE) {
 	    obj->blendmode = swf_GetU8(tag);
 	}

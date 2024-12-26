@@ -58,7 +58,7 @@ void write_base64(FILE*fi, const char* s)
 	    data[3] = '=';
 	break;
 	default:
-	    fprintf(stderr, "internal error in base64 implementation (%d)\n", end-b);
+	    fprintf(stderr, "internal error in base64 implementation (%td)\n", end-b);
 	break;
     }
     fwrite(data, 4, 1, fi);

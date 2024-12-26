@@ -242,10 +242,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
     }
 
     if ((ret = DGifSlurp(gft)) != GIF_OK) {
-#if defined(GIFLIB_MAJOR) && GIFLIB_MAJOR >= 5
-        fprintf(stderr, "GIF-LIB: %s\n", GifErrorString(ret));
-#else
+#if !defined(GIFLIB_MAJOR)  // libungif
         PrintGifError();
+#elif GIFLIB_MAJOR < 5
+        fprintf(stderr, "GIF-LIB: %s\n", GifErrorString());
+#else
+        fprintf(stderr, "GIF-LIB: %s\n", GifErrorString(ret));
 #endif
         return t;
     }
@@ -468,7 +470,12 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id, int imgidx)
 
     free(pal);
     free(imagedata);
+
+#if GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1 || GIFLIB_MAJOR > 5
     DGifCloseFile(gft, D_GIF_SUCCEEDED);
+#else
+    DGifCloseFile(gft);
+#endif
 
     return t;
 }
@@ -518,10 +525,12 @@ int CheckInputFile(char *fname, char **realname)
         global.max_image_height = gft->SHeight;
 
     if ((ret = DGifSlurp(gft)) != GIF_OK) {
-#if defined(GIFLIB_MAJOR) && GIFLIB_MAJOR >= 5
-        fprintf(stderr, "GIF-LIB: %s\n", GifErrorString(ret));
-#else
+#if !defined(GIFLIB_MAJOR)  // libungif
         PrintGifError();
+#elif GIFLIB_MAJOR < 5
+        fprintf(stderr, "GIF-LIB: %s\n", GifErrorString());
+#else
+        fprintf(stderr, "GIF-LIB: %s\n", GifErrorString(ret));
 #endif
         return -1;
     }
@@ -541,7 +550,11 @@ int CheckInputFile(char *fname, char **realname)
             fprintf(stderr, "frame: %u, delay: %.3f sec\n", i + 1, getGifDelayTime(gft, i) / 100.0);
     }
 
+#if GIFLIB_MAJOR == 5 && GIFLIB_MINOR >= 1 || GIFLIB_MAJOR > 5
     DGifCloseFile(gft, D_GIF_SUCCEEDED);
+#else
+    DGifCloseFile(gft);
+#endif
 
     return 0;
 }

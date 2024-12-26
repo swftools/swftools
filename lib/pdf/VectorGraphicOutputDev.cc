@@ -49,6 +49,37 @@
 
 #include "../png.h"
 
+namespace {
+gfxcxform_t CreateAlphaCxform(float alpha) {
+	gfxcxform_t cxform;
+	cxform.rr = 1.f;
+	cxform.rg = 0.f;
+	cxform.rb = 0.f;
+	cxform.ra = 0.f;
+	cxform.tr = 0.f;
+
+	cxform.gr = 0.f;
+	cxform.gg = 1.f;
+	cxform.gb = 0.f;
+	cxform.ga = 0.f;
+	cxform.tg = 0.f;
+
+	cxform.br = 0.f;
+	cxform.bg = 0.f;
+	cxform.bb = 1.f;
+	cxform.ba = 0.f;
+	cxform.tb = 0.f;
+
+	cxform.ar = 0.f;
+	cxform.ag = 0.f;
+	cxform.ab = 0.f;
+	cxform.aa = alpha;
+	cxform.ta = 0.f;
+	return cxform;
+}
+
+}
+
 /* config */
 static int verbose = 0;
 static int dbgindent = 1;
@@ -1030,7 +1061,7 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
         double x1,double y1,
         double x2,double y2,
         double x3,double y3,
-        double x4,double y4, int type, int multiply)
+        double x4,double y4, int type, int multiply, gfxcxform_t* color_transform)
 {
     gfxcolor_t*newpic=0;
     
@@ -1073,19 +1104,19 @@ static void drawimage(gfxdevice_t*dev, gfxcolor_t* data, int sizex,int sizey,
 	dev->setparameter(dev, "next_bitmap_is_jpeg", "1");
 
     dump_outline(&p1);
-    dev->fillbitmap(dev, &p1, &img, &m, 0);
+    dev->fillbitmap(dev, &p1, &img, &m, color_transform);
 }
 
 void drawimagejpeg(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey, 
-        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4, int multiply)
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4, int multiply, gfxcxform_t* color_transform)
 {
-    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG, multiply);
+    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_JPEG, multiply, color_transform);
 }
 
 void drawimagelossless(gfxdevice_t*dev, gfxcolor_t*mem, int sizex,int sizey, 
-        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4, int multiply)
+        double x1,double y1, double x2,double y2, double x3,double y3, double x4,double y4, int multiply, gfxcxform_t* color_transform)
 {
-    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS, multiply);
+    drawimage(dev,mem,sizex,sizey,x1,y1,x2,y2,x3,y3,x4,y4, IMAGE_TYPE_LOSSLESS, multiply, color_transform);
 }
 
 
@@ -1103,6 +1134,7 @@ void VectorGraphicOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stre
   int ncomps = 1;
   int bits = 1;
   unsigned char* maskbitmap = 0;
+  gfxcxform_t color_transform = CreateAlphaCxform(state->getFillOpacity());
 				 
   if(colorMap) {
     ncomps = colorMap->getNumPixelComps();
@@ -1254,7 +1286,7 @@ void VectorGraphicOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stre
 	  pic2[width*y+x] = pal[pic[y*width+x]];
 	}
       }
-      drawimagelossless(device, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
+      drawimagelossless(device, pic2, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply, 0);
       delete[] pic2;
       delete[] pic;
       delete imgStr;
@@ -1296,9 +1328,9 @@ void VectorGraphicOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stre
 	}
       }
       if(str->getKind()==strDCT)
-	  drawimagejpeg(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
+	  drawimagejpeg(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply, &color_transform);
       else
-	  drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
+	  drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply, &color_transform);
       delete[] pic;
       delete imgStr;
       if(maskbitmap) free(maskbitmap);
@@ -1353,7 +1385,8 @@ void VectorGraphicOutputDev::drawGeneralImage(GfxState *state, Object *ref, Stre
 	      height = maskHeight;
 	  }
       }
-      drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply);
+
+      drawimagelossless(device, pic, width, height, x1,y1,x2,y2,x3,y3,x4,y4, config_multiply, &color_transform);
 
       delete[] pic;
       delete imgStr;

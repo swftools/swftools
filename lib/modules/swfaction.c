@@ -141,7 +141,8 @@ r: register (byte)
 {6,"StringGreater", 0x68,""},
 {6,"Enumerate2", 0x55,""},
 {6,"InstanceOf", 0x54,""},
-{6,"StrictEquals", 0x66,""}
+{6,"StrictEquals", 0x66,""},
+{7,"DefineFunction2", 0x8e, "{"}
 };
 static int definedactions = sizeof(actions)/sizeof(struct Action);
 
@@ -223,7 +224,7 @@ void swf_ActionSet(TAG*tag, ActionTAG*action)
     }
 }
 
-int OpAdvance(char c, U8*data)
+int OpAdvance(ActionTAG *atag, char c, U8*data)
 {
     switch (c)
     {
@@ -283,8 +284,15 @@ int OpAdvance(char c, U8*data)
 	    while(*data++); //name
 	    num = (*data++); //num
 	    num += (*data++)*256;
+	    if(atag->op == 0x8e/*DefineFunction2*/) {
+		data += 3; // RegisterCount and flags
+	    }
 	    for(t=0;t<num;t++)
+	    {
+		if(atag->op == 0x8e/*DefineFunction2*/)
+			data++; // Register
 		while(*data++); //param
+	    }
 	    codesize = (*data++); //num
 	    codesize += (*data++)*256;
 	    return data-odata;
@@ -378,7 +386,12 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		      while(data[s++]); //name
 		      num = (data[s++]); //num
 		      num += (data[s++])*256;
+		      if(atag->op == 0x8e/*DefineFunction2*/) {
+			  s += 3; // RegisterCount and flags
+		      }
 		      for(t=0;t<num;t++) {
+			  if(atag->op == 0x8e/*DefineFunction2*/)
+			      s++; // Register
 			  printf("%s",data+s);  // 10/22/04 MD: added +s to
 			  if(t<num-1)
 			      printf(", ");
@@ -474,7 +487,7 @@ void swf_DumpActions(ActionTAG*atag, char*prefix)
 		      }
 		  } break;
 	      }
-	      data += OpAdvance(*cp, data);
+	      data += OpAdvance(atag, *cp, data);
 	      if((*cp!='c' || !poollen) &&
 		 (*cp!='p' || !(data<&atag->data[atag->len])))
 		  cp++;
@@ -598,7 +611,7 @@ int swf_ActionEnumerate(ActionTAG*atag, char*(*callback)(char*), int type)
 			}
 		    } break;
 		}
-		data += OpAdvance(*cp, data);
+		data += OpAdvance(atag, *cp, data);
 		if(*cp!='c' || !poollen)
 		    cp++;
 		if(poollen)
@@ -790,6 +803,7 @@ int inline ActionTagSize(ActionTAG*atag)
 #define ACTION_SETTARGET      0x8b
 #define ACTION_GOTOLABEL      0x8c
 #define ACTION_WAITFORFRAME2  0x8d
+#define ACTION_DEFINEFUNCTION2 0x8e
 #define ACTION_WITH           0x94
 #define ACTION_PUSH           0x96
 #define ACTION_JUMP           0x99

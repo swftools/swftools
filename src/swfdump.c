@@ -218,6 +218,8 @@ void dumpButton2Actions(TAG*tag, char*prefix)
     U32 oldTagPos;
     U32 offsetpos;
     U32 condition;
+    U8 state;
+    int nfilters, i;
 
     oldTagPos = swf_GetTagPos(tag);
 
@@ -226,14 +228,27 @@ void dumpButton2Actions(TAG*tag, char*prefix)
     swf_GetU16(tag);          // Character ID
     swf_GetU8(tag);           // Flags;
 
-    offsetpos = swf_GetTagPos(tag);  // first offset
-    swf_GetU16(tag);
+    offsetpos = swf_GetU16(tag);  // first offset
 
-    while (swf_GetU8(tag))      // state  -> parse ButtonRecord
-    { swf_GetU16(tag);          // id
+    while (state = swf_GetU8(tag))      // state  -> parse ButtonRecord
+    {
+      swf_GetU16(tag);          // id
       swf_GetU16(tag);          // layer
       swf_GetMatrix(tag,NULL);  // matrix
       swf_GetCXForm(tag,NULL,1);  // cxform
+      if (state & 16)
+      {   // ButtonHasFilterList
+          nfilters = swf_GetU8(tag);
+          for (i = 0; i < nfilters; i++)
+          {
+              FILTER *f = swf_GetFilter(tag);
+              swf_DeleteFilter(f);
+          }
+      }
+      if (state & 32)
+      {   // ButtonHasBlendMode
+          swf_GetU8(tag);
+      }
     }
 
     while(offsetpos)
@@ -707,6 +722,7 @@ void handlePlaceObject23(TAG*tag, char*prefix)
 	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
 	}
     }
+    if(flags&32) { while(swf_GetU8(tag)); }
     if(flags&64) {
 	U16 clip = swf_GetU16(tag); //clip
 	if(placements) {
@@ -715,7 +731,6 @@ void handlePlaceObject23(TAG*tag, char*prefix)
 	    ppos[2] += sprintf(pstr[2]+ppos[2], "|       ");
 	}
     }
-    if(flags&32) { while(swf_GetU8(tag)); }
 
     if(flags2&1) { // filter list
 	U8 num = swf_GetU8(tag);
