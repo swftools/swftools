@@ -1495,7 +1495,10 @@ void s_image(const char*name, const char*type, const char*filename, int quality)
 	RGBA*data = 0;
 	swf_SetU16(tag, imageID);
 
-	png_load(filename, &width, &height, (unsigned char**)&data);
+	if(!png_load(filename, &width, &height, (unsigned char**)&data)) {
+	    msg("<error>  Failed to load from %s", filename);
+	    return;
+	}
 
 	if(!data) {
 	    syntaxerror("Image \"%s\" not found, or contains errors", filename);
@@ -1667,11 +1670,17 @@ void s_sound(const char*name, const char*filename)
 
     if(wav_read(&wav, filename))
     {
-        int t;
-        wav_convert2mono(&wav, &wav2, 44100);
-        samples = (U16*)wav2.data;
-        numsamples = wav2.size/2;
-        free(wav.data);
+	int t;
+	if(!wav_convert2mono(&wav, &wav2, 44100))
+	{
+	    warning("Couldn't convert WAV file \"%s\" to mono", filename);
+	    samples = 0;
+	    numsamples = 0;
+	} else {
+	    samples = (U16*)wav2.data;
+	    numsamples = wav2.size/2;
+	}
+	free(wav.data);
 #ifdef WORDS_BIGENDIAN
 	/* swap bytes */
         for(t=0;t<numsamples;t++)

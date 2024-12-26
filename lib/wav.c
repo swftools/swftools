@@ -203,7 +203,7 @@ void wav_print(struct WAV*wav)
 
 int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
 {
-    int samplelen=src->size/src->align;
+    int samplelen;
     int bps=src->bps;
     double ratio;
     double pos = 0;
@@ -212,6 +212,15 @@ int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
     int i;
     int fill;
 
+    if (src->align == 0) {
+	fprintf(stderr, "Illegal wave align == 0\n");
+	return 0;
+    }
+    if (src->align != (channels*bps/8)) {
+	fprintf(stderr, "Unsupported non-PCM convert to mono: align:%d != (channels:%d*bps:%d/8)\n", src->align , channels, bps);
+	return 0;
+    }
+
     dest->sampsPerSec = rate;
     dest->bps = 16;
     dest->channels = 1;
@@ -219,6 +228,7 @@ int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
     dest->tag = src->tag;
     dest->bytesPerSec = dest->sampsPerSec*dest->align;
 
+    samplelen=(src->size+(src->align-1))/src->align; // round up
     ratio = (double)dest->sampsPerSec/(double)src->sampsPerSec;
     fill = (int)(ratio+1)*2;
     
@@ -286,6 +296,9 @@ int wav_convert2mono(struct WAV*src, struct WAV*dest, int rate)
 	}
     } else {
 	fprintf(stderr, "Unsupported bitspersample value: %d\n", bps);
+	free(dest->data);
+	dest->data = 0;
+	return 0;
     }
     return 1;
 }

@@ -6,7 +6,7 @@
    Part of the swftools package.
 
    Copyright (c) 2008 Matthias Kramm <kramm@quiss.org>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -114,7 +114,7 @@ extern type_t slotinfo_type;
 char slotinfo_equals(slotinfo_t*c1, slotinfo_t*c2);
 
 void registry_init();
-        
+
 classinfo_t* classinfo_register(int access, const char*package, const char*name, int num_interfaces);
 methodinfo_t* methodinfo_register_onclass(classinfo_t*cls, U8 access, const char*ns, const char*name, char is_static);
 methodinfo_t* methodinfo_register_global(U8 access, const char*package, const char*name);
@@ -135,7 +135,7 @@ void registry_fill_multiname(multiname_t*m, namespace_t*n, slotinfo_t*c);
     namespace_t m##_ns;\
     (x)->package; \
     registry_fill_multiname(&m, &m##_ns, (slotinfo_t*)(x));
-                    
+
 multiname_t* classinfo_to_multiname(slotinfo_t*cls);
 
 char registry_isfunctionclass();
@@ -153,7 +153,6 @@ void registry_use(slotinfo_t*s);
 asset_bundle_list_t*registry_getassets();
 
 // static multinames
-classinfo_t voidclass;
 classinfo_t* registry_getanytype();
 classinfo_t* registry_getarrayclass();
 classinfo_t* registry_getobjectclass();
@@ -218,7 +217,7 @@ void slotinfo_dump(slotinfo_t*s);
 #define TYPE_IS_XML(t)      ((t) == registry_getxmlclass())
 #define TYPE_XMLLIST        registry_getxmllistclass()
 #define TYPE_IS_XMLLIST(t)  ((t) == registry_getxmllistclass())
-        
+
 #define TYPE_IS_BUILTIN_SIMPLE(type) (TYPE_IS_INT(type) || \
                                       TYPE_IS_UINT(type) || \
                                       TYPE_IS_FLOAT(type) || \

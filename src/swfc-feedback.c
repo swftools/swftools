@@ -4,7 +4,7 @@
 
    Copyright (c) 2007 Huub Schaeks <huub@h-schaeks.speedlinq.nl>
    Copyright (c) 2007 Matthias Kramm <kramm@quiss.org>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -23,6 +23,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "swfc-feedback.h"
+
+char* filename = NULL;
+int line = 0;
+int column = 0;
+void (*cleanUp)() = NULL;
 
 void syntaxerror(char*format, ...)
 {

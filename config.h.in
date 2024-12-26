@@ -19,6 +19,15 @@
 #undef SIZEOF_SIGNED_LONG_LONG
 #undef SIZEOF_VOIDP
 
+/* Define to `int' if <sys/types.h> does not define. */
+#undef boolean
+
+/* boolean constant false */
+#undef FALSE
+
+/* boolean constant true */
+#undef TRUE
+
 /* Define if you have the ANSI C header files.  */
 #undef STDC_HEADERS
 

@@ -198,7 +198,7 @@ int png_read_header(FILE*fi, struct png_header*header)
 		exit(1);
 	    }
 	    if(a!=8 && (b==2 || b==6)) {
-		fprintf(stderr, "Bpp %d in mode %d not supported!\n", b, a);
+		fprintf(stderr, "Bpp %d in mode %d not supported!\n", a, b);
 		exit(1);
 	    }
 	    if(c!=0) {
@@ -473,7 +473,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
     if(global.mkjpeg) {
 #ifdef HAVE_JPEGLIB
 	RGBA*data = 0;
-	png_load(sname, &width, &height, (unsigned char**)&data);
+	if(!png_load(sname, &width, &height, (unsigned char**)&data)) {
+	    msg("<fatal>  Failed to load from %s", sname);
+	    exit(1);
+	}
 	if(!data) 
 	    exit(1);
 	if(swf_ImageHasAlpha(data, width, height)) {
@@ -488,7 +491,10 @@ TAG *MovieAddFrame(SWF * swf, TAG * t, char *sname, int id)
 #endif
     } else {
 	RGBA*data = 0;
-	png_load(sname, &width, &height, (unsigned char**)&data);
+	if(!png_load(sname, &width, &height, (unsigned char**)&data)) {
+	    msg("<fatal>  Failed to load from %s", sname);
+	    exit(1);
+	}
 	if(!data) 
 	    exit(1);
 	t = swf_InsertTag(t, ST_DEFINEBITSLOSSLESS);

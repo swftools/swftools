@@ -18,7 +18,6 @@ typedef struct _point {
     int32_t x;
     int32_t y;
 } point_t;
-type_t point_type;
 
 #define SEGNR(s) ((int)((s)?(s)->nr:-1))
 

@@ -638,14 +638,13 @@ RGBA *swf_JPEG2TagToImage(TAG * tag, int *width, int *height)
 #ifdef HAVE_ZLIB
     if(offset) {
 	uLongf datalen = cinfo.output_width*cinfo.output_height;
-	U8* alphadata = (U8*)rfx_alloc(datalen);
+	U8* alphadata = (U8*)rfx_calloc(datalen);
 	int error;
 	tag->len = oldtaglen;
 	swf_SetTagPos(tag, 6+offset);
 	error = uncompress(alphadata, &datalen, &tag->data[tag->pos], tag->len - tag->pos);
 	if (error != Z_OK) {
 	    fprintf(stderr, "rfxswf: Zlib error %d while extracting definejpeg3\n", error);
-	    return 0;
 	}
 	for(y=0;y<cinfo.output_height;y++) {
 	    RGBA*line = &dest[y*cinfo.output_width];
@@ -982,14 +981,13 @@ RGBA *swf_DefineLosslessBitsTagToImage(TAG * tag, int *dwidth, int *dheight)
 	if (data)
 	    rfx_free(data);
 	datalen += 4096;
-	data = (U8*)rfx_alloc(datalen);
+	data = (U8*)rfx_calloc(datalen);
 	error =
 	    uncompress(data, &datalen, &tag->data[tag->pos],
 		       tag->len - tag->pos);
     } while (error == Z_BUF_ERROR);
     if (error != Z_OK) {
 	fprintf(stderr, "rfxswf: Zlib error %d (image %d)\n", error, id);
-	return 0;
     }
     pos = 0;
 

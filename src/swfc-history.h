@@ -4,7 +4,7 @@
 
    Copyright (c) 2007 Huub Schaeks <huub@h-schaeks.speedlinq.nl>
    Copyright (c) 2007 Matthias Kramm <kramm@quiss.org>
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -20,7 +20,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 #ifndef __HISTORY_H
-#define __HISTORY_Y
+#define __HISTORY_H
 
 #include "../lib/types.h"
 #include "../lib/rfxswf.h"
@@ -34,7 +34,7 @@ enum
 	CF_CHANGE = 2,
     CF_SCHANGE = 3,
     CF_SWEEP = 4,
-	CF_JUMP = 5	
+	CF_JUMP = 5
 };
 
 #define SF_X 0x0001
@@ -55,11 +55,11 @@ enum
 
 #define IF_FIXED_ALIGNMENT 0x0001
 
-FILTER* noFilters;
-FILTER_BLUR* noBlur;
-FILTER_BEVEL* noBevel;
-FILTER_DROPSHADOW* noDropshadow;
-FILTER_GRADIENTGLOW* noGradientGlow;
+extern FILTER* noFilters;
+extern FILTER_BLUR* noBlur;
+extern FILTER_BEVEL* noBevel;
+extern FILTER_DROPSHADOW* noDropshadow;
+extern FILTER_GRADIENTGLOW* noGradientGlow;
 
 typedef struct _spline
 {
