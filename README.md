@@ -1,9 +1,7 @@
-# This branch has issues with rendering images. Go to the gfx2gfx-pdftext-unupdated branch if you are rendering a swf with images.
-
 # Compile instructions
 1) Clone repo
 ```
-git clone -b gfx2gfx-pdftext --recursive https://github.com/flanter21/swftools.git
+git clone https://github.com/flanter21/swftools.git
 ```
 2) Update config.guess and config.sub
 ```
@@ -13,17 +11,12 @@ autoupdate
 autoconf
 ./configure
 ```
-3) Compile. gfx2gfx will be found in the src folder.
+3) Compile twice (for some reason)
 ```
 make
 make
 ```
-4) If the above doesn't work, try this.
 
-```
-cd src
-make gfx2gfx
-```
 # SWFTools
 
 SWFTools is a collection of utilities for working with Adobe Flash files (SWF files).
