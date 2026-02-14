@@ -650,7 +650,6 @@ int handlefont(SWF*swf, TAG*tag)
     U16 id;
     char name[80];
     char*filename = name;
-    int t;
 
     id = swf_GetDefineID(tag);
     prepare_name(name, sizeof(name), "font", "swf", id);
@@ -788,7 +787,11 @@ int handlejpeg(TAG*tag)
 
 	uLongf datalen = width*height;
 	Bytef *data = malloc(datalen);
-
+        if(!data) {
+            fprintf(stderr, "malloc error datalen:%ld tag->id:%d\n",
+                    datalen, tag->id);
+            return 0;
+        }
 	int error = uncompress(data, &datalen, &tag->data[end], (uLong)(tag->len - end));
 	if(error != Z_OK) {
 	  fprintf(stderr, "Zlib error %d\n", error);
@@ -880,12 +883,10 @@ int handlelossless(TAG*tag)
     char*filename = name;
     FILE*fi;
     int width, height;
-    int crc;
     int id;
     int t;
     U8 bpp = 1;
     U8 format;
-    U8 tmp;
     Bytef* data=0;
     U8* data2=0;
     U8* data3=0;
@@ -898,7 +899,6 @@ int handlelossless(TAG*tag)
     RGBA* palette;
     int pos;
     int error;
-    U32 tmp32;
 
     make_crc32_table();
 
@@ -927,10 +927,6 @@ int handlelossless(TAG*tag)
     width = swf_GetU16(tag);
     height = swf_GetU16(tag);
     if(format == 3) cols = swf_GetU8(tag) + 1;
-// this is what format means according to the flash specification. (which is
-// clearly wrong)
-//    if(format == 4) cols = swf_GetU16(tag) + 1;
-//    if(format == 5) cols = swf_GetU32(tag) + 1;
     else cols = 0;
 
     msg("<verbose> Width %d", width);
@@ -938,17 +934,20 @@ int handlelossless(TAG*tag)
     msg("<verbose> Format %d", format);
     msg("<verbose> Cols %d", cols);
     msg("<verbose> Bpp %d", bpp);
+    msg("<verbose> Alpha %d", alpha);
 
-    datalen = (width*height*bpp/8+cols*8);
-    do {
-	if(data)
-	    free(data);
-	datalen+=4096;
-	data = malloc(datalen);
-	error = uncompress (data, &datalen, &tag->data[tag->pos], tag->len-tag->pos);
-    } while(error == Z_BUF_ERROR);
+#define align_width(w, a) (((w) + ((a)-1)) & -(a))
+    datalen = (3+alpha)*cols + align_width((uLongf)width*(bpp/8), 4)*height;
+    data = malloc(datalen);
+    if(!data) {
+	fprintf(stderr, "malloc error datalen:%ld tag->id:%d\n",
+		datalen, tag->id);
+        return 0;
+    }
+    error = uncompress (data, &datalen, &tag->data[tag->pos], tag->len-tag->pos);
     if(error != Z_OK) {
 	fprintf(stderr, "Zlib error %d (image %d)\n", error, id);
+	free(data);
 	return 0;
     }
     msg("<verbose> Uncompressed image is %d bytes (%d colormap)", datalen, (3+alpha)*cols);
