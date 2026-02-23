@@ -564,14 +564,15 @@ static int isSWF(const char*filename)
 {
     FILE*fi = fopen(filename, "rb");
     char a[8];
+    int l;
     if(!fi) {
 	perror(filename);
 	return -1;
     }
     memset(a, 0, sizeof(a));
-    fread(a, 4, 1, fi);
+    l = fread(a, 4, 1, fi);
     fclose(fi);
-
+    if(l != 1) return 0;
     if(!strncmp(a, "FWS", 3) || !strncmp(a, "CWS", 3)) {
 	return 1;
     }

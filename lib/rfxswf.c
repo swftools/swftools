@@ -1891,19 +1891,21 @@ int swf_WriteHeader(int handle,SWF * swf)
 
 int swf_WriteCGI(SWF * swf)
 { int len;
+  int slen;
   char s[1024];
-    
+
   len = swf_WriteSWF(-1,swf);
 
   if (len<0) return -1;
 
-  sprintf(s,"Content-type: application/x-shockwave-flash\n"
+  snprintf(s, sizeof(s), "Content-type: application/x-shockwave-flash\n"
             "Accept-Ranges: bytes\n"
             "Content-Length: %d\n"
             "Expires: Thu, 13 Apr 2000 23:59:59 GMT\n"
             "\n",len);
-            
-  write(fileno(stdout),s,strlen(s));
+
+  slen = strlen(s);
+  if (write(fileno(stdout),s,slen) != slen) return -1;
   return swf_WriteSWF(fileno(stdout),swf);
 }
 
